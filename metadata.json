@@ -1,0 +1,5 @@
+{
+  "name": "React Idle Game",
+  "description": "A futuristic idle game where you generate energy, buy upgrades, and aim for prestige. This is a React and Tailwind CSS recreation of an existing idle game.",
+  "requestFramePermissions": []
+}

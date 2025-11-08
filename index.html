@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React Idle Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-from: #1e1e2f;
+            --bg-to: #2a2a3f;
+            --text-main: #ffffff;
+            --text-header: #ffcc00;
+            --bg-popup: #222;
+            --bg-upgrade: rgba(0,0,0,0.3);
+            --border-color: #444;
+        }
+        :root[data-theme='light'] {
+            --bg-from: #eef2f3;
+            --bg-to: #8e9eab;
+            --text-main: #2c3e50;
+            --text-header: #d35400;
+            --bg-popup: #f4f4f4;
+            --bg-upgrade: rgba(255,255,255,0.4);
+            --border-color: #bdc3c7;
+        }
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(135deg, var(--bg-from), var(--bg-to));
+            color: var(--text-main);
+        }
+        @keyframes pop {
+            0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+            50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+            100% { transform: translateX(-50%) scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop 0.3s ease-in-out;
+        }
+        @keyframes pulseAnim {
+            0% { transform: scale(1); box-shadow: 0 0 3px #fff; }
+            50% { transform: scale(1.05); box-shadow: 0 0 10px #fff; }
+            100% { transform: scale(1); box-shadow: 0 0 3px #fff; }
+        }
+        .animate-pulse-effect {
+            animation: pulseAnim 0.3s ease-out;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+<body class="transition-colors duration-500 overflow-hidden">
+    <div id="root"></div>
+</body>
+</html>
