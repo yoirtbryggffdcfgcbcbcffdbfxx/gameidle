@@ -48,6 +48,78 @@
         .animate-pulse-effect {
             animation: pulseAnim 0.3s ease-out;
         }
+        @keyframes popup-scale-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-popup-scale {
+            animation: popup-scale-in 0.3s ease-in-out;
+        }
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 3s linear infinite;
+        }
+        @keyframes loading-pulse {
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 10px #00ffff); }
+        }
+        .animate-loading-pulse {
+            animation: loading-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes progress-fill {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        .animate-progress-fill {
+            animation: progress-fill 1s ease-out forwards;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes particle-fade {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+        }
+        .animate-particle-fade {
+            animation: particle-fade linear infinite;
+            position: absolute;
+            background: #00ffff;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* In-Game Themed Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1a1a2a;
+            border-radius: 5px;
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #00ffcc, #0044ff);
+            border-radius: 5px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 8px rgba(0, 255, 204, 0.7);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #1affde, #1a5cff);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 1);
+        }
+        /* For Firefox */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #00aaff #1a1a2a;
+        }
     </style>
 <script type="importmap">
 {
