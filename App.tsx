@@ -6,6 +6,7 @@ import LoadingScreen from './components/LoadingScreen';
 import MainMenu from './components/MainMenu';
 import GameUI from './components/GameUI';
 import NotificationCenter from './components/Notification';
+import CreditsPopup from './components/popups/CreditsPopup';
 
 const App: React.FC = () => {
     const game = useGameEngine();
@@ -21,6 +22,7 @@ const App: React.FC = () => {
                     hasSaveData={game.hasSaveData}
                     onContinue={game.handlers.handleContinue}
                     onNewGame={game.handlers.handleNewGameClick}
+                    onCreditsClick={game.handlers.handleCreditsClick}
                     playSfx={game.playSfx}
                 />
                 <ConfirmationPopup
@@ -33,6 +35,9 @@ const App: React.FC = () => {
                         game.popups.setShowNewGameConfirm(false);
                     }}
                 />
+                {game.uiState.activePopup === 'credits' && (
+                    <CreditsPopup onClose={() => game.popups.setActivePopup(null)} />
+                )}
             </>
         );
     }
@@ -50,13 +55,14 @@ const App: React.FC = () => {
                 playSfx={game.playSfx}
                 formatNumber={game.memoizedFormatNumber}
                 setActivePopup={game.popups.setActivePopup}
-                // FIX: Pass missing properties to the GameUI component to satisfy its prop types.
-                // These functions are required for managing particles, floating text, and tutorial/confirmation popups.
                 removeParticle={game.removeParticle}
                 removeFloatingText={game.removeFloatingText}
-                setShowTutorial={game.popups.setShowTutorial}
+                setTutorialStep={game.popups.setTutorialStep}
                 setShowHardResetConfirm={game.popups.setShowHardResetConfirm}
-                setShowPrestigeConfirm={game.popups.setShowPrestigeConfirm}
+                setShowAscensionConfirm={game.popups.setShowAscensionConfirm}
+                setShowAscensionTutorial={game.popups.setShowAscensionTutorial}
+                // FIX: Added missing 'setShowCoreTutorial' prop to satisfy GameUIProps interface.
+                setShowCoreTutorial={game.setShowCoreTutorial}
             />
             <NotificationCenter 
                 notifications={game.uiState.notifications} 

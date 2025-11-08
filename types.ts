@@ -1,19 +1,25 @@
 export interface Upgrade {
+  id: string;
   name: string;
   baseCost: number;
-  production: number;
+  production: number; // Represents production/sec for PRODUCTION type, and +click power for CLICK type
   owned: number;
   color: string;
   currentCost: number;
+  type: 'PRODUCTION' | 'CLICK';
+  unlockCost: number;
+  requiredAscension: number;
 }
 
 export interface Achievement {
   name: string;
   unlocked: boolean;
   description: string;
+  hidden: boolean;
+  bonus: number; // e.g., 1 for a 1% bonus
 }
 
-export interface PrestigeUpgrade {
+export interface AscensionUpgrade {
     id: string;
     name: string;
     description: string;
@@ -24,12 +30,30 @@ export interface PrestigeUpgrade {
     };
 }
 
+export interface CoreUpgrade {
+    id: string;
+    name: string;
+    description: string;
+    cost: number;
+    effect: {
+        type: 'CORE_BOOST_MULTIPLIER' | 'CORE_CHARGE_RATE';
+        value: number;
+    };
+}
+
 export interface GameState {
   energy: number;
   upgrades: Upgrade[];
-  prestigeCount: number;
+  ascensionCount: number;
   achievements: Achievement[];
-  purchasedPrestigeUpgrades: string[];
+  purchasedAscensionUpgrades: string[];
+  totalClicks: number;
+  hasSeenAscensionTutorial: boolean;
+  coreCharge: number;
+  isCoreDischarging: boolean;
+  quantumShards: number;
+  purchasedCoreUpgrades: string[];
+  hasSeenCoreTutorial: boolean;
 }
 
 export interface Settings {
@@ -38,7 +62,7 @@ export interface Settings {
     scientificNotation: boolean;
     theme: 'dark' | 'light' | 'matrix' | 'solaris' | 'cyberpunk';
     sfxVolume: number; // 0 to 1
-    confirmPrestige: boolean;
+    confirmAscension: boolean;
 }
 
 export interface Particle {

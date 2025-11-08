@@ -4,6 +4,7 @@ interface MainMenuProps {
     hasSaveData: boolean;
     onContinue: () => void;
     onNewGame: () => void;
+    onCreditsClick: () => void;
     playSfx: (sound: 'ui_hover') => void;
 }
 
@@ -11,7 +12,7 @@ const BackgroundParticle: React.FC<{ style: React.CSSProperties }> = ({ style })
     <div className="animate-particle-fade" style={style}></div>
 );
 
-const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame, playSfx }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame, onCreditsClick, playSfx }) => {
     
     const particles = useMemo(() => {
         return Array.from({ length: 20 }).map((_, i) => ({
@@ -28,6 +29,14 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
 
     return (
         <div className="fixed inset-0 bg-gradient-to-br from-[var(--bg-from)] to-[var(--bg-to)] flex flex-col justify-center items-center z-[90] text-center p-4 overflow-hidden">
+            <button 
+                onClick={onCreditsClick}
+                onMouseEnter={() => playSfx('ui_hover')}
+                className="absolute top-4 right-4 text-xs px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-white shadow-md z-20"
+            >
+                Crédits
+            </button>
+
             {particles.map(p => <BackgroundParticle key={p.id} style={p.style} />)}
             
             <div className="relative z-10">
@@ -53,7 +62,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
                     </button>
                 </div>
             </div>
-             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.3.0</p>
+             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.4.0</p>
         </div>
     );
 };

@@ -1,5 +1,6 @@
 export const calculateCost = (baseCost: number, owned: number, costMultiplier: number = 1): number => {
-  return Math.floor(baseCost * Math.pow(1.2, owned) * costMultiplier);
+  // Adjusted cost exponent from 1.15 to 1.10 for better late-game balancing
+  return Math.floor(baseCost * Math.pow(1.10, owned) * costMultiplier);
 };
 
 export const formatNumber = (num: number, scientificNotation: boolean): string => {

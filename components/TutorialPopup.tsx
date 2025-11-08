@@ -1,21 +1,45 @@
 import React from 'react';
 
-interface TutorialPopupProps {
-    show: boolean;
-    onClose: () => void;
+interface GuidedTutorialProps {
+    step: number;
 }
 
-const TutorialPopup: React.FC<TutorialPopupProps> = ({ show, onClose }) => {
-    if (!show) return null;
+const GuidedTutorial: React.FC<GuidedTutorialProps> = ({ step }) => {
+    if (step === 0) return null;
+
+    const getStepContent = () => {
+        switch (step) {
+            case 1:
+                return {
+                    text: "Bienvenue ! Cliquez sur 'Collecter' pour générer votre première énergie.",
+                    style: { top: '85px', right: '1rem', transform: 'translateY(0)', width: '200px' }
+                };
+            case 2:
+                return {
+                    text: "Parfait ! Utilisez cette énergie pour acheter votre premier 'Petit Générateur'.",
+                    style: { top: '120px', left: '50%', transform: 'translateX(-50%)', width: '250px' }
+                };
+            case 3:
+                return {
+                    text: "Excellent ! Il produit de l'énergie automatiquement. Continuez à améliorer pour devenir plus puissant !",
+                    style: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '300px' }
+                };
+            default:
+                return null;
+        }
+    };
+
+    const content = getStepContent();
+    if (!content) return null;
 
     return (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[var(--bg-popup)] text-[var(--text-main)] p-3 rounded-lg w-64 text-center shadow-2xl z-40">
-            <p>⚡ Clique = énergie</p>
-            <p className="my-1">↑ Upgrades = production</p>
-            <p>✨ Prestige = bonus permanent</p>
-            <button onClick={onClose} className="bg-blue-600 text-white mt-2 px-4 py-1 rounded">J'ai compris</button>
+        <div 
+            className="fixed bg-[var(--bg-popup)] text-[var(--text-main)] p-3 rounded-lg text-center shadow-2xl z-[2000] border-2 border-cyan-400 animate-popup-scale"
+            style={content.style}
+        >
+            <p className="text-xs mb-2">{content.text}</p>
         </div>
     );
 };
 
-export default TutorialPopup;
+export default GuidedTutorial;

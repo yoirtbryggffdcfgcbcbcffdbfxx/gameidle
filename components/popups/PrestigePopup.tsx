@@ -1,65 +1,70 @@
 // FIX: This file was created to resolve module not found errors.
 import React from 'react';
 import Popup from './Popup';
-import { PRESTIGE_UPGRADES } from '../../constants';
-import { MAX_ENERGY } from '../../constants';
+import { ASCENSION_UPGRADES } from '../../constants';
+import { Upgrade } from '../../types';
 
-interface PrestigePopupProps {
-    canPrestige: boolean;
-    prestigeCount: number;
-    prestigeGain: number;
-    purchasedPrestigeUpgrades: string[];
-    onPrestige: () => void;
-    onBuyPrestigeUpgrade: (id: string) => void;
+interface AscensionPopupProps {
+    canAscend: boolean;
+    ascensionCount: number;
+    ascensionGain: number;
+    purchasedAscensionUpgrades: string[];
+    onAscend: () => void;
+    onBuyAscensionUpgrade: (id: string) => void;
     onClose: () => void;
-    formatNumber: (num: number) => string;
     energy: number;
-    totalUpgradesOwned: number;
+    maxEnergy: number;
+    formatNumber: (n: number) => string;
 }
 
-const PrestigePopup: React.FC<PrestigePopupProps> = ({
-    canPrestige,
-    prestigeCount,
-    prestigeGain,
-    purchasedPrestigeUpgrades,
-    onPrestige,
-    onBuyPrestigeUpgrade,
+const AscensionPopup: React.FC<AscensionPopupProps> = ({
+    canAscend,
+    ascensionCount,
+    ascensionGain,
+    purchasedAscensionUpgrades,
+    onAscend,
+    onBuyAscensionUpgrade,
     onClose,
-    formatNumber,
     energy,
-    totalUpgradesOwned
+    maxEnergy,
+    formatNumber,
 }) => {
     return (
-        <Popup title="Prestige" onClose={onClose}>
+        <Popup title="Ascension" onClose={onClose}>
             <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="bg-[var(--bg-main)] p-3 rounded-lg text-center">
-                    <p className="text-lg">Vous avez <strong className="text-yellow-400">{prestigeCount}</strong> points de prestige.</p>
+                    <p className="text-lg">Vous avez <strong className="text-yellow-400">{ascensionCount}</strong> points d'ascension.</p>
                     <p className="text-sm opacity-80">Ces points offrent des bonus permanents.</p>
                 </div>
 
                 <div className="bg-[var(--bg-upgrade)] p-3 rounded-lg">
-                    <h3 className="text-lg text-[var(--text-bright)] mb-2">Faire un Prestige</h3>
-                    <p className="mb-1">Condition 1: Atteindre {formatNumber(MAX_ENERGY)} énergie ({energy >= MAX_ENERGY ? '✔️' : '❌'})</p>
-                    <p className="mb-3">Condition 2: Posséder au moins 10 améliorations ({totalUpgradesOwned >= 10 ? '✔️' : '❌'})</p>
+                    <h3 className="text-lg text-[var(--text-bright)] mb-2">Faire une Ascension</h3>
+                    <p className="mb-3 text-xs">
+                        Condition: Atteindre la capacité d'énergie maximale.
+                        <br/>
+                        <span className={`mt-1 inline-block ${canAscend ? 'text-green-400' : 'text-red-400'}`}>
+                           ({formatNumber(energy)} / {formatNumber(maxEnergy)})
+                        </span>
+                    </p>
                     
-                    {canPrestige && <p className="text-green-400">Vous gagnerez {prestigeGain} points de prestige.</p>}
+                    {canAscend && <p className="text-green-400">Vous gagnerez {ascensionGain} point d'ascension et {ascensionGain} Fragment Quantique.</p>}
                     
                     <button 
-                        onClick={onPrestige} 
-                        disabled={!canPrestige}
+                        onClick={onAscend} 
+                        disabled={!canAscend}
                         className="w-full mt-2 p-2 rounded-md bg-purple-700 text-white transition-all disabled:bg-gray-600 disabled:cursor-not-allowed hover:enabled:bg-purple-600"
                     >
-                        {canPrestige ? 'Prestige Maintenant' : 'Conditions non remplies'}
+                        {canAscend ? 'Faire une Ascension' : 'Conditions non remplies'}
                     </button>
-                    <p className="text-xs opacity-70 mt-2">Le prestige réinitialisera votre énergie et vos améliorations, mais vous conserverez vos points de prestige et leurs améliorations.</p>
+                    <p className="text-xs opacity-70 mt-2">L'ascension réinitialisera votre énergie et vos améliorations, mais vous conserverez vos points d'ascension et leurs améliorations.</p>
                 </div>
 
                 <div className="bg-[var(--bg-upgrade)] p-3 rounded-lg">
-                     <h3 className="text-lg text-[var(--text-bright)] mb-2">Améliorations de Prestige</h3>
+                     <h3 className="text-lg text-[var(--text-bright)] mb-2">Améliorations d'Ascension</h3>
                      <div className="space-y-2">
-                        {PRESTIGE_UPGRADES.map(upgrade => {
-                            const isPurchased = purchasedPrestigeUpgrades.includes(upgrade.id);
-                            const canAfford = prestigeCount >= upgrade.cost;
+                        {ASCENSION_UPGRADES.map(upgrade => {
+                            const isPurchased = purchasedAscensionUpgrades.includes(upgrade.id);
+                            const canAfford = ascensionCount >= upgrade.cost;
                             return (
                                 <div key={upgrade.id} className={`p-2 rounded flex justify-between items-center ${isPurchased ? 'bg-green-800/50' : 'bg-black/20'}`}>
                                     <div>
@@ -67,7 +72,7 @@ const PrestigePopup: React.FC<PrestigePopupProps> = ({
                                         <p className="text-xs opacity-80">{upgrade.description}</p>
                                     </div>
                                     <button 
-                                        onClick={() => onBuyPrestigeUpgrade(upgrade.id)}
+                                        onClick={() => onBuyAscensionUpgrade(upgrade.id)}
                                         disabled={isPurchased || !canAfford}
                                         className="text-sm px-3 py-1 rounded bg-yellow-600 text-white disabled:bg-gray-500 disabled:cursor-not-allowed hover:enabled:bg-yellow-500"
                                     >
@@ -83,4 +88,4 @@ const PrestigePopup: React.FC<PrestigePopupProps> = ({
     );
 };
 
-export default PrestigePopup;
+export default AscensionPopup;

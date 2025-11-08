@@ -34,7 +34,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onD
             dismissTimer.current = window.setTimeout(handleDismiss, remainingTime.current);
             setIsPaused(false);
         }
-    }, [isPaused]);
+    }, [isPaused, handleDismiss]);
 
     useEffect(() => {
         startTime.current = Date.now();
@@ -90,7 +90,7 @@ interface NotificationCenterProps {
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, removeNotification }) => {
     return (
-        <div className="fixed top-4 right-4 z-[2500] w-64 space-y-2 pointer-events-none">
+        <div className="fixed bottom-4 right-4 z-[2500] w-64 space-y-2 pointer-events-none">
             {notifications.map(notification => (
                  <div key={notification.id} className="pointer-events-auto">
                     <NotificationToast notification={notification} onDismiss={removeNotification} />

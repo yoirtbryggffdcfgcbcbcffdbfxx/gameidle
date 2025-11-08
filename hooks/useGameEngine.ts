@@ -24,8 +24,8 @@ export const useGameEngine = () => {
     const { playSfx, unlockAudio } = useSfx(settings.sfxVolume);
     const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
     const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.visualEffects);
+    const [showDevPanel, setShowDevPanel] = useState(false);
     
-    // --- Unified Notification System ---
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const notificationIdCounter = useRef(0);
 
@@ -48,9 +48,9 @@ export const useGameEngine = () => {
         };
         setNotifications(prev => [newNotification, ...prev]);
     }, []);
-    // --- End of Notification System ---
 
     const popups = usePopupManager();
+    const [showCoreTutorial, setShowCoreTutorial] = useState(false);
 
     const handleAchievementUnlock = useCallback((achievement: Achievement) => {
         playSfx('buy');
@@ -60,86 +60,172 @@ export const useGameEngine = () => {
         });
     }, [addNotification, playSfx]);
     
-    const gameState = useGameState(handleAchievementUnlock);
+    const handleShowAscensionTutorial = useCallback(() => {
+        popups.setShowAscensionTutorial(true);
+    }, [popups]);
+
+    const gameState = useGameState(handleAchievementUnlock, handleShowAscensionTutorial);
     const { 
         energy, 
-        productionTotal, 
-        prestigeCount, 
-        prestigeBonuses, 
-        canPrestige,
-        prestigeGain,
+        productionTotal,
+        clickPowerFromUpgrades,
+        ascensionCount, 
+        ascensionBonuses, 
+        canAscend,
+        ascensionGain,
+        maxEnergy,
         isLoaded,
         unlockAchievement,
+        incrementClickCount,
+        availableUpgradesForCurrentAscension,
+        upgradesAtMaxLevelCount,
+        coreCharge,
+        isCoreDischarging,
+        quantumShards,
+        purchasedCoreUpgrades,
+        coreBonuses,
+        hasSeenCoreTutorial,
+        setHasSeenCoreTutorial
     } = gameState;
     
     const memoizedFormatNumber = useCallback((num: number) => formatNumber(num, settings.scientificNotation), [settings.scientificNotation]);
     const formattedEnergy = useMemo(() => memoizedFormatNumber(energy), [energy, memoizedFormatNumber]);
     
-    // Game Loop & Save Timer Effects
+    // Dev Panel keyboard listener
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                setShowDevPanel(prev => !prev);
+                if(!showDevPanel) unlockAchievement("Développeur Honoraire");
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showDevPanel, unlockAchievement]);
+
     useEffect(() => {
         if (isLoaded) {
             const timer = setTimeout(() => setAppState('menu'), 1000);
             return () => clearTimeout(timer);
         }
     }, [isLoaded, setAppState]);
+
+    const productionTotalRef = useRef(productionTotal);
+    const addFloatingTextRef = useRef(addFloatingText);
+    const memoizedFormatNumberRef = useRef(memoizedFormatNumber);
+    const isCoreDischargingRef = useRef(isCoreDischarging);
+    useEffect(() => {
+        productionTotalRef.current = productionTotal;
+        addFloatingTextRef.current = addFloatingText;
+        memoizedFormatNumberRef.current = memoizedFormatNumber;
+        isCoreDischargingRef.current = isCoreDischarging;
+    }, [productionTotal, addFloatingText, memoizedFormatNumber, isCoreDischarging]);
     
     useEffect(() => {
         if (!isLoaded || appState !== 'game') return;
-        const saveTimer = setInterval(() => gameState.saveGameState(settings), 5000);
+        
         const productionTimer = setInterval(() => {
-            if (productionTotal > 0) {
-                addFloatingText(`+${memoizedFormatNumber(productionTotal)}`, window.innerWidth * 0.25, 60, '#00ffcc');
+            const currentProduction = productionTotalRef.current;
+            if (currentProduction > 0 && !isCoreDischargingRef.current) {
+                addFloatingTextRef.current(`+${memoizedFormatNumberRef.current(currentProduction)}`, window.innerWidth * 0.25, 60, '#00ffcc');
             }
         }, 1000);
-        return () => {
-            clearInterval(saveTimer);
-            clearInterval(productionTimer);
+
+        return () => clearInterval(productionTimer);
+    }, [isLoaded, appState]);
+
+    useEffect(() => {
+        if (!isLoaded || appState !== 'game') return;
+        const saveTimer = setInterval(() => gameState.saveGameState(settings), 5000);
+        return () => clearInterval(saveTimer);
+    }, [gameState, settings, isLoaded, appState]);
+
+    // Auto-advance tutorial
+    useEffect(() => {
+        if (popups.tutorialStep === 3) {
+            const timer = setTimeout(() => {
+                popups.setTutorialStep(0); // Auto-close after showing final message
+            }, 3000);
+            return () => clearTimeout(timer);
         }
-    }, [gameState, settings, isLoaded, appState, productionTotal, addFloatingText, memoizedFormatNumber]);
+    }, [popups.tutorialStep, popups.setTutorialStep]);
     
-    // --- Event Handlers ---
     const handleCollect = (e: React.MouseEvent<HTMLButtonElement>) => {
         playSfx('click');
-        const clickValue = (CLICK_POWER + prestigeCount) * prestigeBonuses.clickMultiplier;
-        gameState.setEnergy(prev => Math.min(prev + clickValue, 10000));
+        incrementClickCount();
+        const clickValue = (CLICK_POWER + clickPowerFromUpgrades + ascensionCount) * ascensionBonuses.clickMultiplier;
+        const newEnergy = Math.min(energy + clickValue, maxEnergy);
+        gameState.setEnergy(newEnergy);
+        
         addParticle(e.clientX, e.clientY, PARTICLE_COLORS.CLICK);
         addFloatingText(`+${memoizedFormatNumber(clickValue)}`, e.clientX, e.clientY, '#ffffff');
-        unlockAchievement("Premier Clic");
+        unlockAchievement("Étincelle Initiale");
+
+        if (popups.tutorialStep === 1 && newEnergy >= 10) {
+            gameState.unlockSpecificUpgrade('gen_1');
+            popups.setTutorialStep(2);
+        }
     };
 
     const handleBuyUpgrade = (index: number) => {
         if (gameState.buyUpgrade(index)) {
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
-            unlockAchievement("Premier Achat");
+            unlockAchievement("Premier Investissement");
+            if (popups.tutorialStep === 2) {
+                popups.setTutorialStep(3);
+            }
         } else {
             addNotification("Pas assez d'énergie !", 'error');
         }
     };
     
-    const confirmPrestige = () => {
-        if (gameState.doPrestige()) {
-            unlockAchievement("Première Prestige");
-            addNotification(`Prestige x${prestigeGain} obtenu !`, 'info', { title: "Prestige !" });
+    const confirmAscension = () => {
+        if (gameState.doAscension()) {
+            unlockAchievement("Au-delà du Voile");
+            addNotification(`Ascension effectuée ! Vous gagnez ${ascensionGain} point et ${ascensionGain} Fragment.`, 'info', { title: "Ascension !" });
         }
-        popups.setShowPrestigeConfirm(false);
+        popups.setShowAscensionConfirm(false);
     };
+    
+    const handleDischargeCore = () => {
+        if (gameState.dischargeCore()) {
+            playSfx('buy'); // Use a powerful sound
+            if (!hasSeenCoreTutorial) {
+                setShowCoreTutorial(true);
+                setHasSeenCoreTutorial(true);
+            } else {
+                addNotification(`Cœur quantique activé ! Production x${coreBonuses.multiplier.toFixed(1)} pendant 10s !`, 'info', { title: 'SURCHARGE !'});
+            }
+            unlockAchievement("Surcharge Quantique");
+        }
+    }
 
-    const handlePrestigeAttempt = () => {
-        if (!canPrestige) return;
-        if (settings.confirmPrestige) {
-            popups.setShowPrestigeConfirm(true);
+    const handleAscendAttempt = () => {
+        if (!canAscend) return;
+        if (settings.confirmAscension) {
+            popups.setShowAscensionConfirm(true);
         } else {
-            confirmPrestige();
+            confirmAscension();
         }
     };
 
-    const handleBuyPrestigeUpgrade = (id: string) => {
-        if (gameState.buyPrestigeUpgrade(id)) {
+    const handleBuyAscensionUpgrade = (id: string) => {
+        if (gameState.buyAscensionUpgrade(id)) {
             playSfx('buy');
-            addNotification("Amélioration de prestige achetée !", 'info');
+            addNotification("Amélioration d'ascension achetée !", 'info');
         } else {
-            addNotification("Pas assez de points de prestige !", 'error');
+            addNotification("Pas assez de points d'ascension !", 'error');
+        }
+    };
+
+    const handleBuyCoreUpgrade = (id: string) => {
+        if (gameState.buyCoreUpgrade(id)) {
+            playSfx('buy');
+            addNotification("Réacteur du cœur amélioré !", 'info');
+        } else {
+            addNotification("Pas assez de fragments quantiques !", 'error');
         }
     };
 
@@ -154,7 +240,7 @@ export const useGameEngine = () => {
     const startNewGame = () => {
         gameState.resetGame(true);
         setSettings(s => ({...s, theme: s.theme}));
-        popups.setShowTutorial(true);
+        popups.setTutorialStep(1);
         setAppState('game');
     };
 
@@ -173,12 +259,28 @@ export const useGameEngine = () => {
             startNewGame();
         }
     };
+    
+    const handleCreditsClick = () => {
+        playSfx('ui_hover');
+        popups.setActivePopup('credits');
+        unlockAchievement("Curieux");
+    }
 
     const handleConfirmNewGame = () => {
         playSfx('click');
         popups.setShowNewGameConfirm(false);
         startNewGame();
         addNotification("Nouvelle partie commencée.", 'info');
+    };
+
+    // --- DEV HANDLERS ---
+    const devHandlers = {
+        addEnergy: () => gameState.setEnergy(maxEnergy),
+        addAscension: () => gameState.setAscensionCount(p => p + 10),
+        unlockAllUpgrades: () => gameState.dev_unlockAllUpgrades(),
+        unlockAllAchievements: () => gameState.dev_unlockAllAchievements(),
+        resetAchievements: () => gameState.dev_resetAchievements(),
+        closePanel: () => setShowDevPanel(false)
     };
 
     return {
@@ -188,51 +290,64 @@ export const useGameEngine = () => {
         memoizedFormatNumber,
         removeNotification,
 
-        // All game-related state values
         gameState: {
             energy: gameState.energy,
             upgrades: gameState.upgrades,
+            visibleUpgrades: gameState.visibleUpgrades,
             achievements: gameState.achievements,
-            prestigeCount: gameState.prestigeCount,
-            purchasedPrestigeUpgrades: gameState.purchasedPrestigeUpgrades,
+            ascensionCount: gameState.ascensionCount,
+            purchasedAscensionUpgrades: gameState.purchasedAscensionUpgrades,
+            ascensionBonuses: gameState.ascensionBonuses,
+            coreCharge,
+            isCoreDischarging,
+            quantumShards,
+            purchasedCoreUpgrades,
+            coreBonuses,
         },
         
-        // Values computed from game state
         computedState: {
-            canPrestige: gameState.canPrestige,
-            prestigeGain: gameState.prestigeGain,
+            canAscend: gameState.canAscend,
+            ascensionGain: gameState.ascensionGain,
             totalUpgradesOwned: gameState.totalUpgradesOwned,
+            availableUpgradesForCurrentAscension,
+            upgradesAtMaxLevelCount,
+            maxEnergy,
             formattedEnergy,
         },
 
-        // UI-specific state
         uiState: {
             settings,
             particles,
             floatingTexts,
             notifications,
             activePopup: popups.activePopup,
-            showTutorial: popups.showTutorial,
+            tutorialStep: popups.tutorialStep,
             showHardResetConfirm: popups.showHardResetConfirm,
-            showPrestigeConfirm: popups.showPrestigeConfirm,
+            showAscensionConfirm: popups.showAscensionConfirm,
+            showAscensionTutorial: popups.showAscensionTutorial,
+            showDevPanel,
+            showCoreTutorial,
         },
 
-        // Callbacks for UI components
         handlers: {
             onCollect: handleCollect,
             onBuyUpgrade: handleBuyUpgrade,
-            onPrestige: handlePrestigeAttempt,
-            onConfirmPrestige: confirmPrestige,
-            onBuyPrestigeUpgrade: handleBuyPrestigeUpgrade,
+            onAscend: handleAscendAttempt,
+            onConfirmAscension: confirmAscension,
+            onBuyAscensionUpgrade: handleBuyAscensionUpgrade,
+            onBuyCoreUpgrade: handleBuyCoreUpgrade,
             onConfirmHardReset: handleConfirmHardReset,
             onSettingsChange: handleSettingsChange,
+            onDischargeCore: handleDischargeCore,
             handleContinue,
             handleNewGameClick,
             handleConfirmNewGame,
+            handleCreditsClick,
+            dev: devHandlers,
         },
         
-        // Functions to manage UI state
         popups,
+        setShowCoreTutorial,
         removeParticle,
         removeFloatingText,
     };

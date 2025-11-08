@@ -11,11 +11,12 @@ interface AchievementsPopupProps {
 
 const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, onClose }) => {
     const unlockedCount = achievements.filter(a => a.unlocked).length;
+    const visibleAchievements = achievements.filter(a => !a.hidden || a.unlocked);
     
     return (
         <Popup title={`Succès (${unlockedCount}/${achievements.length})`} onClose={onClose}>
             <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                {achievements.map((ach) => (
+                {visibleAchievements.map((ach) => (
                     <AchievementCard key={ach.name} achievement={ach} />
                 ))}
             </div>

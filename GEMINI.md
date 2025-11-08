@@ -1,76 +1,82 @@
 # Fichier de Contexte Technique pour Gemini - Projet Quantum Core
 
-Ce document est ma "mémoire" pour ce projet. Il détaille l'architecture interne, les décisions de conception et les points clés pour me permettre de reprendre le développement rapidement et avec précision.
+Ce document est ma "mémoire" technique pour ce projet. Il détaille l'architecture interne, les décisions de conception, les patterns utilisés et les points clés pour me permettre de maintenir, déboguer et étendre l'application avec efficacité et précision.
 
-## 1. Objectif du Projet
+## 1. Philosophie du Projet & Objectifs
 
-Créer un jeu de type "idle/clicker" nommé "Quantum Core" en utilisant React, TypeScript et Tailwind CSS. L'application doit fonctionner sans étape de build (via `importmap` et CDN) et être entièrement contenue dans un ensemble de fichiers statiques.
+-   **Objectif Principal :** Créer un jeu idle/clicker riche en fonctionnalités, "Quantum Core", en utilisant React, TypeScript et Tailwind CSS.
+-   **Contrainte Clé (Zero-Build) :** L'application doit fonctionner sans aucune étape de build (pas de Webpack, Vite, etc.). Cela est accompli en utilisant un `importmap` dans `index.html` pour charger les dépendances React directement depuis un CDN. Cette approche favorise la simplicité, le prototypage rapide et l'accessibilité.
+-   **Architecture Orientée Hooks :** La logique est entièrement encapsulée dans des hooks React personnalisés. L'objectif est une séparation stricte et claire entre la logique (les "hooks") et la présentation (les "composants"), rendant le code plus modulaire, testable et facile à raisonner.
 
-## 2. Philosophie de l'Architecture
+## 2. Architecture & Patterns de Conception
 
-L'architecture repose sur une séparation stricte de la logique et de la présentation, en utilisant une composition de hooks React personnalisés.
+### 2.1. Le "Hook Façade Pattern" (`useGameEngine`)
 
--   **Logique Centralisée (`useGameEngine`) :** Un seul hook, `useGameEngine`, sert de "façade" pour toute la logique du jeu. Il compose tous les autres hooks et expose un objet unique contenant l'état, les valeurs calculées et les gestionnaires d'événements à l'interface utilisateur. L'UI n'interagit jamais directement avec les hooks de bas niveau.
--   **Hooks Spécialisés et Découplés :** Chaque hook a une responsabilité unique et bien définie (ex: `useGameState` pour les données du jeu, `useSfx` pour le son, `useParticleSystem` pour les effets visuels). Cela rend le code plus facile à maintenir et à déboguer.
--   **Flux de Données Unidirectionnel :** L'état est géré dans les hooks -> passé à `App.tsx` -> propagé aux composants enfants via les props. Les interactions de l'utilisateur déclenchent des fonctions (passées en props) qui mettent à jour l'état dans les hooks, ce qui provoque un nouveau rendu.
--   **État vs UI :** Les composants React sont majoritairement des composants de présentation "bêtes". Ils reçoivent des données et ne savent pas comment elles sont calculées ou modifiées.
+Le piler de l'architecture est le hook `useGameEngine.ts`. Il implémente un pattern "Façade" :
 
-## 3. Analyse des Hooks Principaux
+-   **Rôle d'Orchestrateur :** Il est le seul hook que l'interface (le composant `App.tsx`) consomme directement. Il initialise tous les autres hooks de plus bas niveau ( `useGameState`, `useSettings`, `useSfx`, etc.).
+-   **Point d'Entrée Unique :** Il agrège l'état, les valeurs dérivées et les fonctions de tous les autres hooks en un seul objet structuré. Cela simplifie grandement le passage de props et la compréhension du flux de données.
+-   **Gestion des Effets Croisés :** C'est l'endroit idéal pour les `useEffect` qui dépendent de plusieurs domaines logiques. Par exemple, la boucle de vérification des succès a besoin de données de `useGameState` (énergie, production) et de fonctions de `useNotifier` pour afficher les notifications.
 
-Ceci est le cœur de la logique applicative.
+### 2.2. Gestion de l'État (`useGameState`)
 
-### `hooks/useGameEngine.ts`
--   **Rôle :** **Orchestrateur / Cerveau**. C'est le point d'intégration de toute la logique.
--   **Fonctionnement :**
-    1.  Initialise tous les autres hooks (`useGameState`, `useSettings`, `useSfx`, etc.).
-    2.  Passe des dépendances entre les hooks si nécessaire (ex: `settings.visualEffects` est passé à `useParticleSystem`).
-    3.  Contient les `useEffect` qui nécessitent des informations de plusieurs hooks, comme la **boucle de déblocage des succès** (qui a besoin de `totalUpgradesOwned`, `energy`, etc. de `useGameState`) et les **timers globaux** (sauvegarde, production de texte flottant).
-    4.  Définit les **gestionnaires d'événements complexes** (`handleCollect`, `handleBuyUpgrade`) qui combinent plusieurs actions (jouer un son, créer une particule, modifier l'état du jeu).
-    5.  Retourne un objet unique et structuré que `App.tsx` peut consommer.
+-   **Rôle de "Source de Vérité" :** `useGameState.ts` gère l'état fondamental et persistant du jeu (énergie, améliorations, ascension, etc.). C'est le cœur de la logique métier.
+-   **Persistance :** Il gère la sérialisation (sauvegarde) et la désérialisation (chargement) de l'état du jeu vers/depuis `localStorage`.
+-   **Pattern `useRef` pour État Asynchrone :** Pour éviter les problèmes de "stale closure" dans les `useCallback` (comme `buyUpgrade`), une référence (`energyRef`) est maintenue en parallèle de l'état `energy`. L'état est utilisé pour les rendus React, tandis que la référence est utilisée dans les callbacks pour garantir l'accès à la dernière valeur sans avoir à redéfinir la fonction à chaque changement d'énergie.
+-   **Calculs Mémorisés :** Les valeurs dérivées coûteuses (`productionTotal`, `ascensionBonuses`, etc.) sont calculées avec `useMemo` pour optimiser les performances et n'être recalculées que lorsque leurs dépendances changent.
 
-### `hooks/useGameState.ts`
--   **Rôle :** **Gestionnaire d'État / Base de Données**. Il est responsable de l'état persistant du jeu.
--   **Fonctionnement :**
-    -   Gère les états fondamentaux : `energy`, `upgrades`, `prestigeCount`, `achievements`, `purchasedPrestigeUpgrades`.
-    -   Contient la logique de **chargement (`useEffect` initial)** et de **sauvegarde (`saveGameState`)** via `localStorage`.
-    -   Expose les fonctions de mutation de l'état principal : `buyUpgrade`, `doPrestige`, `buyPrestigeUpgrade`, `resetGame`.
-    -   Calcule les valeurs dérivées (`useMemo`) comme `productionTotal`, `canPrestige`, `prestigeGain`.
-    -   **Point critique :** `energy` utilise `_setEnergy` et `energyRef` pour s'assurer que les callbacks comme `buyUpgrade` (qui sont mémorisés avec `useCallback`) aient toujours accès à la valeur la plus récente de l'énergie sans avoir besoin d'être redéclarés.
+### 2.3. Flux de Données (Unidirectionnel)
 
-### `hooks/useSettings.ts`
--   **Rôle :** **Gestionnaire de Configuration et d'État de l'Application**.
--   **Fonctionnement :**
-    -   Gère l'état `settings` (thème, volume, etc.).
-    -   Gère l'état global de l'application : `appState` (`'loading'`, `'menu'`, `'game'`). C'est ce qui contrôle l'affichage de l'écran de chargement, du menu principal ou de l'interface de jeu.
-    -   Applique le thème au `document.documentElement` via un `useEffect`.
+Le flux de données est strict et facile à suivre :
 
-### `hooks/useAchievementQueue.ts`
--   **Rôle :** **Contrôleur de File d'Attente pour les Notifications**.
--   **Fonctionnement :**
-    -   Empêche l'affichage simultané de plusieurs toasts de succès.
-    -   Maintient une `queue` (file d'attente) d'objets `Achievement`.
-    -   Lorsqu'un succès est ajouté et qu'aucun n'est actuellement affiché, il le sort de la file, l'affiche (`setCurrentAchievementToast`), et lance un timer.
-    -   À la fin du timer, il cache le toast (`setCurrentAchievementToast(null)`) et attend la fin de l'animation de sortie avant de déverrouiller la file pour le prochain succès.
+1.  **Interaction Utilisateur** (ex: clic sur "Acheter") ->
+2.  **Composant UI** (`UpgradeItem.tsx`) appelle une fonction passée en prop (`onBuyUpgrade`) ->
+3.  **Gestionnaire d'Événement** (`handleBuyUpgrade` dans `useGameEngine.ts`) est exécuté. Il peut combiner plusieurs actions (jouer un son, créer des particules) ->
+4.  **Mutation de l'État** (`buyUpgrade` dans `useGameState.ts`) est appelée, modifiant l'état (énergie, `upgrades`) ->
+5.  **Rendu React :** Le changement d'état déclenche un nouveau rendu des composants qui dépendent de ces données ->
+6.  **Mise à Jour de l'UI :** L'interface reflète le nouvel état du jeu.
 
-## 4. Cheatsheet pour les Modifications Futures
+## 3. Analyse des Systèmes Clés
 
--   **Pour modifier une valeur de jeu fondamentale (ex: coût de base d'une amélioration) :**
-    -   Aller dans `constants.ts`. Modifier `INITIAL_UPGRADES`.
+### 3.1. Calculs & Équilibrage
 
--   **Pour changer la formule de calcul du coût des améliorations :**
-    -   Aller dans `utils/helpers.ts` et modifier la fonction `calculateCost`.
+-   Toutes les valeurs d'équilibrage "magiques" sont centralisées dans `constants.ts` (coûts de base, multiplicateurs, taux).
+-   La formule de coût des améliorations (`utils/helpers.ts`) est un point central de l'équilibrage du jeu. L'ajustement de son exposant (ex: de `1.15` à `1.10`) a un impact global sur le rythme de progression.
 
--   **Pour ajouter une nouvelle variable à sauvegarder :**
-    1.  Ajouter la propriété à l'interface `GameState` dans `types.ts`.
-    2.  Ajouter un `useState` pour cette variable dans `hooks/useGameState.ts`.
-    3.  L'inclure dans l'objet `gameState` de la fonction `saveGameState` dans `useGameState.ts`.
-    4.  Gérer son chargement dans le `useEffect` initial de `useGameState.ts`.
+### 3.2. Systèmes de Progression Parallèles
 
--   **Pour ajouter un nouveau type d'amélioration de prestige :**
-    1.  `constants.ts` : Ajouter l'amélioration au tableau `PRESTIGE_UPGRADES`.
-    2.  `types.ts` : Ajouter le nouveau type à `PrestigeUpgrade['effect']['type']`.
-    3.  `hooks/useGameState.ts` : Dans le `useMemo` de `prestigeBonuses`, ajouter un `case` au `switch` pour gérer le nouvel effet.
+Le jeu possède deux boucles de prestige distinctes pour augmenter la profondeur stratégique :
 
--   **Pour déboguer un problème de rendu visuel :**
-    -   Inspecter les composants dans `components/`.
-    -   Si le problème est lié à une animation ou un effet (particules, texte flottant), vérifier les hooks `useParticleSystem` ou `useFloatingText` et les composants `FlowingParticle.tsx` et `FloatingText.tsx`.
+-   **Ascension :** Focalisée sur les bonus globaux. La monnaie (`Points d'Ascension`) s'obtient en atteignant le cap d'énergie.
+-   **Réacteur du Cœur :** Focalisé sur l'amélioration d'une mécanique de jeu active (le boost). La monnaie (`Fragments Quantiques`) s'obtient en même temps que les points d'ascension, liant les deux systèmes.
+
+### 3.3. Systèmes d'Effets Visuels (UI)
+
+-   **`useParticleSystem` & `useFloatingText` :** Ces hooks gèrent des tableaux d'objets représentant les effets actifs.
+-   **Nettoyage Automatique :** Chaque composant d'effet (`FlowingParticle`, `FloatingText`) est responsable de son propre cycle de vie. Il reçoit une fonction `onComplete` en prop et l'appelle à la fin de son animation. Cette fonction, définie dans `useGameEngine`, retire l'effet du tableau d'état, ce qui le retire du DOM et prévient les fuites de mémoire.
+
+## 4. Guide pour les Modifications Futures
+
+-   **Ajouter une nouvelle Amélioration du Cœur :**
+    1.  `types.ts` : Si nécessaire, ajoutez un nouveau type d'effet à `CoreUpgrade['effect']['type']`.
+    2.  `constants.ts` : Ajoutez un nouvel objet au tableau `CORE_UPGRADES`.
+    3.  `hooks/useGameState.ts` : Dans le `useMemo` de `coreBonuses`, ajoutez un `case` au `switch` pour appliquer le nouvel effet.
+
+-   **Ajouter une nouvelle variable à sauvegarder :**
+    1.  `types.ts` : Ajoutez la propriété à l'interface `GameState`.
+    2.  `hooks/useGameState.ts` :
+        -   Ajoutez un `useState` pour la nouvelle variable.
+        -   Incluez-la dans l'objet `gameState` de la fonction `saveGameState`.
+        -   Gérez son chargement (avec une valeur par défaut) dans le `useEffect` initial de chargement.
+
+-   **Modifier une formule de jeu (ex: gains d'ascension) :**
+    -   Localisez le `useMemo` correspondant dans `hooks/useGameState.ts` (ex: `ascensionGain`).
+    -   Ajustez la formule de calcul. La mémorisation garantira que la valeur est mise à jour automatiquement lorsque ses dépendances changent.
+
+## 5. Optimisations de Performance
+
+-   **`React.memo` :** Utilisé sur des composants fréquemment rendus avec des props potentiellement identiques, comme `UpgradeItem`, pour éviter des rendus inutiles lorsque la liste est longue.
+-   **`useCallback` :** Utilisé pour toutes les fonctions passées en props aux composants enfants. Cela est crucial pour que `React.memo` fonctionne correctement.
+-   **`useMemo` :** Utilisé pour les calculs dérivés complexes afin d'éviter de les ré-exécuter à chaque rendu.
+-   **Gestion des Timers :** Tous les `setInterval` et `setTimeout` sont créés dans des `useEffect` et systématiquement nettoyés dans la fonction de retour pour éviter les fuites de mémoire et les effets de bord inattendus.
+-   **Système de Particules :** Le nombre de particules générées par interaction est volontairement limité pour ne pas surcharger le DOM et le moteur de rendu du navigateur.

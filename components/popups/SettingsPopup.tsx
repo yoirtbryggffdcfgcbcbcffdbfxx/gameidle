@@ -18,8 +18,8 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                     <input type="checkbox" checked={settings.visualEffects} onChange={(e) => onSettingsChange({ visualEffects: e.target.checked })} />
                 </label>
                 <label className="flex items-center justify-between">
-                    <span>Confirmer Prestige</span>
-                    <input type="checkbox" checked={settings.confirmPrestige} onChange={(e) => onSettingsChange({ confirmPrestige: e.target.checked })} />
+                    <span>Confirmer Ascension</span>
+                    <input type="checkbox" checked={settings.confirmAscension} onChange={(e) => onSettingsChange({ confirmAscension: e.target.checked })} />
                 </label>
                 <label className="flex items-center justify-between">
                     <span>Notation scientifique</span>

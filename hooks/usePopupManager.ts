@@ -2,21 +2,24 @@ import { useState } from 'react';
 
 export const usePopupManager = () => {
     const [activePopup, setActivePopup] = useState<string | null>(null);
-    const [showTutorial, setShowTutorial] = useState(false);
+    const [tutorialStep, setTutorialStep] = useState(0); // 0 = off, 1, 2, 3 for steps
     const [showHardResetConfirm, setShowHardResetConfirm] = useState(false);
     const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
-    const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
+    const [showAscensionConfirm, setShowAscensionConfirm] = useState(false);
+    const [showAscensionTutorial, setShowAscensionTutorial] = useState(false);
 
     return {
         activePopup,
-        showTutorial,
+        tutorialStep,
         showHardResetConfirm,
         showNewGameConfirm,
-        showPrestigeConfirm,
+        showAscensionConfirm,
+        showAscensionTutorial,
         setActivePopup,
-        setShowTutorial,
+        setTutorialStep,
         setShowHardResetConfirm,
         setShowNewGameConfirm,
-        setShowPrestigeConfirm,
+        setShowAscensionConfirm,
+        setShowAscensionTutorial,
     };
 };

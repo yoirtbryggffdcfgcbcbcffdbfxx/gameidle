@@ -10,7 +10,7 @@ const initialSettings: Settings = {
     scientificNotation: false,
     theme: 'dark',
     sfxVolume: 0.5,
-    confirmPrestige: true,
+    confirmAscension: true,
 };
 
 export const useSettings = () => {
