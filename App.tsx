@@ -1,132 +1,96 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Settings, Particle } from './types';
-import { CLICK_POWER, PARTICLE_COLORS } from './constants';
-import { useGameState } from './hooks/useGameState';
-import { formatNumber } from './utils/helpers';
-import { sfx } from './sfx';
+import React, { useEffect, useMemo, useCallback } from 'react';
 
-// Component Imports
-import FlowingParticle from './components/FlowingParticle';
-import Header from './components/Header';
-import UpgradeList from './components/UpgradeList';
-import Footer from './components/Footer';
-import SettingsPopup from './components/popups/SettingsPopup';
-import AchievementsPopup from './components/popups/AchievementsPopup';
-import PrestigePopup from './components/popups/PrestigePopup';
-import TutorialPopup from './components/TutorialPopup';
-import Notification from './components/Notification';
+// Hooks
+import { useGameState } from './hooks/useGameState';
+import { useSettings } from './hooks/useSettings';
+import { usePopupManager } from './hooks/usePopupManager';
+import { useParticleSystem } from './hooks/useParticleSystem';
+import { useNotifier } from './hooks/useNotifier';
+import { useSfx } from './hooks/useSfx';
+import { useFloatingText } from './hooks/useFloatingText';
+
+// Constants & Helpers
+import { CLICK_POWER, PARTICLE_COLORS } from './constants';
+import { formatNumber } from './utils/helpers';
+
+// Components
 import ConfirmationPopup from './components/popups/ConfirmationPopup';
 import LoadingScreen from './components/LoadingScreen';
 import MainMenu from './components/MainMenu';
-
-type AppState = 'loading' | 'menu' | 'game';
+import GameUI from './components/GameUI';
 
 const App: React.FC = () => {
+    const { settings, setSettings, handleSettingsChange, appState, setAppState } = useSettings();
+    const { playSfx, unlockAudio } = useSfx(settings.sfxVolume);
+    const { notification, showNotification } = useNotifier();
+    const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
+    const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.floatingText);
+    
+    const {
+        activePopup,
+        showTutorial,
+        showHardResetConfirm,
+        showNewGameConfirm,
+        showPrestigeConfirm,
+        setActivePopup,
+        setShowTutorial,
+        setShowHardResetConfirm,
+        setShowNewGameConfirm,
+        setShowPrestigeConfirm,
+    } = usePopupManager();
+
     const {
         energy, setEnergy,
         upgrades,
         prestigeCount,
+        productionTotal,
+        prestigeBonuses,
+        purchasedPrestigeUpgrades,
         achievements,
         totalUpgradesOwned,
         canPrestige,
+        prestigeGain,
         isLoaded,
         hasSaveData,
         saveGameState,
         buyUpgrade,
         doPrestige,
+        buyPrestigeUpgrade,
         resetGame,
         unlockAchievement,
     } = useGameState();
     
-    const [appState, setAppState] = useState<AppState>('loading');
-    
-    const [settings, setSettings] = useState<Settings>({ 
-        visualEffects: true, 
-        animSpeed: 2,
-        scientificNotation: false,
-        theme: 'dark',
-        sfxVolume: 0.5,
-    });
-
-    const [message, setMessage] = useState<{ text: string; show: boolean }>({ text: '', show: false });
-    const [activePopup, setActivePopup] = useState<string | null>(null);
-    const [showTutorial, setShowTutorial] = useState(false);
-    const [showHardResetConfirm, setShowHardResetConfirm] = useState(false);
-    const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
-    
-    const [particles, setParticles] = useState<Particle[]>([]);
-    const particleIdCounter = useRef(0);
-    
-    const playSfx = useCallback((sound: 'click' | 'buy' | 'ui_hover') => {
-        if (settings.sfxVolume > 0) {
-            const audio = sfx[sound];
-            audio.currentTime = 0;
-            audio.volume = settings.sfxVolume;
-            audio.play().catch(e => console.error("SFX play failed:", e));
-        }
-    }, [settings.sfxVolume]);
-
+    // FIX: Hoist memoized formatters to be declared before they are used in useEffect hooks.
     const formattedEnergy = useMemo(() => formatNumber(energy, settings.scientificNotation), [energy, settings.scientificNotation]);
-    
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', settings.theme);
-    }, [settings.theme]);
-
-    useEffect(() => {
-        if(isLoaded) {
-            const savedGame = localStorage.getItem('reactIdleGameSave');
-            if(savedGame) {
-                const data = JSON.parse(savedGame);
-                if (data.settings) {
-                    setSettings(s => ({...s, ...data.settings}));
-                }
-            } else {
-                 if (appState === 'game') setShowTutorial(true);
-            }
-        }
-    }, [isLoaded, appState]);
+    const memoizedFormatNumber = useCallback((num: number) => formatNumber(num, settings.scientificNotation), [settings.scientificNotation]);
 
     useEffect(() => {
         if (isLoaded) {
-            const timer = setTimeout(() => {
-                setAppState('menu');
-            }, 1000); // Artificial delay for better UX
+            const timer = setTimeout(() => setAppState('menu'), 1000);
             return () => clearTimeout(timer);
         }
-    }, [isLoaded]);
-
+    }, [isLoaded, setAppState]);
+    
     useEffect(() => {
         if (!isLoaded || appState !== 'game') return;
         const saveTimer = setInterval(() => saveGameState(settings), 5000);
-        return () => clearInterval(saveTimer);
-    }, [saveGameState, settings, isLoaded, appState]);
-
-    const showNotification = useCallback((text: string) => {
-        setMessage({ text, show: true });
-        setTimeout(() => setMessage({ text: '', show: false }), 1200);
-    }, []);
-
-    const addParticle = useCallback((x: number, y: number, color: string) => {
-        if (!settings.visualEffects) return;
-        for (let i = 0; i < 10; i++) {
-            const newParticle: Particle = {
-                id: particleIdCounter.current++,
-                startX: x,
-                startY: y,
-                color,
-            };
-            setParticles(prev => [...prev, newParticle]);
+        const productionTimer = setInterval(() => {
+            if (productionTotal > 0) {
+                addFloatingText(`+${memoizedFormatNumber(productionTotal)}`, window.innerWidth * 0.25, 60, '#00ffcc');
+            }
+        }, 1000);
+        return () => {
+            clearInterval(saveTimer);
+            clearInterval(productionTimer);
         }
-    }, [settings.visualEffects]);
+    }, [saveGameState, settings, isLoaded, appState, productionTotal, addFloatingText, memoizedFormatNumber]);
     
-    const removeParticle = (id: number) => {
-        setParticles(prev => prev.filter(p => p.id !== id));
-    };
-
     const handleCollect = (e: React.MouseEvent<HTMLButtonElement>) => {
         playSfx('click');
-        setEnergy(prev => Math.min(prev + CLICK_POWER + prestigeCount, 10000));
+        const clickValue = (CLICK_POWER + prestigeCount) * prestigeBonuses.clickMultiplier;
+        setEnergy(prev => Math.min(prev + clickValue, 10000));
         addParticle(e.clientX, e.clientY, PARTICLE_COLORS.CLICK);
+        addFloatingText(`+${memoizedFormatNumber(clickValue)}`, e.clientX, e.clientY, '#ffffff');
         if (unlockAchievement("Premier Clic")) {
             showNotification("Succès débloqué : Premier Clic");
         }
@@ -145,48 +109,78 @@ const App: React.FC = () => {
     };
 
     useEffect(() => {
-        if (appState === 'game' && totalUpgradesOwned >= 10) {
-            if (unlockAchievement("Collectionneur")) {
-                showNotification("Succès débloqué : Collectionneur");
-            }
-        }
-    }, [totalUpgradesOwned, unlockAchievement, showNotification, appState]);
+        if (appState !== 'game') return;
+        if (totalUpgradesOwned >= 10 && unlockAchievement("Collectionneur")) showNotification("Succès débloqué : Collectionneur");
+        if (totalUpgradesOwned >= 50 && unlockAchievement("Magnat")) showNotification("Succès débloqué : Magnat");
+        if (totalUpgradesOwned >= 200 && unlockAchievement("Empereur Industriel")) showNotification("Succès débloqué : Empereur Industriel");
+
+        if (energy >= 100 && unlockAchievement("Milliardaire en Énergie")) showNotification("Succès débloqué : Milliardaire en Énergie");
+        if (energy >= 1000 && unlockAchievement("Magnat de l'Énergie")) showNotification("Succès débloqué : Magnat de l'Énergie");
+        if (energy >= 10000 && unlockAchievement("Divinité Énergétique")) showNotification("Succès débloqué : Divinité Énergétique");
+
+        if (productionTotal >= 10 && unlockAchievement("Début de Production")) showNotification("Succès débloqué : Début de Production");
+        if (productionTotal >= 100 && unlockAchievement("Automatisation")) showNotification("Succès débloqué : Automatisation");
+        if (productionTotal >= 1000 && unlockAchievement("Puissance Industrielle")) showNotification("Succès débloqué : Puissance Industrielle");
+        if (productionTotal >= 10000 && unlockAchievement("Singularité Productive")) showNotification("Succès débloqué : Singularité Productive");
+        
+        if (prestigeCount >= 5 && unlockAchievement("Prestigieux")) showNotification("Succès débloqué : Prestigieux");
+        if (prestigeCount >= 25 && unlockAchievement("Légende du Prestige")) showNotification("Succès débloqué : Légende du Prestige");
+
+    }, [totalUpgradesOwned, energy, productionTotal, prestigeCount, unlockAchievement, showNotification, appState]);
     
-    const handlePrestige = () => {
-        if (doPrestige()) {
-            setActivePopup(null);
-            showNotification(`Prestige x${prestigeCount + 1} obtenu !`);
-            if (unlockAchievement("Première Prestige")) {
-                showNotification("Succès débloqué : Première Prestige");
-            }
+    const handlePrestigeAttempt = () => {
+        if (!canPrestige) return;
+        if (settings.confirmPrestige) {
+            setShowPrestigeConfirm(true);
+        } else {
+            confirmPrestige();
         }
     };
 
-    const handleOpenHardResetConfirm = () => {
-        setShowHardResetConfirm(true);
+    const confirmPrestige = () => {
+        const newPrestigeCount = prestigeCount + prestigeGain;
+        if (doPrestige()) {
+            if (unlockAchievement("Première Prestige")) {
+                showNotification("Succès débloqué : Première Prestige");
+            }
+            showNotification(`Prestige x${newPrestigeCount} obtenu !`);
+        }
+        setShowPrestigeConfirm(false);
     };
     
+    const handleBuyPrestigeUpgrade = (id: string) => {
+        if (buyPrestigeUpgrade(id)) {
+            playSfx('buy');
+            showNotification("Amélioration de prestige achetée !");
+        } else {
+            showNotification("Pas assez de points de prestige !");
+        }
+    };
+
     const handleConfirmHardReset = () => {
+        playSfx('click');
         resetGame(true);
         setActivePopup(null);
         setShowHardResetConfirm(false);
         showNotification("Jeu réinitialisé.");
     }
     
-    const handleSettingsChange = useCallback((newSettings: Partial<Settings>) => {
-        setSettings(s => ({...s, ...newSettings}));
-    }, []);
-
-    const memoizedFormatNumber = useCallback((num: number) => formatNumber(num, settings.scientificNotation), [settings.scientificNotation]);
-
-    // Menu Handlers
     const startNewGame = () => {
         resetGame(true);
+        setSettings(s => ({...s, theme: s.theme}));
         setShowTutorial(true);
         setAppState('game');
     };
 
+    const handleContinue = () => {
+        playSfx('click');
+        unlockAudio();
+        setAppState('game');
+    };
+
     const handleNewGameClick = () => {
+        playSfx('click');
+        unlockAudio();
         if (hasSaveData) {
             setShowNewGameConfirm(true);
         } else {
@@ -195,6 +189,7 @@ const App: React.FC = () => {
     };
 
     const handleConfirmNewGame = () => {
+        playSfx('click');
         setShowNewGameConfirm(false);
         startNewGame();
         showNotification("Nouvelle partie commencée.");
@@ -209,7 +204,7 @@ const App: React.FC = () => {
             <>
                 <MainMenu
                     hasSaveData={hasSaveData}
-                    onContinue={() => setAppState('game')}
+                    onContinue={handleContinue}
                     onNewGame={handleNewGameClick}
                     playSfx={playSfx}
                 />
@@ -218,67 +213,54 @@ const App: React.FC = () => {
                     title="Commencer une nouvelle partie ?"
                     message="Votre progression actuelle sera effacée. Êtes-vous sûr de vouloir continuer ?"
                     onConfirm={handleConfirmNewGame}
-                    onCancel={() => setShowNewGameConfirm(false)}
+                    onCancel={() => {
+                        playSfx('click');
+                        setShowNewGameConfirm(false);
+                    }}
                 />
             </>
         );
     }
-
+    
     return (
-        <div className="min-h-screen flex flex-col text-xs md:text-sm select-none">
-            {particles.map(p => (
-                <FlowingParticle key={p.id} {...p} animSpeed={settings.animSpeed} onComplete={removeParticle} />
-            ))}
-
-            <Header 
-                energy={energy}
-                formattedEnergy={formattedEnergy}
-                onCollect={handleCollect}
-            />
-            
-            <UpgradeList 
-                upgrades={upgrades}
-                onBuyUpgrade={handleBuyUpgrade}
-                formatNumber={memoizedFormatNumber}
-            />
-
-            <Footer onMenuClick={(popup) => setActivePopup(popup)} />
-
-            {/* Popups */}
-            {activePopup === 'prestige' && (
-                <PrestigePopup
-                    canPrestige={canPrestige}
-                    energy={energy}
-                    totalUpgradesOwned={totalUpgradesOwned}
-                    onPrestige={handlePrestige}
-                    onClose={() => setActivePopup(null)}
-                    formatNumber={memoizedFormatNumber}
-                />
-            )}
-            {activePopup === 'achievements' && (
-                <AchievementsPopup achievements={achievements} onClose={() => setActivePopup(null)} />
-            )}
-            {activePopup === 'settings' && (
-                <SettingsPopup 
-                    settings={settings}
-                    onSettingsChange={handleSettingsChange}
-                    onClose={() => setActivePopup(null)}
-                    onHardReset={handleOpenHardResetConfirm}
-                />
-            )}
-            
-            <TutorialPopup show={showTutorial} onClose={() => setShowTutorial(false)} />
-            
-            <Notification message={message.text} show={message.show} />
-
-            <ConfirmationPopup
-                show={showHardResetConfirm}
-                title="Confirmer la réinitialisation"
-                message="Êtes-vous sûr de vouloir réinitialiser toute votre progression ? Cette action est irréversible."
-                onConfirm={handleConfirmHardReset}
-                onCancel={() => setShowHardResetConfirm(false)}
-            />
-        </div>
+        <GameUI
+            // State
+            energy={energy}
+            upgrades={upgrades}
+            achievements={achievements}
+            canPrestige={canPrestige}
+            prestigeGain={prestigeGain}
+            totalUpgradesOwned={totalUpgradesOwned}
+            settings={settings}
+            particles={particles}
+            floatingTexts={floatingTexts}
+            notification={notification}
+            activePopup={activePopup}
+            showTutorial={showTutorial}
+            showHardResetConfirm={showHardResetConfirm}
+            showPrestigeConfirm={showPrestigeConfirm}
+            prestigeCount={prestigeCount}
+            purchasedPrestigeUpgrades={purchasedPrestigeUpgrades}
+            // Formatters
+            formattedEnergy={formattedEnergy}
+            memoizedFormatNumber={memoizedFormatNumber}
+            // Handlers
+            onCollect={handleCollect}
+            onBuyUpgrade={handleBuyUpgrade}
+            onPrestige={handlePrestigeAttempt}
+            onConfirmPrestige={confirmPrestige}
+            onBuyPrestigeUpgrade={handleBuyPrestigeUpgrade}
+            onConfirmHardReset={handleConfirmHardReset}
+            onSettingsChange={handleSettingsChange}
+            // Setters & Functions
+            removeParticle={removeParticle}
+            removeFloatingText={removeFloatingText}
+            setActivePopup={setActivePopup}
+            setShowTutorial={setShowTutorial}
+            setShowHardResetConfirm={setShowHardResetConfirm}
+            setShowPrestigeConfirm={setShowPrestigeConfirm}
+            playSfx={playSfx}
+        />
     );
 };
 

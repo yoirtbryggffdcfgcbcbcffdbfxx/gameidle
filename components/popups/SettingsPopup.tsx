@@ -18,6 +18,14 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                     <input type="checkbox" checked={settings.visualEffects} onChange={(e) => onSettingsChange({ visualEffects: e.target.checked })} />
                 </label>
                 <label className="flex items-center justify-between">
+                    <span>Texte Flottant</span>
+                    <input type="checkbox" checked={settings.floatingText} onChange={(e) => onSettingsChange({ floatingText: e.target.checked })} />
+                </label>
+                <label className="flex items-center justify-between">
+                    <span>Confirmer Prestige</span>
+                    <input type="checkbox" checked={settings.confirmPrestige} onChange={(e) => onSettingsChange({ confirmPrestige: e.target.checked })} />
+                </label>
+                <label className="flex items-center justify-between">
                     <span>Notation scientifique</span>
                     <input type="checkbox" checked={settings.scientificNotation} onChange={(e) => onSettingsChange({ scientificNotation: e.target.checked })} />
                 </label>
@@ -31,9 +39,12 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                 </label>
                 <label className="flex items-center justify-between">
                     <span>Thème</span>
-                    <select value={settings.theme} onChange={(e) => onSettingsChange({ theme: e.target.value as 'dark' | 'light' })} className="bg-gray-700 text-white p-1 rounded">
+                    <select value={settings.theme} onChange={(e) => onSettingsChange({ theme: e.target.value as any })} className="bg-gray-700 text-white p-1 rounded">
                         <option value="dark">Néon Noir</option>
                         <option value="light">Classique Clair</option>
+                        <option value="matrix">Matrix</option>
+                        <option value="solaris">Solaris</option>
+                        <option value="cyberpunk">Cyberpunk</option>
                     </select>
                 </label>
                 <button onClick={onHardReset} className="w-full bg-red-700 text-white p-2 rounded mt-4 transition-colors hover:bg-red-600 active:bg-red-800">Réinitialiser le jeu</button>

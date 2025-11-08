@@ -32,7 +32,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
             
             <div className="relative z-10">
                 <h1 className="text-4xl md:text-6xl text-[var(--text-header)] mb-16 [text-shadow:2px_2px_#000,0_0_15px_var(--text-header)] animate-float">
-                    Idle Game Optimisé
+                    Quantum Core
                 </h1>
                 <div className="space-y-4 w-full max-w-xs">
                     {hasSaveData && (
@@ -53,7 +53,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
                     </button>
                 </div>
             </div>
-             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.2.0</p>
+             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.3.0</p>
         </div>
     );
 };

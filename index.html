@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>React Idle Game</title>
+    <title>Quantum Core</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +26,33 @@
             --bg-popup: #f4f4f4;
             --bg-upgrade: rgba(255,255,255,0.4);
             --border-color: #bdc3c7;
+        }
+        :root[data-theme='matrix'] {
+            --bg-from: #000000;
+            --bg-to: #0d0d0d;
+            --text-main: #00ff41;
+            --text-header: #39ff14;
+            --bg-popup: #0a0a0a;
+            --bg-upgrade: rgba(0, 255, 65, 0.1);
+            --border-color: #00ff41;
+        }
+        :root[data-theme='solaris'] {
+            --bg-from: #ff7e5f;
+            --bg-to: #feb47b;
+            --text-main: #ffffff;
+            --text-header: #4a1c0d;
+            --bg-popup: #ff6a3d;
+            --bg-upgrade: rgba(255, 255, 255, 0.2);
+            --border-color: #ffffff;
+        }
+        :root[data-theme='cyberpunk'] {
+            --bg-from: #0b022d;
+            --bg-to: #3a0ca3;
+            --text-main: #f0f0f0;
+            --text-header: #ff00c8;
+            --bg-popup: #1e0a4f;
+            --bg-upgrade: rgba(255, 0, 200, 0.15);
+            --border-color: #00f5d4;
         }
         body {
             font-family: 'Press Start 2P', cursive;
@@ -94,6 +121,13 @@
             background: #00ffff;
             border-radius: 50%;
             pointer-events: none;
+        }
+        @keyframes float-up {
+            from { transform: translateY(0) scale(1); opacity: 1; }
+            to { transform: translateY(-60px) scale(1.5); opacity: 0; }
+        }
+        .animate-float-up {
+            animation: float-up 1.5s ease-out forwards;
         }
 
         /* In-Game Themed Scrollbar */

@@ -1,6 +1,5 @@
-
-export const calculateCost = (baseCost: number, owned: number): number => {
-  return Math.floor(baseCost * Math.pow(1.2, owned));
+export const calculateCost = (baseCost: number, owned: number, costMultiplier: number = 1): number => {
+  return Math.floor(baseCost * Math.pow(1.2, owned) * costMultiplier);
 };
 
 export const formatNumber = (num: number, scientificNotation: boolean): string => {

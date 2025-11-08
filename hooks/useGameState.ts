@@ -1,15 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Upgrade, Achievement, Settings } from '../types';
-import { MAX_ENERGY, INITIAL_UPGRADES, INITIAL_ACHIEVEMENTS, SAVE_KEY } from '../constants';
+import { Upgrade, Achievement, Settings, PrestigeUpgrade } from '../types';
+import { MAX_ENERGY, INITIAL_UPGRADES, INITIAL_ACHIEVEMENTS, SAVE_KEY, PRESTIGE_UPGRADES } from '../constants';
 import { calculateCost } from '../utils/helpers';
 
 export const useGameState = () => {
     const [energy, _setEnergy] = useState(0);
     const energyRef = useRef(energy);
 
-    // Custom setter to keep the ref perfectly in sync with the state.
-    // This solves the race condition where the check could use a different energy value than the deduction.
-    const setEnergy = useCallback((value) => {
+    const setEnergy = useCallback((value: number | ((prev: number) => number)) => {
         if (typeof value === 'function') {
             _setEnergy(currentVal => {
                 const newVal = value(currentVal);
@@ -27,20 +25,55 @@ export const useGameState = () => {
     );
     const [prestigeCount, setPrestigeCount] = useState(0);
     const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
+    const [purchasedPrestigeUpgrades, setPurchasedPrestigeUpgrades] = useState<string[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasSaveData, setHasSaveData] = useState(false);
 
+    const prestigeBonuses = useMemo(() => {
+        const bonuses = {
+            productionMultiplier: 1,
+            clickMultiplier: 1,
+            costReduction: 1,
+            startingEnergy: 0,
+        };
+        purchasedPrestigeUpgrades.forEach(upgradeId => {
+            const upgrade = PRESTIGE_UPGRADES.find(u => u.id === upgradeId);
+            if (!upgrade) return;
+            switch(upgrade.effect.type) {
+                case 'PRODUCTION_MULTIPLIER':
+                    bonuses.productionMultiplier *= upgrade.effect.value;
+                    break;
+                case 'CLICK_POWER_MULTIPLIER':
+                    bonuses.clickMultiplier *= upgrade.effect.value;
+                    break;
+                case 'COST_REDUCTION':
+                    bonuses.costReduction *= upgrade.effect.value;
+                    break;
+                case 'STARTING_ENERGY':
+                    bonuses.startingEnergy += upgrade.effect.value;
+                    break;
+            }
+        });
+        return bonuses;
+    }, [purchasedPrestigeUpgrades]);
+
     const productionTotal = useMemo(() => {
-        return upgrades.reduce((total, u) => total + u.production * u.owned, 0);
-    }, [upgrades]);
+        const baseProduction = upgrades.reduce((total, u) => total + u.production * u.owned, 0);
+        return baseProduction * prestigeBonuses.productionMultiplier;
+    }, [upgrades, prestigeBonuses.productionMultiplier]);
 
     const totalUpgradesOwned = useMemo(() => {
         return upgrades.reduce((total, u) => total + u.owned, 0);
     }, [upgrades]);
 
     const canPrestige = useMemo(() => energy >= MAX_ENERGY && totalUpgradesOwned >= 10, [energy, totalUpgradesOwned]);
+    
+    const prestigeGain = useMemo(() => {
+        if (!canPrestige) return 0;
+        // Gain 1 point for every 10 total upgrades owned, starting at 10.
+        return Math.floor(totalUpgradesOwned / 10);
+    }, [totalUpgradesOwned, canPrestige]);
 
-    // Game tick
     useEffect(() => {
         if (!isLoaded) return;
         const gameTick = setInterval(() => {
@@ -49,7 +82,6 @@ export const useGameState = () => {
         return () => clearInterval(gameTick);
     }, [productionTotal, isLoaded, setEnergy]);
     
-    // Load game
     useEffect(() => {
         try {
             const savedGame = localStorage.getItem(SAVE_KEY);
@@ -58,11 +90,12 @@ export const useGameState = () => {
                 const data = JSON.parse(savedGame);
                 setEnergy(data.energy || 0);
                 setPrestigeCount(data.prestigeCount || 0);
+                setPurchasedPrestigeUpgrades(data.purchasedPrestigeUpgrades || []);
                 
                 const loadedUpgrades = INITIAL_UPGRADES.map((u) => {
                     const savedUpgrade = data.upgrades?.find((su: any) => su.name === u.name);
                     const owned = savedUpgrade ? savedUpgrade.owned : 0;
-                    return { ...u, owned, currentCost: calculateCost(u.baseCost, owned) };
+                    return { ...u, owned, currentCost: calculateCost(u.baseCost, owned, prestigeBonuses.costReduction) };
                 });
                 setUpgrades(loadedUpgrades);
                 
@@ -77,7 +110,7 @@ export const useGameState = () => {
         } finally {
             setIsLoaded(true);
         }
-    }, [setEnergy]);
+    }, [setEnergy, prestigeBonuses.costReduction]);
 
     const saveGameState = useCallback((currentSettings: Settings) => {
         const gameState = { 
@@ -85,31 +118,27 @@ export const useGameState = () => {
             upgrades: upgrades.map(({name, owned}) => ({name, owned})), 
             prestigeCount, 
             achievements,
+            purchasedPrestigeUpgrades,
             settings: currentSettings,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
-    }, [energy, upgrades, prestigeCount, achievements]);
+    }, [energy, upgrades, prestigeCount, achievements, purchasedPrestigeUpgrades]);
 
     const buyUpgrade = useCallback((index: number) => {
         const upgrade = upgrades[index];
-        // Use the ref for the check to ensure we have the most up-to-date energy value.
         if (energyRef.current >= upgrade.currentCost) {
             setEnergy(e => e - upgrade.currentCost);
-            
-            // Use an updater function to prevent race conditions from rapid clicks.
             setUpgrades(currentUpgrades => {
                 const newUpgrades = [...currentUpgrades];
                 const targetUpgrade = newUpgrades[index];
-                
                 targetUpgrade.owned++;
-                targetUpgrade.currentCost = calculateCost(targetUpgrade.baseCost, targetUpgrade.owned);
-                
+                targetUpgrade.currentCost = calculateCost(targetUpgrade.baseCost, targetUpgrade.owned, prestigeBonuses.costReduction);
                 return newUpgrades;
             });
             return true;
         }
         return false;
-    }, [upgrades, setEnergy]);
+    }, [upgrades, setEnergy, prestigeBonuses.costReduction]);
 
     const unlockAchievement = useCallback((name: string) => {
         let wasUnlocked = false;
@@ -127,38 +156,55 @@ export const useGameState = () => {
 
     const doPrestige = useCallback(() => {
         if (canPrestige) {
-            setPrestigeCount(prev => prev + 1);
-            setEnergy(0);
-            setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0) })));
-            unlockAchievement("Première Prestige");
+            setPrestigeCount(prev => prev + prestigeGain);
+            setEnergy(prestigeBonuses.startingEnergy);
+            setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, prestigeBonuses.costReduction) })));
             return true;
         }
         return false;
-    }, [canPrestige, unlockAchievement, setEnergy]);
+    }, [canPrestige, prestigeGain, setEnergy, prestigeBonuses]);
+    
+    const buyPrestigeUpgrade = useCallback((upgradeId: string) => {
+        const upgrade = PRESTIGE_UPGRADES.find(u => u.id === upgradeId);
+        if (upgrade && prestigeCount >= upgrade.cost && !purchasedPrestigeUpgrades.includes(upgradeId)) {
+            setPrestigeCount(pc => pc - upgrade.cost);
+            setPurchasedPrestigeUpgrades(prev => [...prev, upgradeId]);
+            return true;
+        }
+        return false;
+    }, [prestigeCount, purchasedPrestigeUpgrades]);
 
     const resetGame = useCallback((hardReset: boolean) => {
         if (hardReset) {
             localStorage.removeItem(SAVE_KEY);
+            setHasSaveData(false);
+            setPurchasedPrestigeUpgrades([]);
+            setPrestigeCount(0);
         }
-        setEnergy(0);
-        setPrestigeCount(0);
-        setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0) })));
-        setAchievements(INITIAL_ACHIEVEMENTS.map(a => ({ ...a })));
-    }, [setEnergy]);
+        setEnergy(hardReset ? 0 : prestigeBonuses.startingEnergy);
+        if(!hardReset) setPrestigeCount(0);
+        setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, hardReset ? 1 : prestigeBonuses.costReduction) })));
+        setAchievements(INITIAL_ACHIEVEMENTS.map(a => ({ ...a, unlocked: false })));
+    }, [setEnergy, prestigeBonuses]);
 
     return {
         energy,
         setEnergy,
         upgrades,
         prestigeCount,
+        productionTotal,
+        prestigeBonuses,
+        purchasedPrestigeUpgrades,
         achievements,
         totalUpgradesOwned,
         canPrestige,
+        prestigeGain,
         isLoaded,
         hasSaveData,
         saveGameState,
         buyUpgrade,
         doPrestige,
+        buyPrestigeUpgrade,
         resetGame,
         unlockAchievement,
     };

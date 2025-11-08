@@ -12,7 +12,7 @@ const Header: React.FC<HeaderProps> = ({ energy, formattedEnergy, onCollect }) =
 
     return (
         <header>
-            <h1 className="text-lg md:text-2xl text-center my-2 text-[var(--text-header)] [text-shadow:1px_1px_#000]">Idle Game Optimisé</h1>
+            <h1 className="text-lg md:text-2xl text-center my-2 text-[var(--text-header)] [text-shadow:1px_1px_#000]">Quantum Core</h1>
             <div className="flex justify-between items-center mx-2 md:mx-4 my-1">
                 <div className="flex-1 mr-2 md:mr-4">
                     <div className="relative w-full h-5 bg-[#222] rounded-full overflow-hidden shadow-inner shadow-black">
