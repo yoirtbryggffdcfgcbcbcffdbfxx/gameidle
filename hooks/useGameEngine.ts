@@ -23,7 +23,7 @@ export const useGameEngine = () => {
     const { settings, setSettings, handleSettingsChange, appState, setAppState } = useSettings();
     const { playSfx, unlockAudio } = useSfx(settings.sfxVolume);
     const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
-    const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.visualEffects);
+    const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.showFloatingText);
     const [showDevPanel, setShowDevPanel] = useState(false);
     
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -64,21 +64,23 @@ export const useGameEngine = () => {
         popups.setShowAscensionTutorial(true);
     }, [popups]);
 
-    const gameState = useGameState(handleAchievementUnlock, handleShowAscensionTutorial);
+    const gameState = useGameState(handleAchievementUnlock, handleShowAscensionTutorial, appState);
     const { 
         energy, 
         productionTotal,
         clickPowerFromUpgrades,
-        ascensionCount, 
+        ascensionLevel,
+        ascensionPoints, 
         ascensionBonuses, 
+        achievementBonuses,
         canAscend,
         ascensionGain,
         maxEnergy,
         isLoaded,
         unlockAchievement,
         incrementClickCount,
-        availableUpgradesForCurrentAscension,
-        upgradesAtMaxLevelCount,
+        unlockedUpgradesForCurrentAscension,
+        unlockedUpgradesAtMaxLevelCount,
         coreCharge,
         isCoreDischarging,
         quantumShards,
@@ -87,6 +89,10 @@ export const useGameEngine = () => {
         hasSeenCoreTutorial,
         setHasSeenCoreTutorial
     } = gameState;
+
+    const totalClickPower = useMemo(() => {
+        return (CLICK_POWER + clickPowerFromUpgrades + ascensionLevel) * ascensionBonuses.clickMultiplier * achievementBonuses.click;
+    }, [clickPowerFromUpgrades, ascensionLevel, ascensionBonuses.clickMultiplier, achievementBonuses.click]);
     
     const memoizedFormatNumber = useCallback((num: number) => formatNumber(num, settings.scientificNotation), [settings.scientificNotation]);
     const formattedEnergy = useMemo(() => memoizedFormatNumber(energy), [energy, memoizedFormatNumber]);
@@ -128,7 +134,7 @@ export const useGameEngine = () => {
         const productionTimer = setInterval(() => {
             const currentProduction = productionTotalRef.current;
             if (currentProduction > 0 && !isCoreDischargingRef.current) {
-                addFloatingTextRef.current(`+${memoizedFormatNumberRef.current(currentProduction)}`, window.innerWidth * 0.25, 60, '#00ffcc');
+                addFloatingTextRef.current(`+${memoizedFormatNumberRef.current(currentProduction)}`, window.innerWidth / 3, window.innerHeight / 2, '#00ffcc');
             }
         }, 1000);
 
@@ -140,41 +146,30 @@ export const useGameEngine = () => {
         const saveTimer = setInterval(() => gameState.saveGameState(settings), 5000);
         return () => clearInterval(saveTimer);
     }, [gameState, settings, isLoaded, appState]);
-
-    // Auto-advance tutorial
-    useEffect(() => {
-        if (popups.tutorialStep === 3) {
-            const timer = setTimeout(() => {
-                popups.setTutorialStep(0); // Auto-close after showing final message
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [popups.tutorialStep, popups.setTutorialStep]);
     
     const handleCollect = (e: React.MouseEvent<HTMLButtonElement>) => {
         playSfx('click');
         incrementClickCount();
-        const clickValue = (CLICK_POWER + clickPowerFromUpgrades + ascensionCount) * ascensionBonuses.clickMultiplier;
-        const newEnergy = Math.min(energy + clickValue, maxEnergy);
+        const newEnergy = Math.min(energy + totalClickPower, maxEnergy);
         gameState.setEnergy(newEnergy);
         
         addParticle(e.clientX, e.clientY, PARTICLE_COLORS.CLICK);
-        addFloatingText(`+${memoizedFormatNumber(clickValue)}`, e.clientX, e.clientY, '#ffffff');
+        addFloatingText(`+${memoizedFormatNumber(totalClickPower)}`, e.clientX, e.clientY, '#ffffff');
         unlockAchievement("Étincelle Initiale");
 
-        if (popups.tutorialStep === 1 && newEnergy >= 10) {
-            gameState.unlockSpecificUpgrade('gen_1');
+        if (popups.tutorialStep === 1) {
             popups.setTutorialStep(2);
         }
     };
 
     const handleBuyUpgrade = (index: number) => {
+        const upgradeId = gameState.upgrades[index].id;
         if (gameState.buyUpgrade(index)) {
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
             unlockAchievement("Premier Investissement");
-            if (popups.tutorialStep === 2) {
-                popups.setTutorialStep(3);
+            if (popups.tutorialStep === 3 && upgradeId === 'gen_1') {
+                popups.setTutorialStep(4);
             }
         } else {
             addNotification("Pas assez d'énergie !", 'error');
@@ -256,8 +251,12 @@ export const useGameEngine = () => {
         if (gameState.hasSaveData) {
             popups.setShowNewGameConfirm(true);
         } else {
-            startNewGame();
+            setAppState('cinematic');
         }
+    };
+    
+    const handleStartGameAfterCinematic = () => {
+        startNewGame();
     };
     
     const handleCreditsClick = () => {
@@ -276,7 +275,7 @@ export const useGameEngine = () => {
     // --- DEV HANDLERS ---
     const devHandlers = {
         addEnergy: () => gameState.setEnergy(maxEnergy),
-        addAscension: () => gameState.setAscensionCount(p => p + 10),
+        addAscension: () => gameState.dev_addAscension(),
         unlockAllUpgrades: () => gameState.dev_unlockAllUpgrades(),
         unlockAllAchievements: () => gameState.dev_unlockAllAchievements(),
         resetAchievements: () => gameState.dev_resetAchievements(),
@@ -295,22 +294,26 @@ export const useGameEngine = () => {
             upgrades: gameState.upgrades,
             visibleUpgrades: gameState.visibleUpgrades,
             achievements: gameState.achievements,
-            ascensionCount: gameState.ascensionCount,
+            ascensionLevel: gameState.ascensionLevel,
+            ascensionPoints: gameState.ascensionPoints,
             purchasedAscensionUpgrades: gameState.purchasedAscensionUpgrades,
             ascensionBonuses: gameState.ascensionBonuses,
+            achievementBonuses: gameState.achievementBonuses,
             coreCharge,
             isCoreDischarging,
             quantumShards,
             purchasedCoreUpgrades,
             coreBonuses,
+            productionTotal,
+            clickPower: totalClickPower,
         },
         
         computedState: {
             canAscend: gameState.canAscend,
             ascensionGain: gameState.ascensionGain,
             totalUpgradesOwned: gameState.totalUpgradesOwned,
-            availableUpgradesForCurrentAscension,
-            upgradesAtMaxLevelCount,
+            unlockedUpgradesForCurrentAscensionCount: unlockedUpgradesForCurrentAscension.length,
+            unlockedUpgradesAtMaxLevelCount,
             maxEnergy,
             formattedEnergy,
         },
@@ -343,6 +346,8 @@ export const useGameEngine = () => {
             handleNewGameClick,
             handleConfirmNewGame,
             handleCreditsClick,
+            handleStartGameAfterCinematic,
+            unlockSpecificUpgrade: gameState.unlockSpecificUpgrade,
             dev: devHandlers,
         },
         

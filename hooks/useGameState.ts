@@ -4,7 +4,7 @@ import { INITIAL_UPGRADES, SAVE_KEY, ASCENSION_UPGRADES, MAX_UPGRADE_LEVEL, CORE
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
 import { calculateCost } from '../utils/helpers';
 
-export const useGameState = (onAchievementUnlock: (achievement: Achievement) => void, onShowAscensionTutorial: () => void) => {
+export const useGameState = (onAchievementUnlock: (achievement: Achievement) => void, onShowAscensionTutorial: () => void, appState: string) => {
     const [energy, _setEnergy] = useState(0);
     const energyRef = useRef(energy);
     const [totalClicks, setTotalClicks] = useState(0);
@@ -25,9 +25,9 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
     const [upgrades, setUpgrades] = useState<Upgrade[]>(() => 
         INITIAL_UPGRADES.map(u => ({ ...u, currentCost: calculateCost(u.baseCost, u.owned) }))
     );
-    const [ascensionCount, setAscensionCount] = useState(0);
+    const [ascensionLevel, setAscensionLevel] = useState(0);
+    const [ascensionPoints, setAscensionPoints] = useState(0);
     const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
-    const unlockingRef = useRef(new Set<string>()); // Synchronous guard against unlock race conditions
     const [purchasedAscensionUpgrades, setPurchasedAscensionUpgrades] = useState<string[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasSaveData, setHasSaveData] = useState(false);
@@ -41,7 +41,25 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
     const [purchasedCoreUpgrades, setPurchasedCoreUpgrades] = useState<string[]>([]);
     const [hasSeenCoreTutorial, setHasSeenCoreTutorial] = useState(false);
 
-    const maxEnergy = useMemo(() => 1_000_000_000 * Math.pow(10, ascensionCount), [ascensionCount]);
+    const maxEnergy = useMemo(() => 1_000_000_000 * Math.pow(10, ascensionLevel), [ascensionLevel]);
+
+    const achievementBonuses = useMemo(() => {
+        const bonuses = {
+            production: 1,
+            click: 1,
+            coreCharge: 1,
+            costReduction: 1,
+        };
+        achievements.filter(a => a.unlocked).forEach(ach => {
+            switch(ach.bonus.type) {
+                case 'PRODUCTION': bonuses.production *= (1 + ach.bonus.value / 100); break;
+                case 'CLICK': bonuses.click *= (1 + ach.bonus.value / 100); break;
+                case 'CORE_CHARGE': bonuses.coreCharge *= (1 + ach.bonus.value / 100); break;
+                case 'COST_REDUCTION': bonuses.costReduction *= (1 - ach.bonus.value / 100); break;
+            }
+        });
+        return bonuses;
+    }, [achievements]);
 
     const ascensionBonuses = useMemo(() => {
         const bonuses = {
@@ -88,25 +106,20 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
                     break;
             }
         });
+        bonuses.chargeRate *= achievementBonuses.coreCharge;
         return bonuses;
-    }, [purchasedCoreUpgrades]);
+    }, [purchasedCoreUpgrades, achievementBonuses.coreCharge]);
     
-    const achievementBonus = useMemo(() => {
-        return achievements
-            .filter(a => a.unlocked)
-            .reduce((total, ach) => total * (1 + ach.bonus / 100), 1);
-    }, [achievements]);
-
     const productionTotal = useMemo(() => {
         const baseProduction = upgrades
             .filter(u => u.type === 'PRODUCTION')
             .reduce((total, u) => total + u.production * u.owned, 0);
-        let finalProduction = baseProduction * ascensionBonuses.productionMultiplier * achievementBonus;
+        let finalProduction = baseProduction * ascensionBonuses.productionMultiplier * achievementBonuses.production;
         if (isCoreDischarging) {
             finalProduction *= coreBonuses.multiplier;
         }
         return finalProduction;
-    }, [upgrades, ascensionBonuses.productionMultiplier, coreBonuses.multiplier, achievementBonus, isCoreDischarging]);
+    }, [upgrades, ascensionBonuses.productionMultiplier, achievementBonuses.production, coreBonuses.multiplier, isCoreDischarging]);
     
     const clickPowerFromUpgrades = useMemo(() => {
         return upgrades
@@ -118,43 +131,49 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
         return upgrades.reduce((total, u) => total + u.owned, 0);
     }, [upgrades]);
 
-    const availableUpgradesForCurrentAscension = useMemo(() => {
-        return upgrades.filter(u => u.requiredAscension <= ascensionCount);
-    }, [upgrades, ascensionCount]);
+    const unlockedUpgradesForCurrentAscension = useMemo(() => {
+        return upgrades.filter(u => unlockedUpgrades.has(u.id) && u.requiredAscension <= ascensionLevel);
+    }, [upgrades, unlockedUpgrades, ascensionLevel]);
 
-    const upgradesAtMaxLevelCount = useMemo(() => {
-        return availableUpgradesForCurrentAscension.filter(u => u.owned >= MAX_UPGRADE_LEVEL).length;
-    }, [availableUpgradesForCurrentAscension]);
+    const unlockedUpgradesAtMaxLevelCount = useMemo(() => {
+        return unlockedUpgradesForCurrentAscension.filter(u => u.owned >= MAX_UPGRADE_LEVEL).length;
+    }, [unlockedUpgradesForCurrentAscension]);
 
-    const canAscend = useMemo(() => energy >= maxEnergy, [energy, maxEnergy]);
+    const canAscend = useMemo(() => {
+        if (ascensionLevel === 0) {
+            const allUnlockedMaxed = unlockedUpgradesForCurrentAscension.length > 0 && unlockedUpgradesAtMaxLevelCount === unlockedUpgradesForCurrentAscension.length;
+            return energy >= maxEnergy && allUnlockedMaxed;
+        }
+        return energy >= maxEnergy;
+    }, [energy, maxEnergy, ascensionLevel, unlockedUpgradesAtMaxLevelCount, unlockedUpgradesForCurrentAscension]);
     
     const ascensionGain = useMemo(() => {
         if (!canAscend) return 0;
-        return 1 + Math.floor(ascensionCount / 5);
-    }, [canAscend, ascensionCount]);
+        return 1 + Math.floor(ascensionLevel / 5);
+    }, [canAscend, ascensionLevel]);
 
     const visibleUpgrades = useMemo(() => {
         return upgrades
             .map((upgrade, index) => ({ upgradeData: upgrade, originalIndex: index }))
-            .filter(({ upgradeData }) => unlockedUpgrades.has(upgradeData.id) && upgradeData.requiredAscension <= ascensionCount);
-    }, [upgrades, unlockedUpgrades, ascensionCount]);
+            .filter(({ upgradeData }) => unlockedUpgrades.has(upgradeData.id) && upgradeData.requiredAscension <= ascensionLevel);
+    }, [upgrades, unlockedUpgrades, ascensionLevel]);
 
     // Effect to check for new upgrades to reveal based on current energy
     useEffect(() => {
-        if (!isLoaded) return;
+        if (!isLoaded || appState !== 'game') return;
         const newlyUnlocked = new Set<string>();
         upgrades.forEach(u => {
-            if (energy >= u.unlockCost && !unlockedUpgrades.has(u.id) && u.requiredAscension <= ascensionCount && u.id !== 'gen_1') {
+            if (energy >= u.unlockCost && !unlockedUpgrades.has(u.id) && u.requiredAscension <= ascensionLevel && u.id !== 'gen_1') {
                 newlyUnlocked.add(u.id);
             }
         });
         if (newlyUnlocked.size > 0) {
             setUnlockedUpgrades(prev => new Set([...prev, ...newlyUnlocked]));
         }
-    }, [energy, upgrades, unlockedUpgrades, isLoaded, ascensionCount]);
+    }, [energy, upgrades, unlockedUpgrades, isLoaded, ascensionLevel, appState]);
 
     useEffect(() => {
-        if (!isLoaded) return;
+        if (!isLoaded || appState !== 'game') return;
         const gameTick = setInterval(() => {
             setEnergy(prev => Math.min(prev + productionTotal / 10, maxEnergy)); // Tick 10 times per second for smoother updates
             if (!isCoreDischarging) {
@@ -162,16 +181,16 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             }
         }, 100);
         return () => clearInterval(gameTick);
-    }, [productionTotal, isLoaded, setEnergy, maxEnergy, isCoreDischarging, coreBonuses.chargeRate]);
+    }, [productionTotal, isLoaded, setEnergy, maxEnergy, isCoreDischarging, coreBonuses.chargeRate, appState]);
     
     useEffect(() => {
         setUpgrades(currentUpgrades => 
             currentUpgrades.map(u => ({
                 ...u,
-                currentCost: calculateCost(u.baseCost, u.owned, ascensionBonuses.costReduction)
+                currentCost: calculateCost(u.baseCost, u.owned, ascensionBonuses.costReduction * achievementBonuses.costReduction)
             }))
         );
-    }, [ascensionBonuses.costReduction]);
+    }, [ascensionBonuses.costReduction, achievementBonuses.costReduction]);
 
     useEffect(() => {
         try {
@@ -179,9 +198,10 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             if (savedGame) {
                 setHasSaveData(true);
                 const data = JSON.parse(savedGame);
-                const loadedAscensionCount = data.ascensionCount || 0;
+                const loadedAscensionLevel = data.ascensionLevel || 0;
                 setEnergy(data.energy || 0);
-                setAscensionCount(loadedAscensionCount);
+                setAscensionLevel(loadedAscensionLevel);
+                setAscensionPoints(data.ascensionPoints || 0);
                 setTotalClicks(data.totalClicks || 0);
                 setPurchasedAscensionUpgrades(data.purchasedAscensionUpgrades || []);
                 setHasSeenAscensionTutorial(data.hasSeenAscensionTutorial || false);
@@ -196,7 +216,7 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
                 const loadedUpgrades = INITIAL_UPGRADES.map((u) => {
                     const savedUpgrade = data.upgrades?.find((su: any) => su.name === u.name);
                     const owned = savedUpgrade ? savedUpgrade.owned : 0;
-                    if (owned > 0 && u.requiredAscension <= loadedAscensionCount) {
+                    if (owned > 0 && u.requiredAscension <= loadedAscensionLevel) {
                         revealedUpgrades.add(u.id);
                     }
                     return { ...u, owned, currentCost: calculateCost(u.baseCost, owned) };
@@ -209,26 +229,21 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
                      return savedAchievement ? { ...a, unlocked: savedAchievement.unlocked } : a;
                 });
                 setAchievements(loadedAchievements);
-                
-                loadedAchievements.forEach(a => {
-                    if (a.unlocked) {
-                        unlockingRef.current.add(a.name);
-                    }
-                });
             }
         } catch (error) {
             console.error("Failed to load game state:", error);
         } finally {
             setIsLoaded(true);
         }
-    // eslint-disable-next-line react-hooks-exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setEnergy]);
 
     const saveGameState = useCallback((currentSettings: Settings) => {
         const gameState = { 
             energy, 
             upgrades: upgrades.map(({name, owned}) => ({name, owned})), 
-            ascensionCount, 
+            ascensionLevel,
+            ascensionPoints, 
             achievements,
             purchasedAscensionUpgrades,
             totalClicks,
@@ -241,7 +256,7 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             hasSeenCoreTutorial,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
-    }, [energy, upgrades, ascensionCount, achievements, purchasedAscensionUpgrades, totalClicks, hasSeenAscensionTutorial, coreCharge, isCoreDischarging, quantumShards, purchasedCoreUpgrades, hasSeenCoreTutorial]);
+    }, [energy, upgrades, ascensionLevel, ascensionPoints, achievements, purchasedAscensionUpgrades, totalClicks, hasSeenAscensionTutorial, coreCharge, isCoreDischarging, quantumShards, purchasedCoreUpgrades, hasSeenCoreTutorial]);
 
     const buyUpgrade = useCallback((index: number) => {
         const upgrade = upgrades[index];
@@ -252,13 +267,13 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
                 const newUpgrades = [...currentUpgrades];
                 const targetUpgrade = newUpgrades[index];
                 targetUpgrade.owned++;
-                targetUpgrade.currentCost = calculateCost(targetUpgrade.baseCost, targetUpgrade.owned, ascensionBonuses.costReduction);
+                targetUpgrade.currentCost = calculateCost(targetUpgrade.baseCost, targetUpgrade.owned, ascensionBonuses.costReduction * achievementBonuses.costReduction);
                 return newUpgrades;
             });
             return true;
         }
         return false;
-    }, [upgrades, setEnergy, ascensionBonuses.costReduction]);
+    }, [upgrades, setEnergy, ascensionBonuses.costReduction, achievementBonuses.costReduction]);
     
     const incrementClickCount = useCallback(() => setTotalClicks(c => c + 1), []);
     
@@ -267,35 +282,32 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
     }, []);
 
     const unlockAchievement = useCallback((name: string) => {
-        if (unlockingRef.current.has(name)) {
-            return;
-        }
-        const isAlreadyUnlockedInState = achievements.find(a => a.name === name)?.unlocked;
-        if (isAlreadyUnlockedInState) {
-            unlockingRef.current.add(name);
-            return;
-        }
-        unlockingRef.current.add(name);
-        setAchievements(prev => {
-            const achievementIndex = prev.findIndex(a => a.name === name);
-            if (achievementIndex > -1 && !prev[achievementIndex].unlocked) {
-                const achievementData = INITIAL_ACHIEVEMENTS.find(a => a.name === name);
-                if (achievementData) {
-                    onAchievementUnlock(achievementData);
-                }
-                const newAchievements = [...prev];
-                newAchievements[achievementIndex] = { ...newAchievements[achievementIndex], unlocked: true };
-                return newAchievements;
+        setAchievements(currentAchievements => {
+            const ach = currentAchievements.find(a => a.name === name);
+
+            // If achievement doesn't exist or is already unlocked, do nothing.
+            if (!ach || ach.unlocked) {
+                return currentAchievements;
             }
-            return prev;
+
+            // Fire the notification/sound effect callback with the original data
+            const achievementData = INITIAL_ACHIEVEMENTS.find(a => a.name === name);
+            if (achievementData) {
+                onAchievementUnlock(achievementData);
+            }
+
+            // Create new state array with the unlocked achievement
+            return currentAchievements.map(a => 
+                a.name === name ? { ...a, unlocked: true } : a
+            );
         });
-    }, [onAchievementUnlock, achievements]);
+    }, [onAchievementUnlock]);
 
     useEffect(() => {
-        if (!isLoaded) return;
+        if (!isLoaded || appState !== 'game') return;
         
         // Ascension Tutorial Check
-        if (energy >= maxEnergy && ascensionCount === 0 && !hasSeenAscensionTutorial) {
+        if (energy >= maxEnergy && ascensionLevel === 0 && !hasSeenAscensionTutorial) {
             onShowAscensionTutorial();
             setHasSeenAscensionTutorial(true);
         }
@@ -322,42 +334,43 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
         checkAndUnlock(productionTotal >= 1000, "Moteur de l'Infini");
         checkAndUnlock(productionTotal >= 100000, "Singularité Déchaînée");
         
-        checkAndUnlock(ascensionCount >= 1, "Au-delà du Voile");
-        checkAndUnlock(ascensionCount >= 5, "Transcendance");
-        checkAndUnlock(ascensionCount >= 10, "Maître du Multivers");
-        checkAndUnlock(ascensionCount >= 25, "Légende Éternelle");
+        checkAndUnlock(ascensionLevel >= 1, "Au-delà du Voile");
+        checkAndUnlock(ascensionLevel >= 5, "Transcendance");
+        checkAndUnlock(ascensionLevel >= 10, "Maître du Multivers");
+        checkAndUnlock(ascensionLevel >= 25, "Légende Éternelle");
         
         checkAndUnlock(totalClicks >= 1000, "Frénésie du Clic");
 
         const galacticCollector = upgrades.find(u => u.id === 'gen_10');
         checkAndUnlock(galacticCollector && galacticCollector.owned >= 100, "Collectionneur Cosmique");
 
-    }, [totalUpgradesOwned, energy, productionTotal, ascensionCount, achievements, unlockAchievement, isLoaded, maxEnergy, totalClicks, upgrades, onShowAscensionTutorial, hasSeenAscensionTutorial]);
+    }, [totalUpgradesOwned, energy, productionTotal, ascensionLevel, achievements, unlockAchievement, isLoaded, maxEnergy, totalClicks, upgrades, onShowAscensionTutorial, hasSeenAscensionTutorial, appState]);
 
     const doAscension = useCallback(() => {
         if (canAscend) {
             const gain = ascensionGain;
-            setAscensionCount(prev => prev + gain);
+            setAscensionLevel(prev => prev + 1);
+            setAscensionPoints(prev => prev + gain);
             setQuantumShards(prev => prev + gain);
             setEnergy(ascensionBonuses.startingEnergy);
-            setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, ascensionBonuses.costReduction) })));
+            setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, ascensionBonuses.costReduction * achievementBonuses.costReduction) })));
             setUnlockedUpgrades(new Set());
             setCoreCharge(0);
             setIsCoreDischarging(false);
             return true;
         }
         return false;
-    }, [canAscend, ascensionGain, setEnergy, ascensionBonuses]);
+    }, [canAscend, ascensionGain, setEnergy, ascensionBonuses, achievementBonuses.costReduction]);
     
     const buyAscensionUpgrade = useCallback((upgradeId: string) => {
         const upgrade = ASCENSION_UPGRADES.find(u => u.id === upgradeId);
-        if (upgrade && ascensionCount >= upgrade.cost && !purchasedAscensionUpgrades.includes(upgradeId)) {
-            setAscensionCount(pc => pc - upgrade.cost);
+        if (upgrade && ascensionPoints >= upgrade.cost && !purchasedAscensionUpgrades.includes(upgradeId)) {
+            setAscensionPoints(pc => pc - upgrade.cost);
             setPurchasedAscensionUpgrades(prev => [...prev, upgradeId]);
             return true;
         }
         return false;
-    }, [ascensionCount, purchasedAscensionUpgrades]);
+    }, [ascensionPoints, purchasedAscensionUpgrades]);
 
     const buyCoreUpgrade = useCallback((upgradeId: string) => {
         const upgrade = CORE_UPGRADES.find(u => u.id === upgradeId);
@@ -390,20 +403,23 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             setQuantumShards(0);
             setHasSeenAscensionTutorial(false);
             setHasSeenCoreTutorial(false);
+            setAscensionLevel(0);
         }
         setEnergy(hardReset ? 0 : ascensionBonuses.startingEnergy);
-        setAscensionCount(0);
+        setAscensionPoints(0);
         setTotalClicks(0);
-        setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, hardReset ? 1 : ascensionBonuses.costReduction) })));
+        setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, hardReset ? 1 : ascensionBonuses.costReduction * achievementBonuses.costReduction) })));
         setAchievements(INITIAL_ACHIEVEMENTS.map(a => ({ ...a, unlocked: false })));
         setUnlockedUpgrades(new Set());
-        unlockingRef.current.clear();
         setCoreCharge(0);
         setIsCoreDischarging(false);
-
-    }, [setEnergy, ascensionBonuses]);
+    }, [setEnergy, ascensionBonuses, achievementBonuses]);
 
     // --- DEV FUNCTIONS ---
+    const dev_addAscension = () => {
+        setAscensionLevel(p => p + 1);
+        setAscensionPoints(p => p + 10);
+    };
     const dev_unlockAllUpgrades = () => {
         setUpgrades(prev => prev.map(u => ({...u, owned: u.owned + 10, currentCost: calculateCost(u.baseCost, u.owned + 10, ascensionBonuses.costReduction)})));
         setUnlockedUpgrades(new Set(upgrades.map(u => u.id)));
@@ -417,16 +433,19 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
         setEnergy,
         upgrades,
         visibleUpgrades,
-        ascensionCount,
-        setAscensionCount,
+        ascensionLevel,
+        ascensionPoints,
+        setAscensionPoints, // For dev panel
+        setAscensionLevel, // For dev panel
         productionTotal,
         clickPowerFromUpgrades,
         ascensionBonuses,
+        achievementBonuses,
         purchasedAscensionUpgrades,
         achievements,
         totalUpgradesOwned,
-        availableUpgradesForCurrentAscension,
-        upgradesAtMaxLevelCount,
+        unlockedUpgradesForCurrentAscension,
+        unlockedUpgradesAtMaxLevelCount,
         canAscend,
         ascensionGain,
         maxEnergy,
@@ -452,5 +471,6 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
         dev_unlockAllUpgrades,
         dev_unlockAllAchievements,
         dev_resetAchievements,
+        dev_addAscension,
     };
 };

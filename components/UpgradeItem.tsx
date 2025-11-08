@@ -1,15 +1,15 @@
-
 import React from 'react';
 import { Upgrade } from '../types';
 import { MAX_UPGRADE_LEVEL } from '../constants';
 
 interface UpgradeItemProps {
+    id: string;
     upgrade: Upgrade;
     onBuy: () => void;
     formatNumber: (num: number) => string;
 }
 
-const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ upgrade, onBuy, formatNumber }) => {
+const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber }) => {
     const isClickUpgrade = upgrade.type === 'CLICK';
     const effectText = isClickUpgrade
         ? `+${formatNumber(upgrade.production)} par clic`
@@ -24,7 +24,7 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ upgrade, onBuy, fo
     const isMaxLevel = upgrade.owned >= MAX_UPGRADE_LEVEL;
 
     return (
-        <div className="bg-[var(--bg-upgrade)] p-2 my-1.5 rounded-lg w-[98%] mx-auto shadow-lg relative">
+        <div id={id} className="bg-[var(--bg-upgrade)] p-2 my-1.5 rounded-lg w-[98%] mx-auto shadow-lg relative">
             <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="flex-grow">
                     <strong style={{ color: upgrade.color, textShadow: '1px 1px 1px #000' }}>

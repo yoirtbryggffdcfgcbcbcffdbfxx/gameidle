@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Settings } from '../types';
 import { SAVE_KEY } from '../constants';
 
-type AppState = 'loading' | 'menu' | 'game';
+type AppState = 'loading' | 'menu' | 'game' | 'cinematic';
 
 const initialSettings: Settings = { 
-    visualEffects: true, 
+    visualEffects: true,
+    showFloatingText: true,
     animSpeed: 2,
     scientificNotation: false,
     theme: 'dark',

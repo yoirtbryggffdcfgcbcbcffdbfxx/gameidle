@@ -7,12 +7,17 @@ import MainMenu from './components/MainMenu';
 import GameUI from './components/GameUI';
 import NotificationCenter from './components/Notification';
 import CreditsPopup from './components/popups/CreditsPopup';
+import IntroCinematic from './components/IntroCinematic';
 
 const App: React.FC = () => {
     const game = useGameEngine();
 
     if (game.appState === 'loading') {
         return <LoadingScreen />;
+    }
+
+    if (game.appState === 'cinematic') {
+        return <IntroCinematic onComplete={game.handlers.handleStartGameAfterCinematic} />;
     }
 
     if (game.appState === 'menu') {

@@ -6,7 +6,8 @@ import { Upgrade } from '../../types';
 
 interface AscensionPopupProps {
     canAscend: boolean;
-    ascensionCount: number;
+    ascensionPoints: number;
+    ascensionLevel: number;
     ascensionGain: number;
     purchasedAscensionUpgrades: string[];
     onAscend: () => void;
@@ -15,11 +16,14 @@ interface AscensionPopupProps {
     energy: number;
     maxEnergy: number;
     formatNumber: (n: number) => string;
+    unlockedUpgradesAtMaxLevelCount: number;
+    unlockedUpgradesForCurrentAscensionCount: number;
 }
 
 const AscensionPopup: React.FC<AscensionPopupProps> = ({
     canAscend,
-    ascensionCount,
+    ascensionPoints,
+    ascensionLevel,
     ascensionGain,
     purchasedAscensionUpgrades,
     onAscend,
@@ -28,24 +32,39 @@ const AscensionPopup: React.FC<AscensionPopupProps> = ({
     energy,
     maxEnergy,
     formatNumber,
+    unlockedUpgradesAtMaxLevelCount,
+    unlockedUpgradesForCurrentAscensionCount
 }) => {
+    const isFirstAscension = ascensionLevel === 0;
+
     return (
         <Popup title="Ascension" onClose={onClose}>
             <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="bg-[var(--bg-main)] p-3 rounded-lg text-center">
-                    <p className="text-lg">Vous avez <strong className="text-yellow-400">{ascensionCount}</strong> points d'ascension.</p>
+                    <p className="text-lg">Vous avez <strong className="text-yellow-400">{ascensionPoints}</strong> points d'ascension.</p>
                     <p className="text-sm opacity-80">Ces points offrent des bonus permanents.</p>
                 </div>
 
                 <div className="bg-[var(--bg-upgrade)] p-3 rounded-lg">
                     <h3 className="text-lg text-[var(--text-bright)] mb-2">Faire une Ascension</h3>
-                    <p className="mb-3 text-xs">
-                        Condition: Atteindre la capacité d'énergie maximale.
-                        <br/>
-                        <span className={`mt-1 inline-block ${canAscend ? 'text-green-400' : 'text-red-400'}`}>
-                           ({formatNumber(energy)} / {formatNumber(maxEnergy)})
-                        </span>
-                    </p>
+                    <div className="mb-3 text-xs space-y-2">
+                        <p>
+                            Condition: Atteindre la capacité d'énergie maximale.
+                            <br/>
+                            <span className={`mt-1 inline-block ${energy >= maxEnergy ? 'text-green-400' : 'text-red-400'}`}>
+                               ({formatNumber(energy)} / {formatNumber(maxEnergy)})
+                            </span>
+                        </p>
+                        {isFirstAscension && (
+                            <p>
+                                Condition (1ère Ascension): Maximiser toutes les améliorations.
+                                <br />
+                                <span className={`mt-1 inline-block ${unlockedUpgradesAtMaxLevelCount === unlockedUpgradesForCurrentAscensionCount ? 'text-green-400' : 'text-red-400'}`}>
+                                    ({unlockedUpgradesAtMaxLevelCount} / {unlockedUpgradesForCurrentAscensionCount} améliorations maxées)
+                                </span>
+                            </p>
+                        )}
+                    </div>
                     
                     {canAscend && <p className="text-green-400">Vous gagnerez {ascensionGain} point d'ascension et {ascensionGain} Fragment Quantique.</p>}
                     
@@ -64,7 +83,7 @@ const AscensionPopup: React.FC<AscensionPopupProps> = ({
                      <div className="space-y-2">
                         {ASCENSION_UPGRADES.map(upgrade => {
                             const isPurchased = purchasedAscensionUpgrades.includes(upgrade.id);
-                            const canAfford = ascensionCount >= upgrade.cost;
+                            const canAfford = ascensionPoints >= upgrade.cost;
                             return (
                                 <div key={upgrade.id} className={`p-2 rounded flex justify-between items-center ${isPurchased ? 'bg-green-800/50' : 'bg-black/20'}`}>
                                     <div>

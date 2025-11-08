@@ -16,7 +16,11 @@ export interface Achievement {
   unlocked: boolean;
   description: string;
   hidden: boolean;
-  bonus: number; // e.g., 1 for a 1% bonus
+  bonus: {
+      type: 'PRODUCTION' | 'CLICK' | 'CORE_CHARGE' | 'COST_REDUCTION';
+      value: number; // Percentage value
+  };
+  relatedUpgradeName?: string;
 }
 
 export interface AscensionUpgrade {
@@ -44,7 +48,8 @@ export interface CoreUpgrade {
 export interface GameState {
   energy: number;
   upgrades: Upgrade[];
-  ascensionCount: number;
+  ascensionLevel: number;
+  ascensionPoints: number;
   achievements: Achievement[];
   purchasedAscensionUpgrades: string[];
   totalClicks: number;
@@ -58,6 +63,7 @@ export interface GameState {
 
 export interface Settings {
     visualEffects: boolean;
+    showFloatingText: boolean;
     animSpeed: number;
     scientificNotation: boolean;
     theme: 'dark' | 'light' | 'matrix' | 'solaris' | 'cyberpunk';
