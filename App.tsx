@@ -18,13 +18,14 @@ import ConfirmationPopup from './components/popups/ConfirmationPopup';
 import LoadingScreen from './components/LoadingScreen';
 import MainMenu from './components/MainMenu';
 import GameUI from './components/GameUI';
+import Notification from './components/Notification';
 
 const App: React.FC = () => {
     const { settings, setSettings, handleSettingsChange, appState, setAppState } = useSettings();
     const { playSfx, unlockAudio } = useSfx(settings.sfxVolume);
     const { notification, showNotification } = useNotifier();
     const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
-    const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.floatingText);
+    const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.visualEffects);
     
     const {
         activePopup,
@@ -92,7 +93,7 @@ const App: React.FC = () => {
         addParticle(e.clientX, e.clientY, PARTICLE_COLORS.CLICK);
         addFloatingText(`+${memoizedFormatNumber(clickValue)}`, e.clientX, e.clientY, '#ffffff');
         if (unlockAchievement("Premier Clic")) {
-            showNotification("Succès débloqué : Premier Clic");
+            showNotification("Premier Clic", 'achievement');
         }
     };
 
@@ -101,30 +102,30 @@ const App: React.FC = () => {
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
             if (unlockAchievement("Premier Achat")) {
-                showNotification("Succès débloqué : Premier Achat");
+                showNotification("Premier Achat", 'achievement');
             }
         } else {
-            showNotification("Pas assez d'énergie !");
+            showNotification("Pas assez d'énergie !", 'error');
         }
     };
 
     useEffect(() => {
         if (appState !== 'game') return;
-        if (totalUpgradesOwned >= 10 && unlockAchievement("Collectionneur")) showNotification("Succès débloqué : Collectionneur");
-        if (totalUpgradesOwned >= 50 && unlockAchievement("Magnat")) showNotification("Succès débloqué : Magnat");
-        if (totalUpgradesOwned >= 200 && unlockAchievement("Empereur Industriel")) showNotification("Succès débloqué : Empereur Industriel");
+        if (totalUpgradesOwned >= 10 && unlockAchievement("Collectionneur")) showNotification("Collectionneur", 'achievement');
+        if (totalUpgradesOwned >= 50 && unlockAchievement("Magnat")) showNotification("Magnat", 'achievement');
+        if (totalUpgradesOwned >= 200 && unlockAchievement("Empereur Industriel")) showNotification("Empereur Industriel", 'achievement');
 
-        if (energy >= 100 && unlockAchievement("Milliardaire en Énergie")) showNotification("Succès débloqué : Milliardaire en Énergie");
-        if (energy >= 1000 && unlockAchievement("Magnat de l'Énergie")) showNotification("Succès débloqué : Magnat de l'Énergie");
-        if (energy >= 10000 && unlockAchievement("Divinité Énergétique")) showNotification("Succès débloqué : Divinité Énergétique");
+        if (energy >= 100 && unlockAchievement("Milliardaire en Énergie")) showNotification("Milliardaire en Énergie", 'achievement');
+        if (energy >= 1000 && unlockAchievement("Magnat de l'Énergie")) showNotification("Magnat de l'Énergie", 'achievement');
+        if (energy >= 10000 && unlockAchievement("Divinité Énergétique")) showNotification("Divinité Énergétique", 'achievement');
 
-        if (productionTotal >= 10 && unlockAchievement("Début de Production")) showNotification("Succès débloqué : Début de Production");
-        if (productionTotal >= 100 && unlockAchievement("Automatisation")) showNotification("Succès débloqué : Automatisation");
-        if (productionTotal >= 1000 && unlockAchievement("Puissance Industrielle")) showNotification("Succès débloqué : Puissance Industrielle");
-        if (productionTotal >= 10000 && unlockAchievement("Singularité Productive")) showNotification("Succès débloqué : Singularité Productive");
+        if (productionTotal >= 10 && unlockAchievement("Début de Production")) showNotification("Début de Production", 'achievement');
+        if (productionTotal >= 100 && unlockAchievement("Automatisation")) showNotification("Automatisation", 'achievement');
+        if (productionTotal >= 1000 && unlockAchievement("Puissance Industrielle")) showNotification("Puissance Industrielle", 'achievement');
+        if (productionTotal >= 10000 && unlockAchievement("Singularité Productive")) showNotification("Singularité Productive", 'achievement');
         
-        if (prestigeCount >= 5 && unlockAchievement("Prestigieux")) showNotification("Succès débloqué : Prestigieux");
-        if (prestigeCount >= 25 && unlockAchievement("Légende du Prestige")) showNotification("Succès débloqué : Légende du Prestige");
+        if (prestigeCount >= 5 && unlockAchievement("Prestigieux")) showNotification("Prestigieux", 'achievement');
+        if (prestigeCount >= 25 && unlockAchievement("Légende du Prestige")) showNotification("Légende du Prestige", 'achievement');
 
     }, [totalUpgradesOwned, energy, productionTotal, prestigeCount, unlockAchievement, showNotification, appState]);
     
@@ -141,7 +142,7 @@ const App: React.FC = () => {
         const newPrestigeCount = prestigeCount + prestigeGain;
         if (doPrestige()) {
             if (unlockAchievement("Première Prestige")) {
-                showNotification("Succès débloqué : Première Prestige");
+                showNotification("Première Prestige", 'achievement');
             }
             showNotification(`Prestige x${newPrestigeCount} obtenu !`);
         }
@@ -153,7 +154,7 @@ const App: React.FC = () => {
             playSfx('buy');
             showNotification("Amélioration de prestige achetée !");
         } else {
-            showNotification("Pas assez de points de prestige !");
+            showNotification("Pas assez de points de prestige !", 'error');
         }
     };
 
@@ -223,44 +224,47 @@ const App: React.FC = () => {
     }
     
     return (
-        <GameUI
-            // State
-            energy={energy}
-            upgrades={upgrades}
-            achievements={achievements}
-            canPrestige={canPrestige}
-            prestigeGain={prestigeGain}
-            totalUpgradesOwned={totalUpgradesOwned}
-            settings={settings}
-            particles={particles}
-            floatingTexts={floatingTexts}
-            notification={notification}
-            activePopup={activePopup}
-            showTutorial={showTutorial}
-            showHardResetConfirm={showHardResetConfirm}
-            showPrestigeConfirm={showPrestigeConfirm}
-            prestigeCount={prestigeCount}
-            purchasedPrestigeUpgrades={purchasedPrestigeUpgrades}
-            // Formatters
-            formattedEnergy={formattedEnergy}
-            memoizedFormatNumber={memoizedFormatNumber}
-            // Handlers
-            onCollect={handleCollect}
-            onBuyUpgrade={handleBuyUpgrade}
-            onPrestige={handlePrestigeAttempt}
-            onConfirmPrestige={confirmPrestige}
-            onBuyPrestigeUpgrade={handleBuyPrestigeUpgrade}
-            onConfirmHardReset={handleConfirmHardReset}
-            onSettingsChange={handleSettingsChange}
-            // Setters & Functions
-            removeParticle={removeParticle}
-            removeFloatingText={removeFloatingText}
-            setActivePopup={setActivePopup}
-            setShowTutorial={setShowTutorial}
-            setShowHardResetConfirm={setShowHardResetConfirm}
-            setShowPrestigeConfirm={setShowPrestigeConfirm}
-            playSfx={playSfx}
-        />
+        <>
+            <GameUI
+                // State
+                energy={energy}
+                upgrades={upgrades}
+                achievements={achievements}
+                canPrestige={canPrestige}
+                prestigeGain={prestigeGain}
+                totalUpgradesOwned={totalUpgradesOwned}
+                settings={settings}
+                particles={particles}
+                floatingTexts={floatingTexts}
+                activePopup={activePopup}
+                showTutorial={showTutorial}
+                showHardResetConfirm={showHardResetConfirm}
+                showPrestigeConfirm={showPrestigeConfirm}
+                prestigeCount={prestigeCount}
+                purchasedPrestigeUpgrades={purchasedPrestigeUpgrades}
+                // Formatters
+                formattedEnergy={formattedEnergy}
+                memoizedFormatNumber={memoizedFormatNumber}
+                // Handlers
+                onCollect={handleCollect}
+                onBuyUpgrade={handleBuyUpgrade}
+                onPrestige={handlePrestigeAttempt}
+                onConfirmPrestige={confirmPrestige}
+                onBuyPrestigeUpgrade={handleBuyPrestigeUpgrade}
+                onConfirmHardReset={handleConfirmHardReset}
+                onSettingsChange={handleSettingsChange}
+                // Setters & Functions
+                removeParticle={removeParticle}
+                removeFloatingText={removeFloatingText}
+                setActivePopup={setActivePopup}
+                setShowTutorial={setShowTutorial}
+                setShowHardResetConfirm={setShowHardResetConfirm}
+                setShowPrestigeConfirm={setShowPrestigeConfirm}
+                playSfx={playSfx}
+            />
+            {/* FIX: The Notification component expects a `text` prop, not `message`, to align with its prop types. */}
+            <Notification text={notification.text} show={notification.show} type={notification.type} />
+        </>
     );
 };
 

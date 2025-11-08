@@ -1,6 +1,8 @@
+// FIX: This file was created to resolve module not found errors.
 import React from 'react';
 import Popup from './Popup';
 import { Achievement } from '../../types';
+import AchievementCard from '../ui/AchievementCard';
 
 interface AchievementsPopupProps {
     achievements: Achievement[];
@@ -8,14 +10,15 @@ interface AchievementsPopupProps {
 }
 
 const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, onClose }) => {
+    const unlockedCount = achievements.filter(a => a.unlocked).length;
+    
     return (
-        <Popup title="Succès" onClose={onClose}>
-            {achievements.map((a, i) => (
-                <div key={i} className={`p-2 my-1 rounded ${a.unlocked ? 'bg-green-800/50' : 'bg-gray-700/50'}`}>
-                    <span>{a.unlocked ? '✅' : '❌'}</span> {a.name}
-                    <p className="text-xs opacity-70 pl-6">{a.description}</p>
-                </div>
-            ))}
+        <Popup title={`Succès (${unlockedCount}/${achievements.length})`} onClose={onClose}>
+            <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                {achievements.map((ach) => (
+                    <AchievementCard key={ach.name} achievement={ach} />
+                ))}
+            </div>
         </Popup>
     );
 };

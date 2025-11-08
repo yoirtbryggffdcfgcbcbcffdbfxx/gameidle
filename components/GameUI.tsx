@@ -13,7 +13,6 @@ import SettingsPopup from './popups/SettingsPopup';
 import AchievementsPopup from './popups/AchievementsPopup';
 import PrestigePopup from './popups/PrestigePopup';
 import TutorialPopup from './TutorialPopup';
-import Notification from './ui/Notification';
 import ConfirmationPopup from './popups/ConfirmationPopup';
 
 interface GameUIProps {
@@ -27,7 +26,6 @@ interface GameUIProps {
     settings: Settings;
     particles: Particle[];
     floatingTexts: FloatingTextType[];
-    notification: { text: string; show: boolean };
     activePopup: string | null;
     showTutorial: boolean;
     showHardResetConfirm: boolean;
@@ -65,7 +63,6 @@ const GameUI: React.FC<GameUIProps> = ({
     settings,
     particles,
     floatingTexts,
-    notification,
     activePopup,
     showTutorial,
     showHardResetConfirm,
@@ -121,7 +118,9 @@ const GameUI: React.FC<GameUIProps> = ({
                     onPrestige={onPrestige} 
                     onBuyPrestigeUpgrade={onBuyPrestigeUpgrade}
                     onClose={() => setActivePopup(null)} 
-                    formatNumber={memoizedFormatNumber} 
+                    formatNumber={memoizedFormatNumber}
+                    energy={energy}
+                    totalUpgradesOwned={totalUpgradesOwned}
                 />
             )}
             {activePopup === 'achievements' && (
@@ -133,8 +132,6 @@ const GameUI: React.FC<GameUIProps> = ({
             
             <TutorialPopup show={showTutorial} onClose={() => setShowTutorial(false)} />
             
-            <Notification message={notification.text} show={notification.show} />
-
             <ConfirmationPopup
                 show={showHardResetConfirm}
                 title="Confirmer la réinitialisation"

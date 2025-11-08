@@ -10,7 +10,6 @@ const initialSettings: Settings = {
     scientificNotation: false,
     theme: 'dark',
     sfxVolume: 0.5,
-    floatingText: true,
     confirmPrestige: true,
 };
 

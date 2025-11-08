@@ -38,7 +38,6 @@ export interface Settings {
     scientificNotation: boolean;
     theme: 'dark' | 'light' | 'matrix' | 'solaris' | 'cyberpunk';
     sfxVolume: number; // 0 to 1
-    floatingText: boolean;
     confirmPrestige: boolean;
 }
 
@@ -55,4 +54,10 @@ export interface FloatingText {
     x: number;
     y: number;
     color: string;
+}
+
+export interface NotificationState {
+    text: string;
+    show: boolean;
+    type?: 'default' | 'achievement' | 'error';
 }
