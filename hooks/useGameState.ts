@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Upgrade, Achievement, Settings, PrestigeUpgrade } from '../types';
-import { MAX_ENERGY, INITIAL_UPGRADES, INITIAL_ACHIEVEMENTS, SAVE_KEY, PRESTIGE_UPGRADES } from '../constants';
+import { MAX_ENERGY, INITIAL_UPGRADES, SAVE_KEY, PRESTIGE_UPGRADES } from '../constants';
+import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
 import { calculateCost } from '../utils/helpers';
 
 export const useGameState = () => {
@@ -141,17 +142,15 @@ export const useGameState = () => {
     }, [upgrades, setEnergy, prestigeBonuses.costReduction]);
 
     const unlockAchievement = useCallback((name: string) => {
-        let wasUnlocked = false;
         setAchievements(prev => {
             const achievementIndex = prev.findIndex(a => a.name === name);
             if (achievementIndex > -1 && !prev[achievementIndex].unlocked) {
-                wasUnlocked = true;
-                const newAchievements = prev.map((a, i) => i === achievementIndex ? { ...a, unlocked: true } : a);
+                const newAchievements = [...prev];
+                newAchievements[achievementIndex] = { ...newAchievements[achievementIndex], unlocked: true };
                 return newAchievements;
             }
             return prev;
         });
-        return wasUnlocked;
     }, []);
 
     const doPrestige = useCallback(() => {

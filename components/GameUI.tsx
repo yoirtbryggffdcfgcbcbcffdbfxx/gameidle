@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Types
-import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType } from '../types';
+import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType, NotificationState } from '../types';
 
 // Components
 import FlowingParticle from './ui/FlowingParticle';
@@ -16,26 +16,26 @@ import TutorialPopup from './TutorialPopup';
 import ConfirmationPopup from './popups/ConfirmationPopup';
 
 interface GameUIProps {
-    // State
+    // State & Data
     energy: number;
     upgrades: Upgrade[];
     achievements: Achievement[];
+    prestigeCount: number;
+    purchasedPrestigeUpgrades: string[];
     canPrestige: boolean;
     prestigeGain: number;
     totalUpgradesOwned: number;
+    formattedEnergy: string;
     settings: Settings;
     particles: Particle[];
     floatingTexts: FloatingTextType[];
+    notification: NotificationState;
     activePopup: string | null;
     showTutorial: boolean;
     showHardResetConfirm: boolean;
     showPrestigeConfirm: boolean;
-    prestigeCount: number;
-    purchasedPrestigeUpgrades: string[];
-    // Formatters
-    formattedEnergy: string;
-    memoizedFormatNumber: (num: number) => string;
-    // Handlers
+
+    // Callbacks & Handlers
     onCollect: (e: React.MouseEvent<HTMLButtonElement>) => void;
     onBuyUpgrade: (index: number) => void;
     onPrestige: () => void;
@@ -43,49 +43,28 @@ interface GameUIProps {
     onBuyPrestigeUpgrade: (id: string) => void;
     onConfirmHardReset: () => void;
     onSettingsChange: (newSettings: Partial<Settings>) => void;
-    // Setters & Functions
+    
+    // Functions
+    playSfx: (sound: any) => void;
+    formatNumber: (num: number) => string;
     removeParticle: (id: number) => void;
     removeFloatingText: (id: number) => void;
     setActivePopup: (popup: string | null) => void;
     setShowTutorial: (show: boolean) => void;
     setShowHardResetConfirm: (show: boolean) => void;
     setShowPrestigeConfirm: (show: boolean) => void;
-    playSfx: (sound: any) => void;
 }
 
-const GameUI: React.FC<GameUIProps> = ({
-    energy,
-    upgrades,
-    achievements,
-    canPrestige,
-    prestigeGain,
-    totalUpgradesOwned,
-    settings,
-    particles,
-    floatingTexts,
-    activePopup,
-    showTutorial,
-    showHardResetConfirm,
-    showPrestigeConfirm,
-    prestigeCount,
-    purchasedPrestigeUpgrades,
-    formattedEnergy,
-    memoizedFormatNumber,
-    onCollect,
-    onBuyUpgrade,
-    onPrestige,
-    onConfirmPrestige,
-    onBuyPrestigeUpgrade,
-    onConfirmHardReset,
-    onSettingsChange,
-    removeParticle,
-    removeFloatingText,
-    setActivePopup,
-    setShowTutorial,
-    setShowHardResetConfirm,
-    setShowPrestigeConfirm,
-    playSfx,
-}) => {
+
+const GameUI: React.FC<GameUIProps> = (props) => {
+    const {
+        energy, upgrades, achievements, prestigeCount, purchasedPrestigeUpgrades,
+        canPrestige, prestigeGain, totalUpgradesOwned, formattedEnergy,
+        settings, particles, floatingTexts, activePopup, showTutorial, showHardResetConfirm, showPrestigeConfirm,
+        onCollect, onBuyUpgrade, onPrestige, onConfirmPrestige, onBuyPrestigeUpgrade, onConfirmHardReset, onSettingsChange,
+        playSfx, formatNumber, removeParticle, removeFloatingText, setActivePopup, setShowTutorial, setShowHardResetConfirm, setShowPrestigeConfirm
+    } = props;
+
     return (
         <div className="min-h-screen flex flex-col text-xs md:text-sm select-none">
             {particles.map(p => (
@@ -104,7 +83,7 @@ const GameUI: React.FC<GameUIProps> = ({
             <UpgradeList 
                 upgrades={upgrades}
                 onBuyUpgrade={onBuyUpgrade}
-                formatNumber={memoizedFormatNumber}
+                formatNumber={formatNumber}
             />
 
             <Footer onMenuClick={(popup) => setActivePopup(popup)} />
@@ -118,7 +97,7 @@ const GameUI: React.FC<GameUIProps> = ({
                     onPrestige={onPrestige} 
                     onBuyPrestigeUpgrade={onBuyPrestigeUpgrade}
                     onClose={() => setActivePopup(null)} 
-                    formatNumber={memoizedFormatNumber}
+                    formatNumber={formatNumber}
                     energy={energy}
                     totalUpgradesOwned={totalUpgradesOwned}
                 />

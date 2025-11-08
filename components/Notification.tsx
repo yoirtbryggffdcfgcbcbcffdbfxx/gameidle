@@ -6,13 +6,11 @@ interface NotificationProps extends NotificationState {}
 const notificationStyles = {
     default: 'bg-gray-700 text-white',
     error: 'bg-red-600 text-white',
-    achievement: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white',
 };
 
 const notificationIcons = {
     default: 'ℹ️',
     error: '❌',
-    achievement: '🏆',
 };
 
 // FIX: Destructured the `text` prop instead of `message` to align with the `NotificationState` type.
@@ -31,16 +29,15 @@ const Notification: React.FC<NotificationProps> = ({ text, show, type = 'default
 
     if (!render) return null;
 
-    const baseClasses = "fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg font-bold z-[100] [text-shadow:1px_1px_#000] flex items-center gap-3 shadow-2xl transition-all duration-300";
-    const animationClass = show ? 'transform-none opacity-100' : 'translate-y-10 opacity-0';
+    const baseClasses = "fixed top-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg font-bold z-[100] [text-shadow:1px_1px_#000] flex items-center gap-3 shadow-2xl transition-all duration-300";
+    const animationClass = show ? 'transform-none opacity-100' : '-translate-y-20 opacity-0';
     const typeClasses = notificationStyles[type] || notificationStyles.default;
     const icon = notificationIcons[type] || notificationIcons.default;
-    const finalMessage = type === 'achievement' ? `Succès débloqué : ${text}` : text;
 
     return (
         <div className={`${baseClasses} ${typeClasses} ${animationClass}`}>
             <span className="text-xl">{icon}</span>
-            <span>{finalMessage}</span>
+            <span>{text}</span>
         </div>
     );
 };

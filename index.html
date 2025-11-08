@@ -103,6 +103,13 @@
         .animate-progress-fill {
             animation: progress-fill 1s ease-out forwards;
         }
+        @keyframes progress-shrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        .animate-progress-shrink {
+            animation: progress-shrink linear forwards;
+        }
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
@@ -128,6 +135,22 @@
         }
         .animate-float-up {
             animation: float-up 1.5s ease-out forwards;
+        }
+
+        /* Achievement Toast Animations */
+        @keyframes toast-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes toast-out {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(0); opacity: 0; }
+        }
+        .animate-toast-in {
+            animation: toast-in 0.3s ease-out forwards;
+        }
+        .animate-toast-out {
+            animation: toast-out 0.3s ease-out forwards;
         }
 
         /* In-Game Themed Scrollbar */

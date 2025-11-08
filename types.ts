@@ -59,5 +59,5 @@ export interface FloatingText {
 export interface NotificationState {
     text: string;
     show: boolean;
-    type?: 'default' | 'achievement' | 'error';
+    type?: 'default' | 'error';
 }
