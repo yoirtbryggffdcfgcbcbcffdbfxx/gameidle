@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Types
-import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType, NotificationState } from '../types';
+import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType } from '../types';
 
 // Components
 import FlowingParticle from './ui/FlowingParticle';
@@ -29,7 +29,6 @@ interface GameUIProps {
     settings: Settings;
     particles: Particle[];
     floatingTexts: FloatingTextType[];
-    notification: NotificationState;
     activePopup: string | null;
     showTutorial: boolean;
     showHardResetConfirm: boolean;

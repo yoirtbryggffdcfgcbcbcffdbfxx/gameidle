@@ -4,7 +4,7 @@ import { MAX_ENERGY, INITIAL_UPGRADES, SAVE_KEY, PRESTIGE_UPGRADES } from '../co
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
 import { calculateCost } from '../utils/helpers';
 
-export const useGameState = () => {
+export const useGameState = (onAchievementUnlock: (achievement: Achievement) => void) => {
     const [energy, _setEnergy] = useState(0);
     const energyRef = useRef(energy);
 
@@ -26,6 +26,7 @@ export const useGameState = () => {
     );
     const [prestigeCount, setPrestigeCount] = useState(0);
     const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
+    const unlockingRef = useRef(new Set<string>()); // Synchronous guard against unlock race conditions
     const [purchasedPrestigeUpgrades, setPurchasedPrestigeUpgrades] = useState<string[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasSaveData, setHasSaveData] = useState(false);
@@ -71,7 +72,6 @@ export const useGameState = () => {
     
     const prestigeGain = useMemo(() => {
         if (!canPrestige) return 0;
-        // Gain 1 point for every 10 total upgrades owned, starting at 10.
         return Math.floor(totalUpgradesOwned / 10);
     }, [totalUpgradesOwned, canPrestige]);
 
@@ -83,6 +83,15 @@ export const useGameState = () => {
         return () => clearInterval(gameTick);
     }, [productionTotal, isLoaded, setEnergy]);
     
+    useEffect(() => {
+        setUpgrades(currentUpgrades => 
+            currentUpgrades.map(u => ({
+                ...u,
+                currentCost: calculateCost(u.baseCost, u.owned, prestigeBonuses.costReduction)
+            }))
+        );
+    }, [prestigeBonuses.costReduction]);
+
     useEffect(() => {
         try {
             const savedGame = localStorage.getItem(SAVE_KEY);
@@ -96,7 +105,7 @@ export const useGameState = () => {
                 const loadedUpgrades = INITIAL_UPGRADES.map((u) => {
                     const savedUpgrade = data.upgrades?.find((su: any) => su.name === u.name);
                     const owned = savedUpgrade ? savedUpgrade.owned : 0;
-                    return { ...u, owned, currentCost: calculateCost(u.baseCost, owned, prestigeBonuses.costReduction) };
+                    return { ...u, owned, currentCost: calculateCost(u.baseCost, owned) };
                 });
                 setUpgrades(loadedUpgrades);
                 
@@ -105,13 +114,21 @@ export const useGameState = () => {
                      return savedAchievement ? { ...a, unlocked: savedAchievement.unlocked } : a;
                 });
                 setAchievements(loadedAchievements);
+                
+                // Populate the synchronous guard with already unlocked achievements from save
+                loadedAchievements.forEach(a => {
+                    if (a.unlocked) {
+                        unlockingRef.current.add(a.name);
+                    }
+                });
             }
         } catch (error) {
             console.error("Failed to load game state:", error);
         } finally {
             setIsLoaded(true);
         }
-    }, [setEnergy, prestigeBonuses.costReduction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setEnergy]);
 
     const saveGameState = useCallback((currentSettings: Settings) => {
         const gameState = { 
@@ -142,16 +159,66 @@ export const useGameState = () => {
     }, [upgrades, setEnergy, prestigeBonuses.costReduction]);
 
     const unlockAchievement = useCallback((name: string) => {
+        // Synchronous check to prevent re-triggering during the same session/tick.
+        if (unlockingRef.current.has(name)) {
+            return;
+        }
+
+        // Check against current state as a pre-emptive measure.
+        const isAlreadyUnlockedInState = achievements.find(a => a.name === name)?.unlocked;
+        if (isAlreadyUnlockedInState) {
+            unlockingRef.current.add(name); // Ensure guard is also set.
+            return;
+        }
+
+        // Set the lock SYNCHRONOUSLY, BEFORE any async state updates. This is the crucial fix.
+        unlockingRef.current.add(name);
+
         setAchievements(prev => {
             const achievementIndex = prev.findIndex(a => a.name === name);
+            // The check inside the updater is the final source of truth.
             if (achievementIndex > -1 && !prev[achievementIndex].unlocked) {
+                const achievementData = INITIAL_ACHIEVEMENTS.find(a => a.name === name);
+                if (achievementData) {
+                    onAchievementUnlock(achievementData);
+                }
                 const newAchievements = [...prev];
                 newAchievements[achievementIndex] = { ...newAchievements[achievementIndex], unlocked: true };
                 return newAchievements;
             }
             return prev;
         });
-    }, []);
+    }, [onAchievementUnlock, achievements]);
+
+    // Achievement Unlocking Effect - Now co-located with the state it depends on.
+    useEffect(() => {
+        if (!isLoaded) return;
+        
+        const checkAndUnlock = (condition: boolean, achievementName: string) => {
+            if (!condition) return;
+            const achievement = achievements.find(a => a.name === achievementName);
+            if (achievement && !achievement.unlocked) {
+                unlockAchievement(achievementName);
+            }
+        };
+
+        checkAndUnlock(totalUpgradesOwned >= 10, "Collectionneur");
+        checkAndUnlock(totalUpgradesOwned >= 50, "Magnat");
+        checkAndUnlock(totalUpgradesOwned >= 200, "Empereur Industriel");
+        
+        checkAndUnlock(energy >= 100, "Milliardaire en Énergie");
+        checkAndUnlock(energy >= 1000, "Magnat de l'Énergie");
+        checkAndUnlock(energy >= 10000, "Divinité Énergétique");
+
+        checkAndUnlock(productionTotal >= 10, "Début de Production");
+        checkAndUnlock(productionTotal >= 100, "Automatisation");
+        checkAndUnlock(productionTotal >= 1000, "Puissance Industrielle");
+        checkAndUnlock(productionTotal >= 10000, "Singularité Productive");
+        
+        checkAndUnlock(prestigeCount >= 5, "Prestigieux");
+        checkAndUnlock(prestigeCount >= 25, "Légende du Prestige");
+
+    }, [totalUpgradesOwned, energy, productionTotal, prestigeCount, achievements, unlockAchievement, isLoaded]);
 
     const doPrestige = useCallback(() => {
         if (canPrestige) {
@@ -184,6 +251,10 @@ export const useGameState = () => {
         if(!hardReset) setPrestigeCount(0);
         setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, hardReset ? 1 : prestigeBonuses.costReduction) })));
         setAchievements(INITIAL_ACHIEVEMENTS.map(a => ({ ...a, unlocked: false })));
+        
+        // Clear the synchronous guard on any reset
+        unlockingRef.current.clear();
+
     }, [setEnergy, prestigeBonuses]);
 
     return {

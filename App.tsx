@@ -5,8 +5,7 @@ import ConfirmationPopup from './components/popups/ConfirmationPopup';
 import LoadingScreen from './components/LoadingScreen';
 import MainMenu from './components/MainMenu';
 import GameUI from './components/GameUI';
-import Notification from './components/Notification';
-import AchievementToast from './components/ui/AchievementToast';
+import NotificationCenter from './components/Notification';
 
 const App: React.FC = () => {
     const game = useGameEngine();
@@ -59,12 +58,10 @@ const App: React.FC = () => {
                 setShowHardResetConfirm={game.popups.setShowHardResetConfirm}
                 setShowPrestigeConfirm={game.popups.setShowPrestigeConfirm}
             />
-            <Notification 
-                text={game.uiState.notification.text} 
-                show={game.uiState.notification.show} 
-                type={game.uiState.notification.type} 
+            <NotificationCenter 
+                notifications={game.uiState.notifications} 
+                removeNotification={game.removeNotification} 
             />
-            <AchievementToast achievement={game.uiState.currentAchievementToast} />
         </>
     );
 };

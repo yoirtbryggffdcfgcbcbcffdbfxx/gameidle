@@ -56,8 +56,10 @@ export interface FloatingText {
     color: string;
 }
 
-export interface NotificationState {
-    text: string;
-    show: boolean;
-    type?: 'default' | 'error';
+export interface Notification {
+    id: number;
+    type: 'info' | 'error' | 'achievement';
+    message: string;
+    title?: string;
+    achievement?: Achievement;
 }
