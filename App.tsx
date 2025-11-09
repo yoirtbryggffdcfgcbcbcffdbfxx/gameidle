@@ -69,6 +69,9 @@ const App: React.FC = () => {
                 setShowAscensionConfirm={game.popups.setShowAscensionConfirm}
                 setShowAscensionTutorial={game.popups.setShowAscensionTutorial}
                 setShowCoreTutorial={game.setShowCoreTutorial}
+                // FIX: Add missing 'setShowBankTutorial' prop to satisfy GameUIProps.
+                setShowBankTutorial={game.setShowBankTutorial}
+                setShowBankInfoPopup={game.setShowBankInfoPopup}
             />
              <NotificationCenter
                 notifications={game.uiState.notifications}

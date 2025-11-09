@@ -13,7 +13,7 @@ import { useFloatingText } from './useFloatingText';
 import { Achievement, Notification } from '../types';
 
 // Constants & Helpers
-import { CLICK_POWER, PARTICLE_COLORS } from '../constants';
+import { CLICK_POWER, PARTICLE_COLORS, BANK_CONSTRUCTION_COST, BANK_UPGRADES } from '../constants';
 import { formatNumber } from '../utils/helpers';
 
 /**
@@ -52,6 +52,7 @@ export const useGameEngine = () => {
 
     const popups = usePopupManager();
     const [showCoreTutorial, setShowCoreTutorial] = useState(false);
+    const [showBankTutorial, setShowBankTutorial] = useState(false);
 
     const handleAchievementUnlock = useCallback((achievement: Achievement) => {
         playSfx('buy');
@@ -64,8 +65,17 @@ export const useGameEngine = () => {
     const handleShowAscensionTutorial = useCallback(() => {
         popups.setShowAscensionTutorial(true);
     }, [popups]);
+    
+    const handleLoanRepaid = useCallback(() => {
+        addNotification("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
+    }, [addNotification]);
+    
+    const handleBankUnlockedFirstTime = useCallback(() => {
+        setShowBankTutorial(true);
+    }, []);
 
-    const gameState = useGameState(handleAchievementUnlock, handleShowAscensionTutorial, appState);
+
+    const gameState = useGameState(handleAchievementUnlock, handleShowAscensionTutorial, handleLoanRepaid, handleBankUnlockedFirstTime, appState);
     const { 
         energy, 
         productionTotal,
@@ -88,7 +98,13 @@ export const useGameEngine = () => {
         purchasedCoreUpgrades,
         coreBonuses,
         hasSeenCoreTutorial,
-        setHasSeenCoreTutorial
+        setHasSeenCoreTutorial,
+        totalEnergyProduced,
+        isBankUnlocked,
+        savingsBalance,
+        currentLoan,
+        bankLevel,
+        bankBonuses,
     } = gameState;
 
     const totalClickPower = useMemo(() => {
@@ -208,6 +224,91 @@ export const useGameEngine = () => {
         addNotification("Jeu réinitialisé.", 'info');
     }
     
+    const handleBuildBank = () => {
+        if (gameState.buildBank(BANK_CONSTRUCTION_COST)) {
+            playSfx('buy');
+            addNotification("Banque construite ! L'épargne et les prêts sont disponibles.", 'info', { title: 'Système Bancaire en Ligne' });
+        } else {
+            addNotification("Pas assez d'énergie pour construire la banque.", 'error');
+        }
+    };
+    
+    const handleDepositSavings = (amount: number) => {
+        if (gameState.depositSavings(amount)) {
+            playSfx('click');
+            addNotification(`${memoizedFormatNumber(amount)} énergie déposée.`, 'info');
+        } else {
+            addNotification("Montant invalide ou pas assez d'énergie.", 'error');
+        }
+    };
+
+    const handleWithdrawSavings = (amount: number, isPercentage: boolean) => {
+        if (!isPercentage && amount > savingsBalance) {
+            addNotification("Pas assez d'épargne pour retirer ce montant.", 'error');
+            return;
+        }
+
+        const result = gameState.withdrawSavings(amount);
+        
+        if (result.success) {
+            playSfx('click');
+            let message = '';
+            if (result.repaidAmount && result.repaidAmount > 0) {
+                message = `${memoizedFormatNumber(result.repaidAmount)} a remboursé votre prêt.`;
+                if (result.toEnergyAmount && result.toEnergyAmount > 0) {
+                    message += ` ${memoizedFormatNumber(result.toEnergyAmount)} a été ajouté à votre énergie.`;
+                }
+            } else {
+                message = `${memoizedFormatNumber(result.withdrawnAmount || 0)} énergie retirée.`;
+            }
+            addNotification(message, 'info');
+        } else {
+            addNotification("Montant invalide ou solde nul.", 'error');
+        }
+    };
+
+    const handleTakeOutLoan = (amount: number) => {
+        const result = gameState.takeOutLoan(amount);
+        if (result.success) {
+            playSfx('buy');
+            addNotification(`Prêt de ${memoizedFormatNumber(amount)} énergie obtenu.`, 'info', { title: 'Prêt Approuvé' });
+        } else {
+             let message = "Impossible d'obtenir le prêt.";
+             switch (result.reason) {
+                case 'loan_exists':
+                    message = "Vous avez déjà un prêt en cours.";
+                    break;
+                case 'exceeds_max':
+                    message = `Le montant du prêt ne peut pas dépasser 10% de votre capacité maximale (${memoizedFormatNumber(maxEnergy * 0.1)}).`;
+                    break;
+                case 'insufficient_collateral':
+                    const repaymentTotal = amount * (1 + bankBonuses.loanInterest);
+                    const requiredCollateral = repaymentTotal * 0.10;
+                    message = `Vous devez posséder au moins 10% du total à rembourser (${memoizedFormatNumber(requiredCollateral)}) pour obtenir ce prêt.`;
+                    break;
+                case 'invalid_amount':
+                    message = "Le montant du prêt est invalide.";
+                    break;
+             }
+             addNotification(message, 'error');
+        }
+    };
+    
+    const handleUpgradeBank = () => {
+        const result = gameState.upgradeBank();
+        if (result.success) {
+            playSfx('buy');
+            const nextUpgradeInfo = BANK_UPGRADES[result.newLevel || 0];
+            addNotification(`Banque améliorée au niveau ${result.newLevel}! ${nextUpgradeInfo.description}`, 'info', { title: 'Amélioration Bancaire' });
+        } else {
+            let message = "Amélioration impossible.";
+            if (result.reason === 'max_level') message = "La banque est déjà au niveau maximum.";
+            if (result.reason === 'insufficient_energy') message = "Pas assez d'énergie pour l'amélioration.";
+            if (result.reason === 'loan_active') message = "Vous ne pouvez pas améliorer la banque avec un prêt en cours.";
+            addNotification(message, 'error');
+        }
+    };
+
     const startNewGame = () => {
         gameState.resetGame(true);
         setSettings(s => ({...s, theme: s.theme}));
@@ -249,7 +350,8 @@ export const useGameEngine = () => {
 
     // --- DEV HANDLERS ---
     const devHandlers = {
-        addEnergy: () => gameState.setEnergy(maxEnergy),
+        addEnergy: () => gameState.dev_setEnergy(maxEnergy),
+        addSpecificEnergy: (amount: number) => gameState.dev_addEnergy(amount),
         addAscension: () => gameState.dev_addAscension(),
         unlockAllUpgrades: () => gameState.dev_unlockAllUpgrades(),
         unlockAllAchievements: () => gameState.dev_unlockAllAchievements(),
@@ -281,6 +383,12 @@ export const useGameEngine = () => {
             coreBonuses,
             productionTotal,
             clickPower: totalClickPower,
+            totalEnergyProduced,
+            isBankUnlocked,
+            savingsBalance,
+            currentLoan,
+            bankLevel,
+            bankBonuses,
         },
         
         computedState: {
@@ -305,6 +413,8 @@ export const useGameEngine = () => {
             showAscensionTutorial: popups.showAscensionTutorial,
             showDevPanel,
             showCoreTutorial,
+            showBankTutorial,
+            showBankInfoPopup: popups.showBankInfoPopup,
         },
 
         handlers: {
@@ -317,6 +427,11 @@ export const useGameEngine = () => {
             onConfirmHardReset: handleConfirmHardReset,
             onSettingsChange: handleSettingsChange,
             onDischargeCore: handleDischargeCore,
+            onBuildBank: handleBuildBank,
+            onDepositSavings: handleDepositSavings,
+            onWithdrawSavings: handleWithdrawSavings,
+            onTakeOutLoan: handleTakeOutLoan,
+            onUpgradeBank: handleUpgradeBank,
             handleContinue,
             handleNewGameClick,
             handleConfirmNewGame,
@@ -328,6 +443,8 @@ export const useGameEngine = () => {
         
         popups,
         setShowCoreTutorial,
+        setShowBankTutorial,
+        setShowBankInfoPopup: popups.setShowBankInfoPopup,
         removeParticle,
         removeFloatingText,
         // FIX: Expose addFloatingText so it can be passed to child components.

@@ -63,6 +63,13 @@ export interface GameState {
   quantumShards: number;
   purchasedCoreUpgrades: string[];
   hasSeenCoreTutorial: boolean;
+  // Bank feature state
+  totalEnergyProduced: number;
+  isBankUnlocked: boolean;
+  savingsBalance: number;
+  currentLoan: { amount: number; remaining: number; } | null;
+  bankLevel: number;
+  hasSeenBankTutorial: boolean;
 }
 
 export interface Settings {

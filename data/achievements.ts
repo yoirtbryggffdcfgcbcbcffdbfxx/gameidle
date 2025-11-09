@@ -36,6 +36,8 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { name: "Légende Éternelle", unlocked: false, description: "Atteindre le niveau d'ascension 25.", hidden: true, bonus: { type: 'PRODUCTION', value: 10 } },
 
   // Cachés
+  { name: "Capitaliste Quantique", unlocked: false, description: "Construire la Banque.", hidden: true, bonus: { type: 'COST_REDUCTION', value: 2 } },
+  { name: "Magnat de la Finance", unlocked: false, description: "Améliorer la banque pour la première fois.", hidden: true, bonus: { type: 'PRODUCTION', value: 3 } },
   { name: "Curieux", unlocked: false, description: "Consulter les crédits du jeu.", hidden: true, bonus: { type: 'COST_REDUCTION', value: 1 } },
   { name: "Développeur Honoraire", unlocked: false, description: "Ouvrir le panneau de développeur.", hidden: true, bonus: { type: 'PRODUCTION', value: 5 } },
   { name: "Surcharge Quantique", unlocked: false, description: "Activer le Cœur Quantique pour la première fois.", hidden: true, bonus: { type: 'CORE_CHARGE', value: 10 } },

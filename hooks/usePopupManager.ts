@@ -7,6 +7,7 @@ export const usePopupManager = () => {
     const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
     const [showAscensionConfirm, setShowAscensionConfirm] = useState(false);
     const [showAscensionTutorial, setShowAscensionTutorial] = useState(false);
+    const [showBankInfoPopup, setShowBankInfoPopup] = useState(false);
 
     return {
         activePopup,
@@ -15,11 +16,13 @@ export const usePopupManager = () => {
         showNewGameConfirm,
         showAscensionConfirm,
         showAscensionTutorial,
+        showBankInfoPopup,
         setActivePopup,
         setTutorialStep,
         setShowHardResetConfirm,
         setShowNewGameConfirm,
         setShowAscensionConfirm,
         setShowAscensionTutorial,
+        setShowBankInfoPopup,
     };
 };

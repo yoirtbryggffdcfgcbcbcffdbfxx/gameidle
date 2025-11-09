@@ -1,9 +1,30 @@
 // FIX: Create the missing useGameState hook to manage all core game logic.
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GameState, Upgrade, Achievement, Settings, CoreUpgrade } from '../types';
-import { SAVE_KEY, INITIAL_UPGRADES, TICK_RATE, MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, ASCENSION_UPGRADES, CORE_UPGRADES } from '../constants';
+import { GameState, Upgrade, Achievement, Settings } from '../types';
+// FIX: Added CORE_UPGRADES to import to resolve module not found error.
+import { SAVE_KEY, INITIAL_UPGRADES, TICK_RATE, MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, ASCENSION_UPGRADES, CORE_UPGRADES, LOAN_REPAYMENT_RATE, BANK_UPGRADES, BANK_UNLOCK_TOTAL_ENERGY } from '../constants';
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
 import { calculateCost } from '../utils/helpers';
+
+export interface LoanResult {
+    success: boolean;
+    reason?: 'loan_exists' | 'exceeds_max' | 'insufficient_collateral' | 'invalid_amount';
+}
+
+export interface WithdrawResult {
+    success: boolean;
+    reason?: 'zero_amount';
+    withdrawnAmount?: number;
+    repaidAmount?: number;
+    toEnergyAmount?: number;
+}
+
+export interface UpgradeBankResult {
+    success: boolean;
+    reason?: 'max_level' | 'insufficient_energy' | 'loan_active';
+    newLevel?: number;
+}
+
 
 const getInitialState = (): GameState => {
     const upgradesWithState = INITIAL_UPGRADES.map(u => ({
@@ -27,6 +48,13 @@ const getInitialState = (): GameState => {
         quantumShards: 0,
         purchasedCoreUpgrades: ['core_start'],
         hasSeenCoreTutorial: false,
+        // Bank
+        totalEnergyProduced: 0,
+        isBankUnlocked: false,
+        savingsBalance: 0,
+        currentLoan: null,
+        bankLevel: 0,
+        hasSeenBankTutorial: false,
     };
 };
 
@@ -34,6 +62,8 @@ const getInitialState = (): GameState => {
 export const useGameState = (
     onAchievementUnlock: (achievement: Achievement) => void,
     onCanAscendFirstTime: () => void,
+    onLoanRepaid: () => void,
+    onBankUnlockedFirstTime: () => void,
     appState: string
 ) => {
     const [gameState, setGameState] = useState<GameState>(getInitialState());
@@ -147,6 +177,11 @@ export const useGameState = (
         });
         return bonuses;
     }, [gameState.purchasedCoreUpgrades]);
+    
+    const bankBonuses = useMemo(() => {
+        const currentLevel = Math.min(gameState.bankLevel, BANK_UPGRADES.length - 1);
+        return BANK_UPGRADES[currentLevel];
+    }, [gameState.bankLevel]);
 
     const costMultiplier = useMemo(() => ascensionBonuses.costReduction * achievementBonuses.costReduction, [ascensionBonuses, achievementBonuses]);
     
@@ -218,20 +253,58 @@ export const useGameState = (
 
         const gameTick = setInterval(() => {
             setGameState(prev => {
-                const newEnergy = Math.min(prev.energy + productionTotal / (1000 / TICK_RATE), maxEnergy);
+                const productionThisTick = productionTotal / (1000 / TICK_RATE);
+                const newTotalEnergyProduced = prev.totalEnergyProduced + productionThisTick;
+
+                let energyFromProduction = productionThisTick;
+                let newLoan = prev.currentLoan;
+                let wasLoanRepaid = false;
+
+                // Loan repayment
+                if (newLoan && newLoan.remaining > 0 && productionThisTick > 0) {
+                    const repaymentAmount = productionThisTick * LOAN_REPAYMENT_RATE;
+                    const actualRepayment = Math.min(repaymentAmount, newLoan.remaining);
+                    energyFromProduction -= actualRepayment;
+
+                    const remaining = newLoan.remaining - actualRepayment;
+                    if (remaining <= 0) {
+                        newLoan = null;
+                        wasLoanRepaid = true;
+                    } else {
+                        newLoan = { ...newLoan, remaining };
+                    }
+                }
+                
+                // Savings interest - uses dynamic rate from bank level
+                const currentBankBonus = BANK_UPGRADES[Math.min(prev.bankLevel, BANK_UPGRADES.length - 1)];
+                const interestThisTick = prev.savingsBalance * currentBankBonus.savingsInterest / (1000 / TICK_RATE);
+                const newSavingsBalance = prev.savingsBalance + interestThisTick;
+
+                const newEnergy = Math.min(prev.energy + energyFromProduction, maxEnergy);
 
                 let newCoreCharge = prev.coreCharge;
                 if (!prev.isCoreDischarging && newCoreCharge < 100) {
                     const chargeRate = (CORE_CHARGE_RATE * coreBonuses.chargeRate * achievementBonuses.coreCharge) / (1000 / TICK_RATE);
                     newCoreCharge = Math.min(100, newCoreCharge + chargeRate);
                 }
+                
+                if (wasLoanRepaid) {
+                    onLoanRepaid();
+                }
 
-                return {...prev, energy: newEnergy, coreCharge: newCoreCharge };
+                return {
+                    ...prev,
+                    energy: newEnergy,
+                    coreCharge: newCoreCharge,
+                    totalEnergyProduced: newTotalEnergyProduced,
+                    savingsBalance: newSavingsBalance,
+                    currentLoan: newLoan
+                };
             });
 
         }, TICK_RATE);
         return () => clearInterval(gameTick);
-    }, [productionTotal, maxEnergy, appState, coreBonuses.chargeRate, achievementBonuses.coreCharge, isLoaded]);
+    }, [productionTotal, maxEnergy, appState, coreBonuses.chargeRate, achievementBonuses.coreCharge, isLoaded, onLoanRepaid]);
 
      const checkAchievement = useCallback((name: string, condition: boolean) => {
         if (!condition) return;
@@ -283,6 +356,14 @@ export const useGameState = (
         }
     }, [canAscend, gameState.hasSeenAscensionTutorial, onCanAscendFirstTime]);
 
+    // Check for bank unlock tutorial
+    useEffect(() => {
+        if (gameState.totalEnergyProduced >= BANK_UNLOCK_TOTAL_ENERGY && !gameState.hasSeenBankTutorial) {
+            onBankUnlockedFirstTime();
+            setGameState(prev => ({...prev, hasSeenBankTutorial: true}));
+        }
+    }, [gameState.totalEnergyProduced, gameState.hasSeenBankTutorial, onBankUnlockedFirstTime]);
+
     // Game Actions
     const unlockAchievement = useCallback((name: string) => {
         checkAchievement(name, true);
@@ -332,7 +413,10 @@ export const useGameState = (
                 purchasedCoreUpgrades: prev.purchasedCoreUpgrades,
                 hasSeenAscensionTutorial: true,
                 hasSeenCoreTutorial: prev.hasSeenCoreTutorial,
-                totalClicks: prev.totalClicks // Keep total clicks
+                hasSeenBankTutorial: prev.hasSeenBankTutorial,
+                totalClicks: prev.totalClicks, // Keep total clicks
+                isBankUnlocked: prev.isBankUnlocked, // Keep bank unlocked status
+                bankLevel: prev.bankLevel, // Keep bank level
             };
         });
         return true;
@@ -393,6 +477,129 @@ export const useGameState = (
         return false;
     };
     
+    const buildBank = (cost: number) => {
+        if (gameState.energy >= cost && !gameState.isBankUnlocked) {
+            setGameState(prev => ({
+                ...prev,
+                energy: prev.energy - cost,
+                isBankUnlocked: true,
+            }));
+            unlockAchievement("Capitaliste Quantique");
+            return true;
+        }
+        return false;
+    };
+
+    const depositSavings = (amount: number) => {
+        const actualAmount = Math.min(amount, gameState.energy);
+        if (actualAmount > 0) {
+            setGameState(prev => ({
+                ...prev,
+                energy: prev.energy - actualAmount,
+                savingsBalance: prev.savingsBalance + actualAmount,
+            }));
+            return true;
+        }
+        return false;
+    };
+
+    const withdrawSavings = (amount: number): WithdrawResult => {
+        const actualWithdrawAmount = Math.min(amount, gameState.savingsBalance);
+        if (actualWithdrawAmount <= 0) return { success: false, reason: 'zero_amount' };
+
+        let repaidAmount = 0;
+        let toEnergyAmount = actualWithdrawAmount;
+
+        if (gameState.currentLoan) {
+            const repayment = Math.min(actualWithdrawAmount, gameState.currentLoan.remaining);
+            repaidAmount = repayment;
+            toEnergyAmount -= repayment;
+        }
+
+        setGameState(prev => {
+            let newLoan = prev.currentLoan;
+            let loanFullyRepaid = false;
+            
+            if (newLoan) {
+                const remaining = newLoan.remaining - repaidAmount;
+                if (remaining <= 0) {
+                    newLoan = null;
+                    loanFullyRepaid = true;
+                } else {
+                    newLoan = { ...newLoan, remaining };
+                }
+            }
+            
+            if (loanFullyRepaid) {
+                onLoanRepaid();
+            }
+
+            return {
+                ...prev,
+                energy: prev.energy + toEnergyAmount,
+                savingsBalance: prev.savingsBalance - actualWithdrawAmount,
+                currentLoan: newLoan,
+            };
+        });
+        
+        return { success: true, withdrawnAmount: actualWithdrawAmount, repaidAmount, toEnergyAmount };
+    };
+    
+    const takeOutLoan = (loanAmount: number): LoanResult => {
+        if (gameState.currentLoan) {
+            return { success: false, reason: "loan_exists" };
+        }
+
+        if (isNaN(loanAmount) || loanAmount <= 0) {
+            return { success: false, reason: "invalid_amount" };
+        }
+
+        const maxLoan = maxEnergy * 0.10;
+        if (loanAmount > maxLoan) {
+            return { success: false, reason: "exceeds_max" };
+        }
+
+        const repaymentTotal = loanAmount * (1 + bankBonuses.loanInterest);
+        const requiredCollateral = repaymentTotal * 0.10;
+
+        if (gameState.energy < requiredCollateral) {
+            return { success: false, reason: "insufficient_collateral" };
+        }
+        
+        setGameState(prev => ({
+            ...prev,
+            energy: prev.energy + loanAmount,
+            currentLoan: { amount: loanAmount, remaining: repaymentTotal },
+        }));
+        return { success: true };
+    };
+
+    const upgradeBank = (): UpgradeBankResult => {
+        const currentLevel = gameState.bankLevel;
+        if (currentLevel >= BANK_UPGRADES.length - 1) {
+            return { success: false, reason: 'max_level' };
+        }
+        
+        const nextUpgrade = BANK_UPGRADES[currentLevel + 1];
+        if (gameState.energy < nextUpgrade.cost) {
+            return { success: false, reason: 'insufficient_energy' };
+        }
+        
+        if (gameState.currentLoan) {
+            return { success: false, reason: 'loan_active' };
+        }
+
+        setGameState(prev => ({
+            ...prev,
+            energy: prev.energy - nextUpgrade.cost,
+            bankLevel: prev.bankLevel + 1,
+        }));
+        // FIX: Provide the required boolean 'condition' argument to the checkAchievement function.
+        checkAchievement("Magnat de la Finance", true);
+        return { success: true, newLevel: currentLevel + 1 };
+    };
+
+
     const resetGame = (hardReset: boolean) => {
         if (hardReset) {
             localStorage.removeItem(SAVE_KEY);
@@ -404,6 +611,22 @@ export const useGameState = (
     const unlockSpecificUpgrade = () => { /* Placeholder if needed */ };
 
     // Dev Functions
+    const dev_setEnergy = (amount: number) => {
+        setGameState(prev => ({
+            ...prev,
+            energy: amount,
+            totalEnergyProduced: Math.max(prev.totalEnergyProduced, amount),
+        }));
+    };
+
+    const dev_addEnergy = (amount: number) => {
+        setGameState(prev => ({
+            ...prev,
+            energy: prev.energy + amount,
+            totalEnergyProduced: prev.totalEnergyProduced + amount,
+        }));
+    };
+
     const dev_addAscension = () => setGameState(prev => ({ ...prev, ascensionLevel: prev.ascensionLevel + 1, ascensionPoints: prev.ascensionPoints + 10 }));
     const dev_unlockAllUpgrades = () => setGameState(prev => ({ ...prev, upgrades: prev.upgrades.map(u => ({...u, owned: Math.min(MAX_UPGRADE_LEVEL, u.owned + 10)}))}));
     const dev_unlockAllAchievements = () => setGameState(prev => ({ ...prev, achievements: prev.achievements.map(a => ({...a, unlocked: true}))}));
@@ -428,6 +651,7 @@ export const useGameState = (
         ascensionBonuses,
         achievementBonuses,
         coreBonuses,
+        bankBonuses,
         
         // Actions
         buyUpgrade,
@@ -439,8 +663,15 @@ export const useGameState = (
         incrementClickCount,
         unlockAchievement,
         unlockSpecificUpgrade,
+        buildBank,
+        depositSavings,
+        withdrawSavings,
+        takeOutLoan,
+        upgradeBank,
 
         // Dev
+        dev_setEnergy,
+        dev_addEnergy,
         dev_addAscension,
         dev_unlockAllUpgrades,
         dev_unlockAllAchievements,

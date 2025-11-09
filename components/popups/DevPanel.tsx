@@ -2,6 +2,7 @@ import React from 'react';
 
 interface DevPanelProps {
     addEnergy: () => void;
+    addSpecificEnergy: (amount: number) => void;
     addAscension: () => void;
     unlockAllUpgrades: () => void;
     unlockAllAchievements: () => void;
@@ -11,6 +12,7 @@ interface DevPanelProps {
 
 const DevPanel: React.FC<DevPanelProps> = ({ 
     addEnergy, 
+    addSpecificEnergy,
     addAscension, 
     unlockAllUpgrades,
     unlockAllAchievements, 
@@ -27,6 +29,7 @@ const DevPanel: React.FC<DevPanelProps> = ({
             </div>
             <div className="flex flex-col">
                 <button onClick={addEnergy} className={buttonStyle}>Max Énergie pour Ascension</button>
+                <button onClick={() => addSpecificEnergy(100000)} className={buttonStyle}>+100k Énergie (Bank)</button>
                 <button onClick={addAscension} className={buttonStyle}>+1 Lvl / +10 Pts Asc.</button>
                 <button onClick={unlockAllUpgrades} className={buttonStyle}>+10 All Upgrades</button>
                 <button onClick={unlockAllAchievements} className={buttonStyle}>Unlock All Achievements</button>

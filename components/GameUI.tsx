@@ -13,10 +13,13 @@ import ConfirmationPopup from './popups/ConfirmationPopup';
 import DevPanel from './popups/DevPanel';
 import AscensionTutorialPopup from './popups/AscensionTutorialPopup';
 import CoreTutorialPopup from './popups/CoreTutorialPopup';
+import BankTutorialPopup from './popups/BankTutorialPopup';
+import BankInfoPopup from './popups/BankInfoPopup';
 import Logo from './Logo';
 import ScrollspyNav from './ScrollspyNav';
 import AscensionSection from './AscensionSection';
 import ReactorSection from './ReactorSection';
+import BankSection from './BankSection';
 import AITutorial from './AITutorial';
 
 
@@ -34,6 +37,7 @@ interface GameUIProps {
     ascensionBonuses: { productionMultiplier: number; clickMultiplier: number; costReduction: number; startingEnergy: number; };
     achievementBonuses: { production: number; click: number; coreCharge: number; costReduction: number; };
     coreBonuses: { chargeRate: number; multiplier: number; };
+    bankBonuses: { savingsInterest: number; loanInterest: number; };
     canAscend: boolean;
     ascensionGain: number;
     unlockedUpgradesForCurrentAscensionCount: number;
@@ -52,6 +56,14 @@ interface GameUIProps {
     quantumShards: number;
     purchasedCoreUpgrades: string[];
     showCoreTutorial: boolean;
+    showBankTutorial: boolean;
+    showBankInfoPopup: boolean;
+    totalEnergyProduced: number;
+    isBankUnlocked: boolean;
+    savingsBalance: number;
+    currentLoan: { amount: number; remaining: number; } | null;
+    bankLevel: number;
+
 
     // Callbacks & Handlers
     onCollect: (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -63,8 +75,14 @@ interface GameUIProps {
     onConfirmHardReset: () => void;
     onSettingsChange: (newSettings: Partial<Settings>) => void;
     onDischargeCore: () => void;
+    onBuildBank: () => void;
+    onDepositSavings: (amount: number) => void;
+    onWithdrawSavings: (amount: number, isPercentage: boolean) => void;
+    onTakeOutLoan: (amount: number) => void;
+    onUpgradeBank: () => void;
     dev: {
         addEnergy: () => void;
+        addSpecificEnergy: (amount: number) => void;
         addAscension: () => void;
         unlockAllUpgrades: () => void;
         unlockAllAchievements: () => void;
@@ -83,6 +101,8 @@ interface GameUIProps {
     setShowAscensionConfirm: (show: boolean) => void;
     setShowAscensionTutorial: (show: boolean) => void;
     setShowCoreTutorial: (show: boolean) => void;
+    setShowBankTutorial: (show: boolean) => void;
+    setShowBankInfoPopup: (show: boolean) => void;
 }
 
 const StatDisplay: React.FC<{ label: string; value: string; icon: string; colorClass: string; }> = ({ label, value, icon, colorClass }) => (
@@ -108,7 +128,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
         settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
         onBuyUpgrade, onSettingsChange,
         playSfx, formatNumber, addFloatingText, removeParticle, removeFloatingText, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
-        showDevPanel, dev, showCoreTutorial, setShowCoreTutorial
+        showDevPanel, dev, showCoreTutorial, setShowCoreTutorial, totalEnergyProduced, showBankTutorial, setShowBankTutorial, showBankInfoPopup, setShowBankInfoPopup
     } = props;
 
     const [activeSection, setActiveSection] = useState('core');
@@ -119,14 +139,16 @@ const GameUI: React.FC<GameUIProps> = (props) => {
     
     const showAscensionSection = useMemo(() => canAscend || ascensionLevel > 0, [canAscend, ascensionLevel]);
     const showReactorSection = useMemo(() => ascensionLevel > 0, [ascensionLevel]);
+    const showBankSection = useMemo(() => totalEnergyProduced >= 100000, [totalEnergyProduced]);
 
     const sections = useMemo(() => [
         { id: 'core', name: 'Cœur' },
         { id: 'forge', name: 'Forge' },
         { id: 'command-center', name: 'Commandement' },
+        ...(showBankSection ? [{ id: 'bank', name: 'Banque' }] : []),
         ...(showAscensionSection ? [{ id: 'ascension-portal', name: 'Ascension' }] : []),
         ...(showReactorSection ? [{ id: 'reactor', name: 'Réacteur' }] : []),
-    ], [showAscensionSection, showReactorSection]);
+    ], [showAscensionSection, showReactorSection, showBankSection]);
 
     const handleNavClick = (id: string) => {
         // Prevent observer from firing while we scroll
@@ -377,12 +399,17 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                     </div>
                 </section>
 
-                {/* Section 4: Ascension (Conditional) */}
+                {/* Section 4: Bank (Conditional) */}
+                {showBankSection && (
+                    <BankSection {...props} />
+                )}
+
+                {/* Section 5: Ascension (Conditional) */}
                 {showAscensionSection && (
                     <AscensionSection {...props} />
                 )}
 
-                {/* Section 5: Reactor (Conditional) */}
+                {/* Section 6: Reactor (Conditional) */}
                 {showReactorSection && (
                      <ReactorSection {...props} />
                 )}
@@ -392,6 +419,8 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             <AITutorial step={tutorialStep} setStep={setTutorialStep} />
             {showAscensionTutorial && <AscensionTutorialPopup onClose={() => setShowAscensionTutorial(false)} />}
             {showCoreTutorial && <CoreTutorialPopup onClose={() => setShowCoreTutorial(false)} />}
+            {showBankTutorial && <BankTutorialPopup onClose={() => setShowBankTutorial(false)} />}
+            {showBankInfoPopup && <BankInfoPopup onClose={() => setShowBankInfoPopup(false)} />}
             {showDevPanel && <DevPanel {...dev} />}
             <ConfirmationPopup show={showHardResetConfirm} title="Confirmer la réinitialisation" message="Êtes-vous sûr de vouloir réinitialiser toute votre progression ? Cette action est irréversible." onConfirm={props.onConfirmHardReset} onCancel={() => { playSfx('click'); setShowHardResetConfirm(false); }} />
             <ConfirmationPopup show={showAscensionConfirm} title="Confirmer l'Ascension" message={`Vous êtes sur le point de réinitialiser votre progression pour gagner ${props.ascensionGain} point d'ascension et ${props.ascensionGain} Fragment Quantique. Continuer ?`} onConfirm={props.onConfirmAscension} onCancel={() => { playSfx('click'); setShowAscensionConfirm(false); }} />

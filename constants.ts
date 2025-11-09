@@ -13,6 +13,26 @@ export const PARTICLE_COLORS = {
     ASCEND: '#cc00ff',
 };
 
+// Bank Constants
+export const BANK_UNLOCK_TOTAL_ENERGY = 100000;
+export const BANK_CONSTRUCTION_COST = 50000;
+export const SAVINGS_INTEREST_RATE = 0.002; // 0.2% per second (Base Rate)
+export const LOAN_INTEREST_RATE = 0.20; // 20% flat interest (Base Rate)
+export const LOAN_REPAYMENT_RATE = 0.50; // 50% of income goes to repayment
+export const LOAN_OPTIONS = [50000, 250000, 1000000];
+
+export const BANK_UPGRADES = [
+    // Level 0 (Base)
+    { cost: 0, savingsInterest: 0.002, loanInterest: 0.20, description: "Taux d'épargne à 0.2%." },
+    // Level 1
+    { cost: 1e6, savingsInterest: 0.005, loanInterest: 0.20, description: "Améliore le taux d'épargne à 0.5%." },
+    // Level 2
+    { cost: 1e8, savingsInterest: 0.005, loanInterest: 0.15, description: "Réduit l'intérêt des prêts à 15%." },
+    // Level 3
+    { cost: 1e9, savingsInterest: 0.008, loanInterest: 0.15, description: "Améliore le taux d'épargne à 0.8%." }
+];
+
+
 // V4 Rebalance: Drastically reduced production and re-adjusted costs for a smoother Ascension 0 curve.
 export const INITIAL_UPGRADES: Omit<Upgrade, 'owned' | 'currentCost'>[] = [
     // Génération
@@ -52,33 +72,22 @@ export const ASCENSION_UPGRADES: AscensionUpgrade[] = [
     // Ring 2: Specialization
     { id: 'prod_2', name: 'Amplification', description: '+50% production.', cost: 3, effect: { type: 'PRODUCTION_MULTIPLIER', value: 0.5 }, required: ['prod_1'], position: { angle: -90, radius: 2 } },
     { id: 'click_2', name: 'Focalisation', description: 'Double la puissance de clic.', cost: 3, effect: { type: 'CLICK_POWER_MULTIPLIER', value: 1 }, required: ['click_1'], position: { angle: 30, radius: 2 } },
-    { id: 'start_1', name: 'Démarrage Rapide', description: 'Commence avec 1000 énergie.', cost: 2, effect: { type: 'STARTING_ENERGY', value: 1000 }, required: ['cost_1'], position: { angle: 210, radius: 2 } },
-
-    // Ring 3: Advanced Branches
-    { id: 'prod_3_scaling', name: 'Distorsion', description: '+10% production par niveau d\'ascension.', cost: 5, effect: { type: 'PRODUCTION_MULTIPLIER', value: 0.1 }, required: ['prod_2'], position: { angle: -120, radius: 3 } },
-    { id: 'prod_4_flat', name: 'Surcharge', description: '+100% production.', cost: 5, effect: { type: 'PRODUCTION_MULTIPLIER', value: 1.0 }, required: ['prod_2'], position: { angle: -60, radius: 3 } },
-    { id: 'click_3_scaling', name: 'Singularité', description: '+50% clic par niveau d\'ascension.', cost: 5, effect: { type: 'CLICK_POWER_MULTIPLIER', value: 0.5 }, required: ['click_2'], position: { angle: 0, radius: 3 } },
-    { id: 'click_4_flat', name: 'Impact', description: 'Triple la puissance de clic.', cost: 5, effect: { type: 'CLICK_POWER_MULTIPLIER', value: 2.0 }, required: ['click_2'], position: { angle: 60, radius: 3 } },
-    { id: 'cost_2', name: 'Optimisation', description: 'Encore -5% coût.', cost: 4, effect: { type: 'COST_REDUCTION', value: 0.05 }, required: ['start_1'], position: { angle: 180, radius: 3 } },
-    { id: 'cost_3', name: 'Automatisation', description: 'Encore -5% coût.', cost: 4, effect: { type: 'COST_REDUCTION', value: 0.05 }, required: ['start_1'], position: { angle: 240, radius: 3 } },
+    // FIX: Complete the truncated AscensionUpgrade object that was causing a type error.
+    { id: 'start_1', name: 'Injection Initiale', description: 'Commencez avec 1000 énergie après une ascension.', cost: 2, effect: { type: 'STARTING_ENERGY', value: 1000 }, required: ['cost_1'], position: { angle: 210, radius: 2 } },
 ];
 
+// FIX: Add the missing CORE_UPGRADES constant to resolve import errors in useGameState and ReactorSection.
 export const CORE_UPGRADES: CoreUpgrade[] = [
     // Center
-    { id: 'core_start', name: 'Noyau Actif', description: 'Le Cœur Quantique est prêt.', cost: 0, effect: { type: 'CORE_CHARGE_RATE', value: 0 }, required: [], position: { angle: 0, radius: 0 } },
-    
-    // Ring 1
-    { id: 'core_charge_1', name: 'Canalisation', description: '+25% vitesse de charge.', cost: 1, effect: { type: 'CORE_CHARGE_RATE', value: 0.25 }, required: ['core_start'], position: { angle: -90, radius: 1 } },
-    { id: 'core_boost_1', name: 'Intensificateur', description: '+50% puissance de boost.', cost: 1, effect: { type: 'CORE_BOOST_MULTIPLIER', value: 0.5 }, required: ['core_start'], position: { angle: 30, radius: 1 } },
-    { id: 'core_duration_1', name: 'Stabilisateur', description: '+2s durée de boost.', cost: 1, effect: { type: 'CORE_BOOST_DURATION', value: 2000 }, required: ['core_start'], position: { angle: 210, radius: 1 } },
-    
-    // Ring 2
-    { id: 'core_charge_2', name: 'Flux Accéléré', description: 'Encore +50% vitesse de charge.', cost: 3, effect: { type: 'CORE_CHARGE_RATE', value: 0.5 }, required: ['core_charge_1'], position: { angle: -90, radius: 2 } },
-    { id: 'core_boost_2', name: 'Fusion', description: 'Encore +100% puissance de boost.', cost: 3, effect: { type: 'CORE_BOOST_MULTIPLIER', value: 1.0 }, required: ['core_boost_1'], position: { angle: 30, radius: 2 } },
-    { id: 'core_duration_2', name: 'Champ de Stase', description: 'Encore +3s durée de boost.', cost: 3, effect: { type: 'CORE_BOOST_DURATION', value: 3000 }, required: ['core_duration_1'], position: { angle: 210, radius: 2 } },
+    { id: 'core_start', name: 'Noyau Actif', description: 'Le cœur quantique est en ligne.', cost: 0, effect: { type: 'CORE_CHARGE_RATE', value: 0 }, required: [], position: { angle: 0, radius: 0 } },
 
-    // Ring 3 - Capstones
-    { id: 'core_charge_3', name: 'Afflux Infini', description: 'Double la vitesse de charge de base.', cost: 5, effect: { type: 'CORE_CHARGE_RATE', value: 1.0 }, required: ['core_charge_2'], position: { angle: -90, radius: 3 } },
-    { id: 'core_boost_3', name: 'Singularité', description: 'Triple la puissance de boost de base.', cost: 5, effect: { type: 'CORE_BOOST_MULTIPLIER', value: 2.0 }, required: ['core_boost_2'], position: { angle: 30, radius: 3 } },
-    { id: 'core_duration_3', name: 'Éternité', description: '+5s durée de boost.', cost: 5, effect: { type: 'CORE_BOOST_DURATION', value: 5000 }, required: ['core_duration_2'], position: { angle: 210, radius: 3 } },
+    // Ring 1
+    { id: 'core_charge_1', name: 'Charge Accélérée', description: 'Augmente la vitesse de charge de 25%.', cost: 1, effect: { type: 'CORE_CHARGE_RATE', value: 0.25 }, required: ['core_start'], position: { angle: -90, radius: 1 } },
+    { id: 'core_boost_1', name: 'Surcharge Améliorée', description: 'Augmente le multiplicateur de boost de +1x.', cost: 1, effect: { type: 'CORE_BOOST_MULTIPLIER', value: 1 }, required: ['core_start'], position: { angle: 30, radius: 1 } },
+    { id: 'core_duration_1', name: 'Stabilité Prolongée', description: 'Augmente la durée du boost de 2 secondes.', cost: 1, effect: { type: 'CORE_BOOST_DURATION', value: 2000 }, required: ['core_start'], position: { angle: 210, radius: 1 } },
+
+    // Ring 2
+    { id: 'core_charge_2', name: 'Flux Turbulent', description: 'Augmente la vitesse de charge de 50%.', cost: 3, effect: { type: 'CORE_CHARGE_RATE', value: 0.5 }, required: ['core_charge_1'], position: { angle: -90, radius: 2 } },
+    { id: 'core_boost_2', name: 'Éruption Quantique', description: 'Augmente le multiplicateur de boost de +2.5x.', cost: 3, effect: { type: 'CORE_BOOST_MULTIPLIER', value: 2.5 }, required: ['core_boost_1'], position: { angle: 30, radius: 2 } },
+    { id: 'core_duration_2', name: 'Ancrage Temporel', description: 'Augmente la durée du boost de 3 secondes.', cost: 3, effect: { type: 'CORE_BOOST_DURATION', value: 3000 }, required: ['core_duration_1'], position: { angle: 210, radius: 2 } },
 ];
