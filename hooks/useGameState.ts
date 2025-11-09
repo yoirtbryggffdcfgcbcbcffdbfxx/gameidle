@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GameState, Upgrade, Achievement, Settings } from '../types';
 // FIX: Added CORE_UPGRADES to import to resolve module not found error.
-import { SAVE_KEY, INITIAL_UPGRADES, TICK_RATE, MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, ASCENSION_UPGRADES, CORE_UPGRADES, LOAN_REPAYMENT_RATE, BANK_UPGRADES, BANK_UNLOCK_TOTAL_ENERGY } from '../constants';
+import { SAVE_KEY, INITIAL_UPGRADES, TICK_RATE, MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, ASCENSION_UPGRADES, CORE_UPGRADES, LOAN_REPAYMENT_RATE, BANK_UPGRADES, BANK_UNLOCK_TOTAL_ENERGY, SHOP_UPGRADES } from '../constants';
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
-import { calculateCost } from '../utils/helpers';
+import { calculateCost, calculateBulkBuy } from '../utils/helpers';
 
 export interface LoanResult {
     success: boolean;
@@ -55,6 +55,8 @@ const getInitialState = (): GameState => {
         currentLoan: null,
         bankLevel: 0,
         hasSeenBankTutorial: false,
+        // Shop
+        purchasedShopUpgrades: [],
     };
 };
 
@@ -375,21 +377,24 @@ export const useGameState = (
         checkAchievement("Tempête de Clics", gameState.totalClicks + 1 >= 100000);
     };
 
-    const buyUpgrade = (index: number) => {
+    const buyUpgrade = (index: number, amount: number | 'MAX') => {
         const upgrade = gameState.upgrades[index];
-        if (gameState.energy >= upgrade.currentCost && upgrade.owned < MAX_UPGRADE_LEVEL) {
-            setGameState(prev => {
-                const newUpgrades = [...prev.upgrades];
-                const newUpgrade = { ...newUpgrades[index] };
-                newUpgrade.owned++;
-                newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier);
+        if (upgrade.owned >= MAX_UPGRADE_LEVEL) return false;
 
-                newUpgrades[index] = newUpgrade;
-                return { ...prev, energy: prev.energy - upgrade.currentCost, upgrades: newUpgrades };
-            });
-            return true;
-        }
-        return false;
+        const { numToBuy, totalCost } = calculateBulkBuy(upgrade, amount, gameState.energy, costMultiplier);
+        
+        if (numToBuy === 0) return false;
+
+        setGameState(prev => {
+            const newUpgrades = [...prev.upgrades];
+            const newUpgrade = { ...newUpgrades[index] };
+            newUpgrade.owned += numToBuy;
+            newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier);
+            newUpgrades[index] = newUpgrade;
+            return { ...prev, energy: prev.energy - totalCost, upgrades: newUpgrades };
+        });
+
+        return true;
     };
     
     const doAscension = () => {
@@ -411,6 +416,7 @@ export const useGameState = (
                 achievements: prev.achievements, // Keep achievements
                 purchasedAscensionUpgrades: prev.purchasedAscensionUpgrades,
                 purchasedCoreUpgrades: prev.purchasedCoreUpgrades,
+                purchasedShopUpgrades: prev.purchasedShopUpgrades,
                 hasSeenAscensionTutorial: true,
                 hasSeenCoreTutorial: prev.hasSeenCoreTutorial,
                 hasSeenBankTutorial: prev.hasSeenBankTutorial,
@@ -459,6 +465,39 @@ export const useGameState = (
             checkAchievement("Noyau Amélioré", gameState.purchasedCoreUpgrades.length === 2);
             return true;
         }
+        return false;
+    };
+
+    const buyShopUpgrade = (id: string) => {
+        const upgrade = SHOP_UPGRADES.find(u => u.id === id);
+        if (!upgrade) return false;
+
+        const isPurchased = gameState.purchasedShopUpgrades.includes(id);
+        if (isPurchased) return false;
+
+        let canAfford = false;
+        if (upgrade.currency === 'quantumShards') {
+            canAfford = gameState.quantumShards >= upgrade.cost;
+        }
+
+        if (canAfford) {
+            setGameState(prev => {
+                const newShopUpgrades = [...prev.purchasedShopUpgrades, id];
+                let newQuantumShards = prev.quantumShards;
+
+                if (upgrade.currency === 'quantumShards') {
+                    newQuantumShards -= upgrade.cost;
+                }
+                
+                return {
+                    ...prev,
+                    purchasedShopUpgrades: newShopUpgrades,
+                    quantumShards: newQuantumShards,
+                };
+            });
+            return true;
+        }
+
         return false;
     };
 
@@ -652,12 +691,14 @@ export const useGameState = (
         achievementBonuses,
         coreBonuses,
         bankBonuses,
+        costMultiplier,
         
         // Actions
         buyUpgrade,
         doAscension,
         buyAscensionUpgrade,
         buyCoreUpgrade,
+        buyShopUpgrade,
         dischargeCore,
         resetGame,
         incrementClickCount,

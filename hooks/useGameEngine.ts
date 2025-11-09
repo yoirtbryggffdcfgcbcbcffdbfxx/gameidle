@@ -96,6 +96,7 @@ export const useGameEngine = () => {
         isCoreDischarging,
         quantumShards,
         purchasedCoreUpgrades,
+        purchasedShopUpgrades,
         coreBonuses,
         hasSeenCoreTutorial,
         setHasSeenCoreTutorial,
@@ -105,6 +106,7 @@ export const useGameEngine = () => {
         currentLoan,
         bankLevel,
         bankBonuses,
+        costMultiplier
     } = gameState;
 
     const totalClickPower = useMemo(() => {
@@ -155,14 +157,14 @@ export const useGameEngine = () => {
         }
     };
 
-    const handleBuyUpgrade = (index: number) => {
-        const upgradeId = gameState.upgrades[index].id;
-        if (gameState.buyUpgrade(index)) {
+    const handleBuyUpgrade = (index: number, amount: number | 'MAX') => {
+        const upgrade = gameState.upgrades[index];
+        if (gameState.buyUpgrade(index, amount)) {
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
             unlockAchievement("Premier Investissement");
-            if (popups.tutorialStep === 4 && upgradeId === 'gen_1') {
-                popups.setTutorialStep(5); // Advance to "Check Achievements" step
+            if (popups.tutorialStep === 4 && upgrade.id === 'gen_1') {
+                popups.setTutorialStep(5);
             }
         } else {
             addNotification("Pas assez d'énergie !", 'error');
@@ -214,6 +216,15 @@ export const useGameEngine = () => {
             addNotification("Réacteur du cœur amélioré !", 'info');
         } else {
             addNotification("Pas assez de fragments quantiques !", 'error');
+        }
+    };
+
+    const handleBuyShopUpgrade = (id: string) => {
+        if (gameState.buyShopUpgrade(id)) {
+            playSfx('buy');
+            addNotification("Amélioration permanente achetée !", 'info');
+        } else {
+            addNotification("Pas assez de Fragments Quantiques !", 'error');
         }
     };
 
@@ -374,6 +385,7 @@ export const useGameEngine = () => {
             ascensionLevel: gameState.ascensionLevel,
             ascensionPoints: gameState.ascensionPoints,
             purchasedAscensionUpgrades: gameState.purchasedAscensionUpgrades,
+            purchasedShopUpgrades: gameState.purchasedShopUpgrades,
             ascensionBonuses: gameState.ascensionBonuses,
             achievementBonuses: gameState.achievementBonuses,
             coreCharge,
@@ -389,6 +401,7 @@ export const useGameEngine = () => {
             currentLoan,
             bankLevel,
             bankBonuses,
+            costMultiplier: gameState.costMultiplier,
         },
         
         computedState: {
@@ -424,6 +437,7 @@ export const useGameEngine = () => {
             onConfirmAscension: confirmAscension,
             onBuyAscensionUpgrade: handleBuyAscensionUpgrade,
             onBuyCoreUpgrade: handleBuyCoreUpgrade,
+            onBuyShopUpgrade: handleBuyShopUpgrade,
             onConfirmHardReset: handleConfirmHardReset,
             onSettingsChange: handleSettingsChange,
             onDischargeCore: handleDischargeCore,

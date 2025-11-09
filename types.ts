@@ -49,6 +49,14 @@ export interface CoreUpgrade {
     position: { angle: number, radius: number };
 }
 
+export interface ShopUpgrade {
+    id: string;
+    name: string;
+    description: string;
+    cost: number;
+    currency: 'quantumShards';
+}
+
 export interface GameState {
   energy: number;
   upgrades: Upgrade[];
@@ -70,6 +78,8 @@ export interface GameState {
   currentLoan: { amount: number; remaining: number; } | null;
   bankLevel: number;
   hasSeenBankTutorial: boolean;
+  // Shop feature state
+  purchasedShopUpgrades: string[];
 }
 
 export interface Settings {

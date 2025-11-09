@@ -14,7 +14,7 @@ const tutorialSteps: { [key: number]: TutorialStep } = {
     },
     2: {
         elementIds: ['energy-bar-container', 'collect-button'],
-        text: "Excellent. L'énergie que vous collectez remplit cette barre. Continuez jusqu'à 10 unités pour notre premier achat.", 
+        text: "Excellent. L'énergie que vous collectez remplit cette barre. Continuez jusqu'à 15 unités pour notre premier achat.", 
     },
     3: { 
         elementIds: ['nav-forge'], 
@@ -171,7 +171,12 @@ const AITutorial: React.FC<AITutorialProps> = ({ step, setStep }) => {
             if (stabilityCounter >= requiredStableChecks) {
                 clearProbe();
                 setHighlightBox(combinedRect);
-                setDialogPosition(combinedRect.top > window.innerHeight / 2 ? 'top' : 'bottom');
+                // User feedback: Force the dialog to the top at step 2 to prevent it from covering the collect button.
+                if (step === 2) {
+                    setDialogPosition('top');
+                } else {
+                    setDialogPosition(combinedRect.top > window.innerHeight / 2 ? 'top' : 'bottom');
+                }
             }
         }, 50);
 

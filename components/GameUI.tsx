@@ -6,7 +6,6 @@ import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextT
 // Components
 import FlowingParticle from './ui/FlowingParticle';
 import FloatingText from './ui/FloatingText';
-import UpgradeList from './UpgradeList';
 import SettingsPopup from './popups/SettingsPopup';
 import AchievementsPopup from './popups/AchievementsPopup';
 import ConfirmationPopup from './popups/ConfirmationPopup';
@@ -21,6 +20,8 @@ import AscensionSection from './AscensionSection';
 import ReactorSection from './ReactorSection';
 import BankSection from './BankSection';
 import AITutorial from './AITutorial';
+import ForgeSection from './ForgeSection';
+import ShopPopup from './popups/ShopPopup';
 
 
 interface GameUIProps {
@@ -34,6 +35,7 @@ interface GameUIProps {
     productionTotal: number;
     clickPower: number;
     purchasedAscensionUpgrades: string[];
+    purchasedShopUpgrades: string[];
     ascensionBonuses: { productionMultiplier: number; clickMultiplier: number; costReduction: number; startingEnergy: number; };
     achievementBonuses: { production: number; click: number; coreCharge: number; costReduction: number; };
     coreBonuses: { chargeRate: number; multiplier: number; };
@@ -63,15 +65,17 @@ interface GameUIProps {
     savingsBalance: number;
     currentLoan: { amount: number; remaining: number; } | null;
     bankLevel: number;
+    costMultiplier: number;
 
 
     // Callbacks & Handlers
     onCollect: (e: React.MouseEvent<HTMLButtonElement>) => void;
-    onBuyUpgrade: (index: number) => void;
+    onBuyUpgrade: (index: number, amount: number | 'MAX') => void;
     onAscend: () => void;
     onConfirmAscension: () => void;
     onBuyAscensionUpgrade: (id: string) => void;
     onBuyCoreUpgrade: (id: string) => void;
+    onBuyShopUpgrade: (id: string) => void;
     onConfirmHardReset: () => void;
     onSettingsChange: (newSettings: Partial<Settings>) => void;
     onDischargeCore: () => void;
@@ -112,21 +116,12 @@ const StatDisplay: React.FC<{ label: string; value: string; icon: string; colorC
     </div>
 );
 
-const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (
-    <div className="w-full flex justify-between items-center mb-4">
-        <h2 className="text-2xl text-center text-[var(--text-header)]">{title}</h2>
-        <div className="bg-black/30 px-3 py-1 rounded-lg text-xs">
-            <span className="text-cyan-300">⚡ {formatNumber(energy)}</span>
-        </div>
-    </div>
-);
-
 
 const GameUI: React.FC<GameUIProps> = (props) => {
     const {
         upgrades, achievements, ascensionLevel, canAscend, maxEnergy, productionTotal,
         settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
-        onBuyUpgrade, onSettingsChange,
+        onSettingsChange,
         playSfx, formatNumber, addFloatingText, removeParticle, removeFloatingText, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
         showDevPanel, dev, showCoreTutorial, setShowCoreTutorial, totalEnergyProduced, showBankTutorial, setShowBankTutorial, showBankInfoPopup, setShowBankInfoPopup
     } = props;
@@ -359,38 +354,50 @@ const GameUI: React.FC<GameUIProps> = (props) => {
 
                 {/* Section 2: Forge */}
                 <section id="forge" className="fullscreen-section reveal">
-                    <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
-                        <SectionHeader title="La Forge" energy={props.energy} formatNumber={formatNumber} />
-                        <div id="upgrades-hub" className="flex-grow overflow-hidden">
-                            <UpgradeList 
-                                upgrades={props.visibleUpgrades}
-                                onBuyUpgrade={onBuyUpgrade}
-                                formatNumber={formatNumber}
-                            />
-                        </div>
-                    </div>
+                     <ForgeSection
+                        energy={props.energy}
+                        formatNumber={formatNumber}
+                        visibleUpgrades={props.visibleUpgrades}
+                        onBuyUpgrade={props.onBuyUpgrade}
+                        productionTotal={props.productionTotal}
+                        costMultiplier={props.costMultiplier}
+                        playSfx={playSfx}
+                        purchasedShopUpgrades={props.purchasedShopUpgrades}
+                    />
                 </section>
 
                 {/* Section 3: Command Center */}
                 <section id="command-center" className="fullscreen-section reveal">
                     <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
-                         <SectionHeader title="Centre de Commandement" energy={props.energy} formatNumber={formatNumber} />
+                        <div className="w-full flex justify-between items-center mb-4">
+                            <h2 className="text-2xl text-center text-[var(--text-header)]">Centre de Commandement</h2>
+                            <div className="bg-black/30 px-3 py-1 rounded-lg text-xs flex gap-4">
+                                <span className="text-purple-400">⚛️ {formatNumber(props.quantumShards)}</span>
+                                <span className="text-cyan-300">⚡ {formatNumber(props.energy)}</span>
+                            </div>
+                        </div>
                         <div className="flex justify-center border-b border-[var(--border-color)] mb-4">
-                            {['achievements', 'settings'].map(tab => (
+                            {['achievements', 'shop', 'settings'].map(tab => (
                                 <button
                                     key={tab}
                                     id={`tab-${tab}`}
                                     onClick={() => handleCommandCenterTabClick(tab)}
                                     className={`px-4 py-2 text-sm md:text-base transition-all duration-300 relative ${activeCommandCenterTab === tab ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
                                 >
-                                    {tab === 'achievements' ? 'Succès' : 'Paramètres'}
-                                    {activeCommandCenterTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--text-header)]"></div>}
+                                    {tab === 'achievements' ? 'Succès' : tab === 'shop' ? 'Boutique' : 'Paramètres'}
                                 </button>
                             ))}
                         </div>
                         <div className="flex-grow overflow-hidden relative">
                              <div id="achievements-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'achievements' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                                 <AchievementsPopup achievements={props.achievements} achievementBonuses={props.achievementBonuses} onClose={() => {}} />
+                            </div>
+                            <div id="shop-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'shop' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <ShopPopup
+                                    quantumShards={props.quantumShards}
+                                    purchasedShopUpgrades={props.purchasedShopUpgrades}
+                                    onBuy={props.onBuyShopUpgrade}
+                                />
                             </div>
                              <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'settings' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                                 <SettingsPopup settings={settings} onSettingsChange={onSettingsChange} onClose={() => {}} onHardReset={() => setShowHardResetConfirm(true)} playSfx={playSfx} />

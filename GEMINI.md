@@ -28,8 +28,27 @@ C'est le pilier de l'architecture. Il agit comme une **façade** :
 
 1.  **`App.tsx`** : Consomme `useGameEngine`. Gère la machine d'état de l'application (`loading`, `cinematic`, `menu`, `game`).
 2.  **`GameUI.tsx`** : Reçoit l'intégralité de l'objet de `useGameEngine` et le déstructure pour le distribuer à ses enfants. C'est le hub principal de l'UI en jeu.
-3.  **Composants de Section (`CoreSection`, `ForgeSection`, etc.)** : Reçoivent les sous-ensembles de props pertinents de `GameUI`.
+3.  **Composants de Section (`ForgeSection`, `AscensionSection`, etc.)** : Reçoivent les sous-ensembles de props pertinents de `GameUI`.
 4.  **Composants d'UI (`UpgradeItem`, `SkillTree`, etc.)** : Reçoivent uniquement les données et les callbacks dont ils ont besoin.
+
+### 2.4. Système de Cosmétiques & Boutique
+
+Ce système gère les thèmes visuels et les curseurs de souris personnalisés.
+
+-   **Gestion de l'État :**
+    -   **Débloqués :** `unlockedThemes: string[]` et `unlockedCursors: string[]` dans `GameState` (`useGameState.ts`) suivent les cosmétiques achetés par le joueur. Ils sont persistants.
+    -   **Sélectionnés :** `theme: string` et `selectedCursor: string` dans `Settings` (`useSettings.ts`) suivent les cosmétiques actuellement actifs.
+
+-   **Flux de Données & Logique :**
+    1.  **Définition :** Les cosmétiques disponibles sont définis dans `constants.ts` (`THEMES`, `CURSORS`).
+    2.  **Achat :** Les articles correspondants sont créés dans `SHOP_UPGRADES` (`constants.ts`) avec un `type` (`THEME` ou `CURSOR`) et un `targetId` qui lie l'article de la boutique à la définition du cosmétique.
+    3.  **Transaction :** `ShopPopup.tsx` affiche ces articles. Un clic sur "Acheter" appelle `handleBuyShopUpgrade` (`useGameEngine.ts`), qui à son tour appelle `buyShopUpgrade` (`useGameState.ts`).
+    4.  **Mise à jour de l'État :** `buyShopUpgrade` vérifie la devise (`quantumShards`), déduit le coût, et ajoute le `targetId` de l'article au tableau approprié (`unlockedThemes` ou `unlockedCursors`).
+    5.  **Sélection :** `SettingsPopup.tsx` lit les tableaux `unlocked...` pour n'afficher que les options disponibles à la sélection.
+    6.  **Application :**
+        -   **Thème :** Un `useEffect` dans `useSettings.ts` applique l'attribut `data-theme` à l'élément `<html>`.
+        -   **Curseur :** Un `useEffect` dans `App.tsx` applique l'attribut `data-cursor` à l'élément `<body>`.
+    7.  **Styling :** Les styles CSS réels pour les thèmes et les curseurs sont définis dans `index.html`.
 
 ## 3. Cookbook pour les Modifications Futures
 
@@ -70,6 +89,6 @@ Ceci est un guide pratique pour les modifications courantes afin d'assurer la co
 ## 4. Équilibrage du Jeu
 
 Les principales sources pour l'équilibrage du jeu sont centralisées dans :
--   **`constants.ts`** : Coûts de base, production, effets des améliorations d'ascension/cœur. La constante `TICK_RATE` influence la vitesse de jeu.
+-   **`constants.ts`** : Coûts de base, production, effets des améliorations d'ascension/cœur, et coûts des articles de la boutique. La constante `TICK_RATE` influence la vitesse de jeu.
 -   **`data/achievements.ts`** : Valeurs des bonus de succès.
 -   **`utils/helpers.ts`** : La fonction `calculateCost` contient la formule de croissance des coûts des améliorations (ex: `Math.pow(1.08, owned)`). C'est un levier très puissant pour l'équilibrage.

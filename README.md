@@ -27,16 +27,18 @@ Le cœur du jeu repose sur une boucle de progression satisfaisante et des décis
 
 -   **Ascension (Système de Prestige) :** Lorsque vous atteignez la capacité maximale d'énergie, vous pouvez **Ascensionner**. Cette puissante réinitialisation recommence votre partie mais vous accorde deux monnaies permanentes :
     -   **Points d'Ascension :** Dépensez-les dans un arbre de compétences dédié pour des bonus globaux puissants (plus de production, clics plus forts, coûts réduits).
-    -   **Fragments Quantiques :** Utilisez-les dans le **Réacteur** pour améliorer en permanence le Cœur Quantique lui-même (charge plus rapide, boost plus puissant).
+    -   **Fragments Quantiques :** Utilisez-les dans le **Réacteur** pour améliorer le Cœur Quantique, ou dans la **Boutique** pour acheter des améliorations fonctionnelles et des objets cosmétiques permanents.
 
 -   **Succès :** Débloquez des dizaines de succès uniques en atteignant divers jalons. Chaque succès débloqué offre un petit bonus permanent et cumulatif à vos statistiques !
+
+-   **La Banque :** Une fois un certain seuil de production atteint, débloquez la Banque Quantique. Épargnez votre énergie pour gagner des intérêts passifs ou contractez des prêts pour une croissance explosive, à vos risques et périls.
 
 ## ✨ Fonctionnalités Clés
 
 -   **Zéro-Build :** Fonctionne directement dans le navigateur sans étape de compilation, grâce aux `importmaps`.
 -   **Design Responsive Unifié :** Une expérience de défilement sur une seule page qui s'adapte à toutes les tailles d'écran, avec une navigation `Scrollspy` pour se déplacer facilement entre les sections.
+-   **Personnalisation Visuelle :** Dépensez vos Fragments Quantiques durement gagnés dans la boutique pour débloquer des thèmes d'interface et des curseurs de souris uniques afin de personnaliser votre expérience de jeu.
 -   **Tutoriel Dynamique :** Un système de tutoriel contextuel guide les nouveaux joueurs à travers les mécaniques de base.
--   **Personnalisation :** Plusieurs thèmes visuels, contrôle du volume, notation scientifique, et plus encore.
 -   **Architecture Moderne :** Entièrement basé sur les Hooks React pour une logique propre et une séparation claire des préoccupations.
 
 ## 🛠️ Stack Technique
@@ -53,7 +55,7 @@ Le projet utilise une structure modulaire orientée par fonctionnalité.
 ```
 /
 ├── components/       # Composants React (UI)
-│   ├── popups/       # Popups (Paramètres, Succès, Crédits...)
+│   ├── popups/       # Popups (Paramètres, Succès, Boutique...)
 │   ├── ui/           # Éléments d'UI réutilisables (SkillTree, ToggleSwitch...)
 │   └── ...
 ├── hooks/            # Hooks React personnalisés (toute la logique du jeu)
@@ -105,6 +107,20 @@ L'architecture est conçue pour être facilement extensible. La philosophie de b
 1.  **Ouvrez `types.ts`** si vous avez besoin d'un nouveau type d'effet.
 2.  **Ouvrez `constants.ts`** et ajoutez un nouvel objet au tableau `ASCENSION_UPGRADES`. Définissez sa `position`, son `coût`, son `effet` et ses prérequis (`required`).
 3.  **Ouvrez `hooks/useGameState.ts`** et dans le `useMemo` `ascensionBonuses`, ajoutez un `case` dans le `switch` pour appliquer l'effet de votre nouvelle amélioration.
+
+### Ajouter un nouveau Thème achetable :
+
+1.  **Ouvrez `constants.ts`**.
+2.  Ajoutez un nouvel objet au tableau `THEMES`.
+3.  Ajoutez un nouvel objet `ShopUpgrade` au tableau `SHOP_UPGRADES` avec `type: ShopUpgradeType.THEME` et `targetId` correspondant à l'ID du thème.
+4.  **Ouvrez `index.html`** et ajoutez le sélecteur CSS `:root[data-theme='votre-theme'] { ... }` avec les variables de couleur.
+
+### Ajouter un nouveau Curseur achetable :
+
+1.  **Ouvrez `constants.ts`**.
+2.  Ajoutez un nouvel objet au tableau `CURSORS`.
+3.  Ajoutez un nouvel objet `ShopUpgrade` au tableau `SHOP_UPGRADES` avec `type: ShopUpgradeType.CURSOR` et `targetId` correspondant à l'ID du curseur.
+4.  **Ouvrez `index.html`** et ajoutez le sélecteur CSS `body[data-cursor='votre-curseur'] #custom-cursor { ... }` pour styliser le curseur.
 
 ## 🌟 Feuille de Route
 

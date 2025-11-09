@@ -1,4 +1,4 @@
-import { Upgrade, AscensionUpgrade, CoreUpgrade } from './types';
+import { Upgrade, AscensionUpgrade, CoreUpgrade, ShopUpgrade } from './types';
 
 export const SAVE_KEY = 'quantum-core-idle-save';
 export const TICK_RATE = 100; // ms per tick for production
@@ -30,6 +30,17 @@ export const BANK_UPGRADES = [
     { cost: 1e8, savingsInterest: 0.005, loanInterest: 0.15, description: "Réduit l'intérêt des prêts à 15%." },
     // Level 3
     { cost: 1e9, savingsInterest: 0.008, loanInterest: 0.15, description: "Améliore le taux d'épargne à 0.8%." }
+];
+
+// Shop Upgrades
+export const SHOP_UPGRADES: ShopUpgrade[] = [
+    {
+        id: 'efficiency_analyzer',
+        name: "Analyseur d'Efficacité",
+        description: "Surligne en permanence l'amélioration de production la plus rentable, vous guidant vers l'investissement optimal.",
+        cost: 500,
+        currency: 'quantumShards',
+    },
 ];
 
 
