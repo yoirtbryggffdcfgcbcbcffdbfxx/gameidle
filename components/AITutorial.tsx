@@ -1,42 +1,50 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { sfx } from '../audio/sfx';
 
 interface TutorialStep {
-    elementId?: string;
+    elementIds?: string[];
     text: string;
     isGlobal?: boolean;
 }
 
 const tutorialSteps: { [key: number]: TutorialStep } = {
     1: { 
-        elementId: 'collect-button', 
+        elementIds: ['collect-button'], 
         text: "Bienvenue, Capitaine. Je suis votre IA de bord. Commençons par générer de l'énergie. Cliquez sur ce bouton.",
     },
     2: {
-        elementId: 'collect-button',
-        text: "Excellent. Chaque clic produit de l'énergie. Continuez jusqu'à ce que vous ayez 10 unités pour acheter notre premier générateur.", 
+        elementIds: ['energy-bar-container', 'collect-button'],
+        text: "Excellent. L'énergie que vous collectez remplit cette barre. Continuez jusqu'à 10 unités pour notre premier achat.", 
     },
-    3: {
-        elementId: 'stats-display-container',
-        text: "Observez ces statistiques. 'Prod/sec' est votre gain passif. 'Clic' est la puissance de chaque clic manuel.",
+    3: { 
+        elementIds: ['nav-forge'], 
+        text: "Parfait. Maintenant, utilisez la navigation pour vous rendre à la Forge et dépenser cette énergie.",
     },
-    4: { 
-        elementId: 'nav-forge', 
-        text: "Parfait. Maintenant, utilisez le système de navigation pour vous rendre à la Forge et dépenser cette énergie.",
-    },
-    5: {
-        elementId: 'upgrade-gen_1',
+    4: {
+        elementIds: ['upgrade-gen_1'],
         text: "Voici les générateurs. Achetez celui-ci pour lancer notre production d'énergie passive. Il travaillera pour nous.",
     },
+    5: {
+        elementIds: ['nav-core'],
+        text: "Générateur activé ! Retournons au Cœur pour voir ses effets."
+    },
     6: {
-        elementId: 'nav-command-center',
-        text: "Systèmes autonomes en ligne. Rendez-vous au Centre de Commandement pour suivre nos progrès.",
+        elementIds: ['stat-prod'],
+        text: "Regardez ! Votre 'Prod/sec' a augmenté. Vous gagnez maintenant de l'énergie automatiquement."
     },
     7: {
-        elementId: 'tab-achievements',
+        elementIds: ['stat-click'],
+        text: "Et ceci est votre puissance de 'Clic', l'énergie que vous gagnez à chaque clic manuel. Vous pourrez aussi l'améliorer."
+    },
+    8: {
+        elementIds: ['nav-command-center'],
+        text: "Bien. Allons au Centre de Commandement pour suivre nos progrès.",
+    },
+    9: {
+        elementIds: ['achievements-panel'],
         text: "Ici, vous pouvez voir les Succès. En débloquer vous donne des bonus permanents. C'est un objectif clé.",
     },
-    8: { 
+    10: { 
         isGlobal: true, 
         text: "Vous maîtrisez les bases. Votre mission : générer, améliorer, et atteindre l'Ascension. Je serai en veille si nécessaire. Bonne chance.",
     },
@@ -70,54 +78,64 @@ const AIAvatar = () => (
     </svg>
 );
 
+const getCombinedBoundingBox = (elementIds: string[]): DOMRect | null => {
+    const elements = elementIds
+        .map(id => document.getElementById(id))
+        .filter(el => el !== null) as HTMLElement[];
+    
+    if (elements.length === 0) return null;
+
+    const rects = elements.map(el => el.getBoundingClientRect());
+    
+    if (rects.some(rect => rect.width === 0 || rect.height === 0)) return null;
+
+    const left = Math.min(...rects.map(r => r.left));
+    const top = Math.min(...rects.map(r => r.top));
+    const right = Math.max(...rects.map(r => r.right));
+    const bottom = Math.max(...rects.map(r => r.bottom));
+
+    return new DOMRect(left, top, right - left, bottom - top);
+};
+
 const AITutorial: React.FC<AITutorialProps> = ({ step, setStep }) => {
     const [highlightBox, setHighlightBox] = useState<DOMRect | null>(null);
     const [dialogPosition, setDialogPosition] = useState<'top' | 'bottom'>('bottom');
     const [charIndex, setCharIndex] = useState(0);
-    const [isVisible, setIsVisible] = useState(false);
-    const [isTextComplete, setIsTextComplete] = useState(false);
     const stepData = tutorialSteps[step];
     const probeRef = useRef<number | null>(null);
 
     const handleNext = () => {
         const nextStep = step + 1;
-        if (tutorialSteps[nextStep]) {
-            setStep(nextStep);
-        } else {
-            setStep(0);
-        }
+        setStep(tutorialSteps[nextStep] ? nextStep : 0);
     };
-
     const handleSkip = () => setStep(0);
-    
+
+    // Typing effect for the dialog text
     useEffect(() => {
         setCharIndex(0);
-        setIsTextComplete(false);
+        if (!stepData?.text) return;
 
-        if (stepData?.text) {
-            const typingInterval = setInterval(() => {
-                setCharIndex(prevIndex => {
-                    if (prevIndex < stepData.text.length) {
-                        if (sfx.typing) {
-                            sfx.typing.currentTime = 0;
-                            sfx.typing.volume = 0.3;
-                            sfx.typing.play().catch(() => {});
-                        }
-                        return prevIndex + 1;
-                    } else {
-                        clearInterval(typingInterval);
-                        setIsTextComplete(true);
-                        return prevIndex;
+        const typingInterval = setInterval(() => {
+            setCharIndex(prevIndex => {
+                if (prevIndex < stepData.text.length) {
+                    if (sfx.typing) {
+                        sfx.typing.currentTime = 0;
+                        sfx.typing.volume = 0.3;
+                        sfx.typing.play().catch(() => {});
                     }
-                });
-            }, 35);
-            return () => clearInterval(typingInterval);
-        }
-    }, [stepData]);
+                    return prevIndex + 1;
+                }
+                clearInterval(typingInterval);
+                return prevIndex;
+            });
+        }, 35);
+        return () => clearInterval(typingInterval);
+    }, [step, stepData]);
 
     const typedText = stepData?.text.substring(0, charIndex) || '';
 
-    useEffect(() => {
+    // Effect to find and highlight the target element
+    useLayoutEffect(() => {
         const clearProbe = () => {
             if (probeRef.current) {
                 clearInterval(probeRef.current);
@@ -127,99 +145,92 @@ const AITutorial: React.FC<AITutorialProps> = ({ step, setStep }) => {
 
         clearProbe();
         setHighlightBox(null);
-        setIsVisible(false);
 
-        if (!stepData || step === 0) {
-            return;
-        }
-        
-        if (stepData.isGlobal) {
-            setDialogPosition('bottom');
-            setHighlightBox(null);
-            setIsVisible(true);
-            return;
-        }
+        if (!stepData || step === 0 || stepData.isGlobal) return;
+        if (!stepData.elementIds || stepData.elementIds.length === 0) return;
 
-        if (!stepData.elementId) return;
-
-        let previousRect: DOMRect | null = null;
+        let previousRectJSON: string | null = null;
         let stabilityCounter = 0;
-        const requiredStableChecks = 5;
-        const interval = 50;
-        
-        probeRef.current = window.setInterval(() => {
-            const element = document.getElementById(stepData.elementId!);
-            if (!element) return;
+        const requiredStableChecks = 3; 
 
-            const section = element.closest('.fullscreen-section');
-            if (section && !section.classList.contains('revealed')) {
+        probeRef.current = window.setInterval(() => {
+            const combinedRect = getCombinedBoundingBox(stepData.elementIds!);
+            if (!combinedRect) {
                 stabilityCounter = 0;
                 return;
             }
 
-            const currentRect = element.getBoundingClientRect();
-            if (currentRect.width === 0 || currentRect.height === 0) return;
-
-            const isStable = previousRect && Math.abs(previousRect.top - currentRect.top) < 1 && Math.abs(previousRect.left - currentRect.left) < 1;
-
-            if (isStable) {
+            const currentRectJSON = JSON.stringify(combinedRect);
+            if (previousRectJSON === currentRectJSON) {
                 stabilityCounter++;
             } else {
                 stabilityCounter = 0;
+                previousRectJSON = currentRectJSON;
             }
-            previousRect = currentRect;
 
             if (stabilityCounter >= requiredStableChecks) {
                 clearProbe();
-                setHighlightBox(currentRect);
-                setDialogPosition(currentRect.top > window.innerHeight / 2 ? 'top' : 'bottom');
-                setIsVisible(true);
+                setHighlightBox(combinedRect);
+                setDialogPosition(combinedRect.top > window.innerHeight / 2 ? 'top' : 'bottom');
             }
-        }, interval);
+        }, 50);
 
-        return clearProbe;
+        return () => clearProbe();
     }, [step, stepData]);
-    
-    if (step === 0 || !stepData) return null;
+
+    if (step === 0 || !stepData) {
+        return null;
+    }
 
     const dialogClasses = `fixed z-[2002] w-full max-w-md p-4 flex items-start ${dialogPosition === 'top' ? 'top-5' : 'bottom-5'} left-1/2 -translate-x-1/2`;
-    const isLastStep = !tutorialSteps[step + 1];
-    
-    const highlightBoxClasses = `absolute z-[2001] border-4 rounded-lg transition-all duration-300 pointer-events-none animate-fade-in-fast 
-        ${(step === 1 || step === 2) ? 'animate-tutorial-pulse' : 'border-cyan-400'}`;
-
-    const showHighlight = isVisible && highlightBox && (step !== 4 || isTextComplete);
+    const isReadyForHighlight = highlightBox && !stepData.isGlobal;
+    const padding = 8;
 
     return (
-        <div className="fixed inset-0 z-[2000]">
-            {showHighlight ? (
-                 <div 
-                    className={highlightBoxClasses}
+        <>
+            {/* Unified Overlay */}
+            <div
+                className="fixed pointer-events-none z-[2000]"
+                style={{
+                    top: isReadyForHighlight ? highlightBox.top - padding : 0,
+                    left: isReadyForHighlight ? highlightBox.left - padding : 0,
+                    width: isReadyForHighlight ? highlightBox.width + padding * 2 : '100%',
+                    height: isReadyForHighlight ? highlightBox.height + padding * 2 : '100%',
+                    boxShadow: isReadyForHighlight ? '0 0 0 100vmax rgba(0,0,0,0.9)' : 'none',
+                    backgroundColor: isReadyForHighlight ? 'transparent' : 'rgba(0,0,0,0.9)',
+                }}
+            />
+
+            {/* Pulsing Highlight Border (only when highlight is active) */}
+            {isReadyForHighlight && (
+                <div
+                    className="fixed z-[2001] border-4 rounded-lg pointer-events-none animate-tutorial-pulse"
                     style={{
-                        top: highlightBox.top - 8,
-                        left: highlightBox.left - 8,
-                        width: highlightBox.width + 16,
-                        height: highlightBox.height + 16,
-                        boxShadow: '0 0 0 9999px #000',
+                        top: highlightBox.top - padding,
+                        left: highlightBox.left - padding,
+                        width: highlightBox.width + padding * 2,
+                        height: highlightBox.height + padding * 2,
                     }}
                 />
-            ) : isVisible && (
-                <div className="absolute inset-0 bg-black animate-fade-in-fast"></div>
             )}
             
-            {isVisible && (
+            {/* Dialog Box (only when ready) */}
+            {(highlightBox || stepData.isGlobal) && (
                 <div className={`${dialogClasses} animate-fade-in-fast`}>
                     <AIAvatar />
                     <div className="bg-[var(--bg-popup)] p-3 rounded-lg flex-grow border border-cyan-500/50 shadow-lg">
-                        <p className="text-sm min-h-[3em]">{typedText}<span className="inline-block w-0.5 h-4 bg-cyan-300 animate-pulse ml-1" /></p>
+                        <p className="text-sm min-h-[3em]">{typedText}{charIndex < (stepData.text?.length || 0) && <span className="inline-block w-0.5 h-4 bg-cyan-300 animate-pulse ml-1" />}
+                        </p>
                         <div className="flex justify-end mt-3 text-xs space-x-2">
                             <button onClick={handleSkip} className="px-3 py-1 rounded bg-red-800/80 hover:bg-red-700 transition-colors">Passer</button>
-                            <button onClick={handleNext} className="px-3 py-1 rounded bg-cyan-700 hover:bg-cyan-600 transition-colors">{isLastStep ? "Terminer" : "Suivant"}</button>
+                            {charIndex >= (stepData.text?.length || 0) && (
+                                 <button onClick={handleNext} className="px-3 py-1 rounded bg-cyan-700 hover:bg-cyan-600 transition-colors">{!tutorialSteps[step + 1] ? "Terminer" : "Suivant"}</button>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 };
 

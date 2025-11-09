@@ -86,7 +86,7 @@ interface GameUIProps {
 }
 
 const StatDisplay: React.FC<{ label: string; value: string; icon: string; colorClass: string; }> = ({ label, value, icon, colorClass }) => (
-    <div className={`bg-black/30 p-2 rounded-lg text-center flex-1 ${colorClass}`}>
+    <div className={`bg-black/30 p-2 rounded-lg text-center ${colorClass}`}>
         <div className="text-xs opacity-80">{icon} {label}</div>
         <div className="text-base md:text-lg font-bold truncate">{value}</div>
     </div>
@@ -149,11 +149,14 @@ const GameUI: React.FC<GameUIProps> = (props) => {
         }, 1000); // 1s buffer for scroll to complete
 
         // Tutorial Progression Logic
-        if (id === 'forge' && tutorialStep === 4) {
-            setTutorialStep(5);
+        if (id === 'forge' && tutorialStep === 3) {
+            setTutorialStep(4);
         }
-        if (id === 'command-center' && tutorialStep === 6) {
-            setTutorialStep(7);
+        if (id === 'core' && tutorialStep === 5) {
+            setTutorialStep(6);
+        }
+        if (id === 'command-center' && tutorialStep === 8) {
+            setTutorialStep(9);
         }
     };
 
@@ -286,8 +289,8 @@ const GameUI: React.FC<GameUIProps> = (props) => {
 
     const handleCommandCenterTabClick = (tab: string) => {
         setActiveCommandCenterTab(tab);
-        if (tab === 'achievements' && tutorialStep === 7) {
-            setTutorialStep(8);
+        if (tab === 'achievements' && tutorialStep === 9) {
+            setTutorialStep(10);
         }
     };
 
@@ -313,8 +316,12 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                             </div>
                             <div className="text-center text-xs opacity-70">{formatNumber(props.energy)} / {formatNumber(maxEnergy)}</div>
                             <div id="stats-display-container" className="flex justify-around items-center gap-2">
-                                <StatDisplay label="Prod/sec" value={formatNumber(props.productionTotal)} icon="⚡" colorClass="text-yellow-300" />
-                                <StatDisplay label="Clic" value={formatNumber(props.clickPower)} icon="🖱️" colorClass="text-cyan-300" />
+                                <div id="stat-prod" className="flex-1">
+                                    <StatDisplay label="Prod/sec" value={formatNumber(props.productionTotal)} icon="⚡" colorClass="text-yellow-300" />
+                                </div>
+                                <div id="stat-click" className="flex-1">
+                                    <StatDisplay label="Clic" value={formatNumber(props.clickPower)} icon="🖱️" colorClass="text-cyan-300" />
+                                </div>
                             </div>
                         </div>
 
@@ -360,7 +367,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                             ))}
                         </div>
                         <div className="flex-grow overflow-hidden relative">
-                             <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'achievements' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                             <div id="achievements-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'achievements' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                                 <AchievementsPopup achievements={props.achievements} achievementBonuses={props.achievementBonuses} onClose={() => {}} />
                             </div>
                              <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'settings' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
