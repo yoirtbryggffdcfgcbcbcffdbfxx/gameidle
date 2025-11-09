@@ -1,99 +1,114 @@
-# Quantum Core - An Addictive Idle Game
+# Quantum Core - Un Jeu Idle Addictif
 
 [![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/your-repo/quantum-core)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-Quantum Core is a futuristic incremental idle game built with React, TypeScript, and Tailwind CSS. Players generate energy, buy upgrades to automate production, unlock achievements, and aim for Ascension to unlock powerful permanent bonuses.
+Quantum Core est un jeu incrémental futuriste développé avec React, TypeScript, et Tailwind CSS. Les joueurs génèrent de l'énergie, achètent des améliorations, débloquent des succès, et visent l'Ascension pour débloquer de puissants bonus permanents.
 
-## 🚀 Gameplay Mechanics
+## Table des Matières
 
-The core of the game revolves around a satisfying loop of progression and strategic decisions.
+- [🕹️ Mécaniques de Jeu](#️-mécaniques-de-jeu)
+- [✨ Fonctionnalités Clés](#-fonctionnalités-clés)
+- [🛠️ Stack Technique](#️-stack-technique)
+- [📁 Structure du Projet](#-structure-du-projet)
+- [🚀 Démarrage Rapide](#-démarrage-rapide)
+- [🤝 Comment Contribuer & Étendre le Jeu](#-comment-contribuer--étendre-le-jeu)
+- [🌟 Feuille de Route](#-feuille-de-route)
 
--   **Cinematic Intro:** New players are greeted with a skippable cinematic intro to set the futuristic and high-stakes tone of the game.
+## 🕹️ Mécaniques de Jeu
 
--   **Core Loop:** Start by manually collecting energy. Use that energy to buy upgrades that generate more energy passively. Re-invest your earnings into more powerful upgrades to watch your production skyrocket.
+Le cœur du jeu repose sur une boucle de progression satisfaisante et des décisions stratégiques.
 
--   **The Quantum Core:** A central mechanic that charges over time. Once fully charged, it can be activated to provide a massive, temporary boost to all energy production, allowing you to break through tough upgrade cost barriers.
+-   **Introduction Cinématique :** Les nouveaux joueurs sont accueillis par une cinématique pour établir le ton futuriste du jeu.
 
--   **Ascension (Prestige System):** When you reach the maximum energy capacity, you can **Ascend**. This powerful reset starts your game over but grants you two permanent currencies:
-    -   **Ascension Points:** Spend these on a dedicated screen for powerful global bonuses, such as increased click power, higher overall production, or reduced upgrade costs.
-    -   **Quantum Shards:** Spend these in the **Reactor** to permanently improve the Quantum Core itself, making it charge faster or provide an even stronger boost.
+-   **Boucle de Gameplay :** Commencez par collecter manuellement de l'énergie. Utilisez cette énergie pour acheter des améliorations qui génèrent passivement plus d'énergie. Réinvestissez vos gains pour voir votre production exploser.
 
--   **Achievements:** Unlock over 20 unique achievements by reaching various milestones in energy, production, or total upgrades. Each unlocked achievement provides a small, permanent, and stacking bonus to your stats!
+-   **Le Cœur Quantique :** Une mécanique centrale qui se charge avec le temps. Une fois plein, il peut être activé pour fournir un boost massif et temporaire à toute la production d'énergie.
 
--   **Responsive Design:** A fully responsive UI that works across all screen sizes. The game is designed as a single-page scrolling experience with distinct sections for the Core, Forge, Command Center, and more. A dynamic scrollspy navigation on the right side of the screen allows for easy jumping between sections.
+-   **Ascension (Système de Prestige) :** Lorsque vous atteignez la capacité maximale d'énergie, vous pouvez **Ascensionner**. Cette puissante réinitialisation recommence votre partie mais vous accorde deux monnaies permanentes :
+    -   **Points d'Ascension :** Dépensez-les dans un arbre de compétences dédié pour des bonus globaux puissants (plus de production, clics plus forts, coûts réduits).
+    -   **Fragments Quantiques :** Utilisez-les dans le **Réacteur** pour améliorer en permanence le Cœur Quantique lui-même (charge plus rapide, boost plus puissant).
 
--   **Customization & Settings:** Tailor your experience with a variety of settings, including multiple visual themes, SFX volume control, scientific notation, and more.
+-   **Succès :** Débloquez des dizaines de succès uniques en atteignant divers jalons. Chaque succès débloqué offre un petit bonus permanent et cumulatif à vos statistiques !
 
-## 🛠️ Technical Deep Dive
+## ✨ Fonctionnalités Clés
 
--   **Framework:** React 19 (served via importmap, no build step required)
--   **Language:** TypeScript
--   **Styling:** Tailwind CSS (via CDN for simplicity)
--   **Architecture:** The entire application is architected around a modern, hook-based system for clean separation of concerns. A primary `useGameEngine` hook acts as a central coordinator, managing game state, side effects, and user interactions.
+-   **Zéro-Build :** Fonctionne directement dans le navigateur sans étape de compilation, grâce aux `importmaps`.
+-   **Design Responsive Unifié :** Une expérience de défilement sur une seule page qui s'adapte à toutes les tailles d'écran, avec une navigation `Scrollspy` pour se déplacer facilement entre les sections.
+-   **Tutoriel Dynamique :** Un système de tutoriel contextuel guide les nouveaux joueurs à travers les mécaniques de base.
+-   **Personnalisation :** Plusieurs thèmes visuels, contrôle du volume, notation scientifique, et plus encore.
+-   **Architecture Moderne :** Entièrement basé sur les Hooks React pour une logique propre et une séparation claire des préoccupations.
 
-## 📁 Project Structure
+## 🛠️ Stack Technique
 
-The project uses a modular, feature-oriented structure.
+-   **Framework :** React 19 (via `importmap` depuis un CDN)
+-   **Langage :** TypeScript
+-   **Styling :** Tailwind CSS (via CDN)
+-   **Gestion d'État :** Hooks React (`useState`, `useMemo`, `useCallback`)
+
+## 📁 Structure du Projet
+
+Le projet utilise une structure modulaire orientée par fonctionnalité.
 
 ```
 /
-├── components/
-│   ├── popups/       # Popup components (Settings, Achievements, Credits...)
-│   ├── ui/           # Reusable UI elements (ToggleSwitch, AchievementCard...)
-│   ├── AscensionSection.tsx # UI for the Ascension portal
-│   ├── GameUI.tsx      # Main game UI, orchestrates all sections
-│   ├── IntroCinematic.tsx
-│   ├── MainMenu.tsx
-│   ├── ReactorSection.tsx # UI for the Quantum Core reactor
-│   ├── ScrollspyNav.tsx # Right-side navigation
-│   ├── TutorialTooltip.tsx # The tutorial component
-│   ├── UpgradeList.tsx
+├── components/       # Composants React (UI)
+│   ├── popups/       # Popups (Paramètres, Succès, Crédits...)
+│   ├── ui/           # Éléments d'UI réutilisables (SkillTree, ToggleSwitch...)
 │   └── ...
-├── hooks/            # Custom React hooks containing all game logic
-│   ├── useGameEngine.ts # The central "façade" hook
-│   ├── useGameState.ts  # Core state management (energy, upgrades)
-│ └── ...
-├── data/             # Static game data (achievements)
-├── audio/            # Base64 encoded audio files
-│   └── sfx.ts
-├── utils/            # Pure helper functions (number formatting)
-├── App.tsx           # Main component, handles app state (loading, cinematic, game)
-├── index.tsx         # React entry point
-├── types.ts          # Global TypeScript type definitions
-└── constants.ts      # Core game constants and balancing values
+├── hooks/            # Hooks React personnalisés (toute la logique du jeu)
+│   ├── useGameEngine.ts # Le hook "façade" qui orchestre tout
+│   ├── useGameState.ts  # Gestion de l'état principal du jeu
+│   └── ...
+├── data/             # Données statiques du jeu (succès)
+├── audio/            # Fichiers audio encodés en Base64
+├── utils/            # Fonctions d'aide pures (formatage de nombres)
+├── App.tsx           # Composant principal, gère la machine d'état de l'application
+├── index.tsx         # Point d'entrée de React
+├── types.ts          # Définitions globales des types TypeScript
+└── constants.ts      # Constantes du jeu et valeurs d'équilibrage
 ```
 
-## 💻 How to Run Locally
+## 🚀 Démarrage Rapide
 
-This project requires no build tools like Webpack or Vite. You can run it with any simple local web server.
+Ce projet ne nécessite aucun outil de build.
 
-1.  Clone the repository.
-2.  Navigate to the project directory in your terminal.
-3.  Start a local server. If you have Python installed, you can use:
+1.  Clonez le dépôt.
+2.  Naviguez vers le répertoire du projet dans votre terminal.
+3.  Démarrez un serveur web local. Si vous avez Python :
     ```bash
     # Python 3
     python -m http.server
     ```
-4.  Open your browser and go to `http://localhost:8000`.
+4.  Ouvrez votre navigateur à l'adresse `http://localhost:8000`.
 
-## 🔧 Extending the Game
+## 🤝 Comment Contribuer & Étendre le Jeu
 
-The architecture is designed to be easily extensible.
+L'architecture est conçue pour être facilement extensible. La philosophie de base est la **séparation des préoccupations** :
+-   **Les `hooks/`** contiennent toute la **logique** et l'**état**.
+-   **Les `components/`** sont aussi "bêtes" que possible. Ils reçoivent des données et des fonctions en props et s'occupent uniquement de l'**affichage**.
 
-### Adding a new Upgrade:
-1.  Open `constants.ts`.
-2.  Add a new upgrade object to the `INITIAL_UPGRADES` array.
-3.  The game will automatically handle the rest!
+### Ajouter une nouvelle Amélioration de base :
 
-### Adding a new Achievement:
-1.  Open `data/achievements.ts` and add your new achievement to the `INITIAL_ACHIEVEMENTS` array.
-2.  Open `hooks/useGameState.ts` and inside the main `useEffect`, add a new `checkAndUnlock(...)` call with the condition required to unlock it.
+1.  **Ouvrez `constants.ts`**.
+2.  Ajoutez un nouvel objet au tableau `INITIAL_UPGRADES`.
+3.  C'est tout ! Le jeu gérera l'affichage, l'achat et la production automatiquement.
 
-## 🌟 Future Roadmap
+### Ajouter un nouveau Succès :
 
--   [ ] Offline progress calculation
--   [ ] More Ascension tiers with new upgrades and mechanics
--   [ ] A persistent research tree
--   [ ] Cloud save/export functionality
--   [ ] More visual themes and customization options
+1.  **Ouvrez `data/achievements.ts`** et ajoutez votre nouvel objet de succès au tableau `INITIAL_ACHIEVEMENTS`.
+2.  **Ouvrez `hooks/useGameState.ts`** et trouvez le `useEffect` qui vérifie les succès.
+3.  Ajoutez un nouvel appel à `checkAchievement("Votre Nouveau Succès", condition_pour_le_debloquer);` avec la condition appropriée.
+
+### Ajouter une nouvelle Amélioration d'Ascension :
+
+1.  **Ouvrez `types.ts`** si vous avez besoin d'un nouveau type d'effet.
+2.  **Ouvrez `constants.ts`** et ajoutez un nouvel objet au tableau `ASCENSION_UPGRADES`. Définissez sa `position`, son `coût`, son `effet` et ses prérequis (`required`).
+3.  **Ouvrez `hooks/useGameState.ts`** et dans le `useMemo` `ascensionBonuses`, ajoutez un `case` dans le `switch` pour appliquer l'effet de votre nouvelle amélioration.
+
+## 🌟 Feuille de Route
+
+-   [ ] Calcul de la progression hors ligne
+-   [ ] Plus de paliers d'Ascension avec de nouvelles mécaniques
+-   [ ] Sauvegarde dans le cloud / Exportation
+-   [ ] Plus de thèmes visuels et d'options de personnalisation

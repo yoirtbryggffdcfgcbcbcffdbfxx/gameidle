@@ -11,12 +11,19 @@ interface UpgradeItemProps {
 
 const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber }) => {
     const isClickUpgrade = upgrade.type === 'CLICK';
+    const isBoosterUpgrade = upgrade.type === 'BOOSTER';
+
     const effectText = isClickUpgrade
         ? `+${formatNumber(upgrade.production)} par clic`
-        : `${formatNumber(upgrade.production)}/sec`;
+        : isBoosterUpgrade
+            ? `+${upgrade.production}% Prod. Totale`
+            : `${formatNumber(upgrade.production)}/sec`;
+
     const totalEffectText = isClickUpgrade
         ? `Bonus Clic Total: +${formatNumber(upgrade.production * upgrade.owned)}`
-        : `Prod. Totale: ${formatNumber(upgrade.production * upgrade.owned)}/sec`;
+        : isBoosterUpgrade
+            ? `Bonus Prod. Total: +${upgrade.production * upgrade.owned}%`
+            : `Prod. Totale: ${formatNumber(upgrade.production * upgrade.owned)}/sec`;
         
     const isUltimate = upgrade.color === '#ffffff';
     const buttonTextColor = isUltimate ? 'text-black' : 'text-white';

@@ -1,4 +1,5 @@
 import React from 'react';
+import SkillTree from './ui/SkillTree';
 import { ASCENSION_UPGRADES } from '../constants';
 
 interface AscensionSectionProps {
@@ -33,9 +34,9 @@ const AscensionSection: React.FC<AscensionSectionProps> = (props) => {
         <section id="ascension-portal" className="fullscreen-section reveal">
             <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
                 <SectionHeader title="Portail d'Ascension" energy={props.energy} formatNumber={props.formatNumber} />
-                <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                     
-                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col justify-between">
+                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col justify-between md:col-span-1">
                         <div>
                             <h3 className="text-lg text-yellow-400 mb-2">Faire une Ascension</h3>
                             <div className="mb-3 text-xs space-y-2">
@@ -68,29 +69,18 @@ const AscensionSection: React.FC<AscensionSectionProps> = (props) => {
                         </button>
                     </div>
 
-                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col">
-                         <h3 className="text-lg text-yellow-400 mb-2">Améliorations d'Ascension</h3>
+                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col md:col-span-2">
+                         <h3 className="text-lg text-yellow-400 mb-2">Arbre d'Ascension</h3>
                          <p className="text-sm mb-2">Vous avez <strong className="text-yellow-400">{props.ascensionPoints}</strong> points.</p>
-                         <div className="space-y-2 overflow-y-auto flex-grow custom-scrollbar pr-1">
-                            {ASCENSION_UPGRADES.map(upgrade => {
-                                const isPurchased = props.purchasedAscensionUpgrades.includes(upgrade.id);
-                                const canAfford = props.ascensionPoints >= upgrade.cost;
-                                return (
-                                    <div key={upgrade.id} className={`p-2 rounded flex justify-between items-center ${isPurchased ? 'bg-green-800/50' : 'bg-black/20'}`}>
-                                        <div>
-                                            <strong>{upgrade.name}</strong>
-                                            <p className="text-xs opacity-80">{upgrade.description}</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => props.onBuyAscensionUpgrade(upgrade.id)}
-                                            disabled={isPurchased || !canAfford}
-                                            className="text-sm px-3 py-1 rounded bg-yellow-600 text-white disabled:bg-gray-500 disabled:cursor-not-allowed hover:enabled:bg-yellow-500"
-                                        >
-                                            {isPurchased ? 'Acheté' : `Coût: ${upgrade.cost}`}
-                                        </button>
-                                    </div>
-                                );
-                            })}
+                         <div className="flex-grow overflow-auto custom-scrollbar pr-1 relative">
+                            <SkillTree
+                                upgrades={ASCENSION_UPGRADES}
+                                purchasedIds={props.purchasedAscensionUpgrades}
+                                onBuy={props.onBuyAscensionUpgrade}
+                                currency={props.ascensionPoints}
+                                currencyType="Points"
+                                themeColor="yellow"
+                            />
                          </div>
                     </div>
 

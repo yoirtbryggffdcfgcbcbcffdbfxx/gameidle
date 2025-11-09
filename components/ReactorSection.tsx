@@ -1,6 +1,7 @@
 import React from 'react';
 import { CORE_UPGRADES } from '../constants';
 import QuantumCore from './QuantumCore';
+import SkillTree from './ui/SkillTree';
 
 interface ReactorSectionProps {
     quantumShards: number;
@@ -29,43 +30,28 @@ const ReactorSection: React.FC<ReactorSectionProps> = (props) => {
         <section id="reactor" className="fullscreen-section reveal">
             <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
                  <SectionHeader title="Réacteur Quantique" energy={props.energy} formatNumber={props.formatNumber} />
-                <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex-grow overflow-hidden custom-scrollbar pr-2">
                     
-                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col justify-center items-center text-center">
-                        <h3 className="text-lg text-cyan-400 mb-4">Contrôle du Cœur</h3>
-                         <QuantumCore
-                            charge={props.coreCharge}
-                            isDischarging={props.isCoreDischarging}
-                            onDischarge={props.onDischargeCore}
-                            multiplier={props.coreBonuses.multiplier}
-                            size={200}
-                        />
-                         <p className="text-xs opacity-70 mt-4">Le Cœur se charge passivement. Activez-le à 100% pour une surcharge de production massive.</p>
-                    </div>
-
-                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col">
-                         <h3 className="text-lg text-cyan-400 mb-2">Calibrations du Cœur</h3>
-                         <p className="text-sm mb-2">Vous avez <strong className="text-purple-400">{props.quantumShards}</strong> Fragments Quantiques.</p>
-                         <div className="space-y-2 overflow-y-auto flex-grow custom-scrollbar pr-1">
-                            {CORE_UPGRADES.map(upgrade => {
-                                const isPurchased = props.purchasedCoreUpgrades.includes(upgrade.id);
-                                const canAfford = props.quantumShards >= upgrade.cost;
-                                return (
-                                    <div key={upgrade.id} className={`p-2 rounded flex justify-between items-center ${isPurchased ? 'bg-green-800/50' : 'bg-black/20'}`}>
-                                        <div>
-                                            <strong>{upgrade.name}</strong>
-                                            <p className="text-xs opacity-80">{upgrade.description}</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => props.onBuyCoreUpgrade(upgrade.id)}
-                                            disabled={isPurchased || !canAfford}
-                                            className="text-sm px-3 py-1 rounded bg-purple-600 text-white disabled:bg-gray-500 disabled:cursor-not-allowed hover:enabled:bg-purple-500"
-                                        >
-                                            {isPurchased ? 'Acheté' : `Coût: ${upgrade.cost} FQ`}
-                                        </button>
-                                    </div>
-                                );
-                            })}
+                    <div className="w-full h-full bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col">
+                         <h3 className="text-lg text-center text-cyan-400 mb-2">Arbre de Calibration du Cœur</h3>
+                         <p className="text-sm text-center mb-2">Vous avez <strong className="text-purple-400">{props.quantumShards}</strong> Fragments Quantiques.</p>
+                         <div className="flex-grow overflow-auto custom-scrollbar pr-1 relative min-h-[300px]">
+                            <SkillTree 
+                                upgrades={CORE_UPGRADES}
+                                purchasedIds={props.purchasedCoreUpgrades}
+                                onBuy={props.onBuyCoreUpgrade}
+                                currency={props.quantumShards}
+                                currencyType="FQ"
+                                themeColor="purple"
+                            >
+                                 <QuantumCore
+                                    charge={props.coreCharge}
+                                    isDischarging={props.isCoreDischarging}
+                                    onDischarge={props.onDischargeCore}
+                                    multiplier={props.coreBonuses.multiplier}
+                                    size={160}
+                                />
+                            </SkillTree>
                          </div>
                     </div>
 

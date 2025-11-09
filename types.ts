@@ -2,11 +2,11 @@ export interface Upgrade {
   id: string;
   name: string;
   baseCost: number;
-  production: number; // Represents production/sec for PRODUCTION type, and +click power for CLICK type
+  production: number; // Represents production/sec for PRODUCTION, +click power for CLICK, and % bonus for BOOSTER
   owned: number;
   color: string;
   currentCost: number;
-  type: 'PRODUCTION' | 'CLICK';
+  type: 'PRODUCTION' | 'CLICK' | 'BOOSTER';
   unlockCost: number;
   requiredAscension: number;
 }
@@ -29,9 +29,11 @@ export interface AscensionUpgrade {
     description: string;
     cost: number;
     effect: {
-        type: 'CLICK_POWER_MULTIPLIER' | 'PRODUCTION_MULTIPLIER' | 'COST_REDUCTION' | 'STARTING_ENERGY';
+        type: 'PRODUCTION_MULTIPLIER' | 'CLICK_POWER_MULTIPLIER' | 'COST_REDUCTION' | 'STARTING_ENERGY';
         value: number;
     };
+    required: string[];
+    position: { angle: number, radius: number };
 }
 
 export interface CoreUpgrade {
@@ -40,9 +42,11 @@ export interface CoreUpgrade {
     description: string;
     cost: number;
     effect: {
-        type: 'CORE_BOOST_MULTIPLIER' | 'CORE_CHARGE_RATE';
+        type: 'CORE_BOOST_MULTIPLIER' | 'CORE_CHARGE_RATE' | 'CORE_BOOST_DURATION';
         value: number;
     };
+    required: string[];
+    position: { angle: number, radius: number };
 }
 
 export interface GameState {
