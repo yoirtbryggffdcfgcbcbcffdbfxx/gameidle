@@ -7,16 +7,19 @@ export const useParticleSystem = (visualEffectsEnabled: boolean) => {
 
     const addParticle = useCallback((x: number, y: number, color: string) => {
         if (!visualEffectsEnabled) return;
+
+        const newParticles: Particle[] = [];
         // Create fewer particles for better performance
         for (let i = 0; i < 5; i++) {
-            const newParticle: Particle = {
+            newParticles.push({
                 id: particleIdCounter.current++,
                 startX: x,
                 startY: y,
                 color,
-            };
-            setParticles(prev => [...prev, newParticle]);
+            });
         }
+        setParticles(prev => [...prev, ...newParticles]);
+
     }, [visualEffectsEnabled]);
 
     const removeParticle = useCallback((id: number) => {

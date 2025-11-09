@@ -10,10 +10,9 @@ interface UpgradeListProps {
 
 const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, formatNumber }) => {
     return (
-        <div className="bg-black/20 rounded-lg p-2 flex flex-col h-full">
-            <h2 className="text-lg text-center text-[var(--text-header)] mb-2">Améliorations</h2>
+        <div className="flex flex-col h-full">
             <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
-                {upgrades.map((item) => (
+                {upgrades.length > 0 ? upgrades.map((item) => (
                     <UpgradeItem 
                         key={item.upgradeData.id} 
                         id={`upgrade-${item.upgradeData.id}`}
@@ -21,7 +20,11 @@ const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, forma
                         onBuy={() => onBuyUpgrade(item.originalIndex)} 
                         formatNumber={formatNumber} 
                     />
-                ))}
+                )) : (
+                    <div className="text-center text-gray-400 h-full flex items-center justify-center">
+                        Aucune amélioration disponible.
+                    </div>
+                )}
             </div>
         </div>
     );

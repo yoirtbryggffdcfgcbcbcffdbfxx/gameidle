@@ -24,7 +24,7 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
     const isMaxLevel = upgrade.owned >= MAX_UPGRADE_LEVEL;
 
     return (
-        <div id={id} className="bg-[var(--bg-upgrade)] p-2 my-1.5 rounded-lg w-[98%] mx-auto shadow-lg relative">
+        <div id={id} className="bg-[var(--bg-upgrade)] p-2 my-1.5 rounded-lg w-[98%] mx-auto shadow-lg relative reveal">
             <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="flex-grow">
                     <strong style={{ color: upgrade.color, textShadow: '1px 1px 1px #000' }}>

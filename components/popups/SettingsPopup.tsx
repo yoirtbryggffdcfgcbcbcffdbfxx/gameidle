@@ -1,12 +1,11 @@
 import React from 'react';
-import Popup from './Popup';
 import { Settings } from '../../types';
 import ToggleSwitch from '../ui/ToggleSwitch';
 
 interface SettingsPopupProps {
     settings: Settings;
     onSettingsChange: (newSettings: Partial<Settings>) => void;
-    onClose: () => void;
+    onClose: () => void; // Kept for prop compatibility, but not used
     onHardReset: () => void;
     playSfx: (sound: 'click' | 'ui_hover') => void;
 }
@@ -26,7 +25,7 @@ const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = 
     </div>
 );
 
-const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChange, onClose, onHardReset, playSfx }) => {
+const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChange, onHardReset, playSfx }) => {
 
     const handleToggle = (key: keyof Settings, value: boolean) => {
         playSfx('click');
@@ -34,8 +33,9 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
     };
 
     return (
-        <Popup title="Paramètres" onClose={onClose} widthClass="w-[95%] max-w-lg">
-            <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="h-full flex flex-col">
+            <h2 className="text-2xl text-center text-[var(--text-header)] mb-4">Paramètres</h2>
+            <div className="space-y-5 flex-grow overflow-y-auto pr-2 custom-scrollbar">
                 
                 <SettingsSection title="Général">
                     <ToggleSwitch 
@@ -110,7 +110,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                 </SettingsSection>
 
             </div>
-        </Popup>
+        </div>
     );
 };
 

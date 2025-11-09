@@ -27,7 +27,7 @@ const App: React.FC = () => {
                     hasSaveData={game.hasSaveData}
                     onContinue={game.handlers.handleContinue}
                     onNewGame={game.handlers.handleNewGameClick}
-                    onCreditsClick={game.handlers.handleCreditsClick}
+                    onCreditsClick={() => game.popups.setActivePopup('credits')}
                     playSfx={game.playSfx}
                 />
                 <ConfirmationPopup
@@ -48,7 +48,7 @@ const App: React.FC = () => {
     }
     
     return (
-        <>
+        <div id="game-content">
             <GameUI
                 // State & Data
                 {...game.gameState}
@@ -59,21 +59,24 @@ const App: React.FC = () => {
                 // Functions
                 playSfx={game.playSfx}
                 formatNumber={game.memoizedFormatNumber}
-                setActivePopup={game.popups.setActivePopup}
+                // FIX: Removed unused 'setActivePopup' prop which is not defined on GameUIProps.
+                // FIX: Pass 'addFloatingText' prop to GameUI to satisfy its prop requirements.
+                addFloatingText={game.addFloatingText}
                 removeParticle={game.removeParticle}
                 removeFloatingText={game.removeFloatingText}
                 setTutorialStep={game.popups.setTutorialStep}
                 setShowHardResetConfirm={game.popups.setShowHardResetConfirm}
                 setShowAscensionConfirm={game.popups.setShowAscensionConfirm}
                 setShowAscensionTutorial={game.popups.setShowAscensionTutorial}
-                // FIX: Added missing 'setShowCoreTutorial' prop to satisfy GameUIProps interface.
                 setShowCoreTutorial={game.setShowCoreTutorial}
             />
-            <NotificationCenter 
-                notifications={game.uiState.notifications} 
-                removeNotification={game.removeNotification} 
+             <NotificationCenter
+                notifications={game.uiState.notifications}
+                removeNotification={game.removeNotification}
+                // Responsive classes for mobile vs desktop
+                className="fixed top-4 right-4 w-56 sm:w-64 sm:bottom-4 sm:top-auto"
             />
-        </>
+        </div>
     );
 };
 

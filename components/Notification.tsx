@@ -83,14 +83,16 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onD
 };
 
 
+// FIX: Add `className` prop to allow flexible styling from the parent component.
 interface NotificationCenterProps {
     notifications: NotificationType[];
     removeNotification: (id: number) => void;
+    className?: string;
 }
 
-const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, removeNotification }) => {
+const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, removeNotification, className }) => {
     return (
-        <div className="fixed bottom-4 right-4 z-[2500] w-64 space-y-2 pointer-events-none">
+        <div className={`${className || 'fixed bottom-4 right-4 w-64'} z-[2500] space-y-2 pointer-events-none`}>
             {notifications.map(notification => (
                  <div key={notification.id} className="pointer-events-auto">
                     <NotificationToast notification={notification} onDismiss={removeNotification} />

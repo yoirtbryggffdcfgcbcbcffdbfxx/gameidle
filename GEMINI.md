@@ -5,78 +5,79 @@ Ce document est ma "mémoire" technique pour ce projet. Il détaille l'architect
 ## 1. Philosophie du Projet & Objectifs
 
 -   **Objectif Principal :** Créer un jeu idle/clicker riche en fonctionnalités, "Quantum Core", en utilisant React, TypeScript et Tailwind CSS.
--   **Contrainte Clé (Zero-Build) :** L'application doit fonctionner sans aucune étape de build (pas de Webpack, Vite, etc.). Cela est accompli en utilisant un `importmap` dans `index.html` pour charger les dépendances React directement depuis un CDN. Cette approche favorise la simplicité, le prototypage rapide et l'accessibilité.
--   **Architecture Orientée Hooks :** La logique est entièrement encapsulée dans des hooks React personnalisés. L'objectif est une séparation stricte et claire entre la logique (les "hooks") et la présentation (les "composants"), rendant le code plus modulaire, testable et facile à raisonner.
+-   **Contrainte Clé (Zero-Build) :** L'application doit fonctionner sans aucune étape de build (pas de Webpack, Vite, etc.). Cela est accompli en utilisant un `importmap` dans `index.html` pour charger les dépendances React (version 19+) directement depuis un CDN.
+-   **Architecture Orientée Hooks :** La logique est entièrement encapsulée dans des hooks React personnalisés. L'objectif est une séparation stricte et claire entre la logique (les "hooks") et la présentation (les "composants").
 
 ## 2. Architecture & Patterns de Conception
 
 ### 2.1. Le "Hook Façade Pattern" (`useGameEngine`)
 
-Le piler de l'architecture est le hook `useGameEngine.ts`. Il implémente un pattern "Façade" :
+Le pilier de l'architecture est le hook `useGameEngine.ts`. Il implémente un pattern "Façade" :
 
--   **Rôle d'Orchestrateur :** Il est le seul hook que l'interface (le composant `App.tsx`) consomme directement. Il initialise tous les autres hooks de plus bas niveau ( `useGameState`, `useSettings`, `useSfx`, etc.).
+-   **Rôle d'Orchestrateur :** Il est le seul hook que l'interface (le composant `App.tsx`) consomme directement. Il initialise tous les autres hooks de plus bas niveau (`useGameState`, `useSettings`, `useSfx`, `useParticleSystem`, etc.).
 -   **Point d'Entrée Unique :** Il agrège l'état, les valeurs dérivées et les fonctions de tous les autres hooks en un seul objet structuré. Cela simplifie grandement le passage de props et la compréhension du flux de données.
--   **Gestion des Effets Croisés :** C'est l'endroit idéal pour les `useEffect` qui dépendent de plusieurs domaines logiques. Par exemple, la boucle de vérification des succès a besoin de données de `useGameState` (énergie, production) et de fonctions de `useNotifier` pour afficher les notifications.
+-   **Gestion des Effets Croisés :** C'est l'endroit où sont gérés les effets qui combinent plusieurs domaines. Par exemple, `handleBuyUpgrade` dans ce hook appelle `gameState.buyUpgrade` (logique métier), `playSfx` (audio), et `addParticle` (effets visuels). Il gère également le système de notifications interne.
 
 ### 2.2. Gestion de l'État (`useGameState`)
 
--   **Rôle de "Source de Vérité" :** `useGameState.ts` gère l'état fondamental et persistant du jeu (énergie, améliorations, ascension, etc.). C'est le cœur de la logique métier.
+-   **Rôle de "Source de Vérité" :** `useGameState.ts` gère l'état fondamental et persistant du jeu (énergie, améliorations, ascension, état du Cœur Quantique, etc.).
 -   **Persistance :** Il gère la sérialisation (sauvegarde) et la désérialisation (chargement) de l'état du jeu vers/depuis `localStorage`.
 -   **Pattern `useRef` pour État Asynchrone :** Pour éviter les problèmes de "stale closure" dans les `useCallback` (comme `buyUpgrade`), une référence (`energyRef`) est maintenue en parallèle de l'état `energy`. L'état est utilisé pour les rendus React, tandis que la référence est utilisée dans les callbacks pour garantir l'accès à la dernière valeur sans avoir à redéfinir la fonction à chaque changement d'énergie.
--   **Calculs Mémorisés :** Les valeurs dérivées coûteuses (`productionTotal`, `ascensionBonuses`, etc.) sont calculées avec `useMemo` pour optimiser les performances et n'être recalculées que lorsque leurs dépendances changent.
+-   **Calculs Mémorisés :** Les valeurs dérivées coûteuses (`productionTotal`, `ascensionBonuses`, `canAscend`, etc.) sont calculées avec `useMemo` pour optimiser les performances.
 
 ### 2.3. Flux de Données (Unidirectionnel)
 
-Le flux de données est strict et facile à suivre :
-
-1.  **Interaction Utilisateur** (ex: clic sur "Acheter") ->
-2.  **Composant UI** (`UpgradeItem.tsx`) appelle une fonction passée en prop (`onBuyUpgrade`) ->
-3.  **Gestionnaire d'Événement** (`handleBuyUpgrade` dans `useGameEngine.ts`) est exécuté. Il peut combiner plusieurs actions (jouer un son, créer des particules) ->
-4.  **Mutation de l'État** (`buyUpgrade` dans `useGameState.ts`) est appelée, modifiant l'état (énergie, `upgrades`) ->
-5.  **Rendu React :** Le changement d'état déclenche un nouveau rendu des composants qui dépendent de ces données ->
-6.  **Mise à Jour de l'UI :** L'interface reflète le nouvel état du jeu.
+Le flux de données est strict :
+1.  **Interaction Utilisateur** ->
+2.  **Composant UI** appelle une fonction (`onBuyUpgrade`) ->
+3.  **Gestionnaire d'Événement** (`handleBuyUpgrade` dans `useGameEngine`) est exécuté ->
+4.  **Mutation de l'État** (`buyUpgrade` dans `useGameState`) est appelée ->
+5.  **Rendu React :** Le changement d'état déclenche un nouveau rendu ->
+6.  **Mise à Jour de l'UI.**
 
 ## 3. Analyse des Systèmes Clés
 
-### 3.1. Calculs & Équilibrage
+### 3.1. Machine d'État de l'Application (`App.tsx`)
 
--   Toutes les valeurs d'équilibrage "magiques" sont centralisées dans `constants.ts` (coûts de base, multiplicateurs, taux).
--   La formule de coût des améliorations (`utils/helpers.ts`) est un point central de l'équilibrage du jeu. L'ajustement de son exposant (ex: de `1.15` à `1.10`) a un impact global sur le rythme de progression.
+L'application suit un cycle de vie simple géré par l'état `appState` dans `useSettings` :
+1.  **`loading`**: État initial, affiche `LoadingScreen`. `useGameEngine` charge les données.
+2.  **`cinematic`**: Une fois le chargement terminé (pour une nouvelle partie), affiche `IntroCinematic`.
+3.  **`menu`**: Après la cinématique ou au démarrage si une sauvegarde existe. Affiche `MainMenu`.
+4.  **`game`**: L'état de jeu principal, affiche `GameUI`.
 
-### 3.2. Systèmes de Progression Parallèles
+### 3.2. Architecture Responsive (`GameUI.tsx`)
 
-Le jeu possède deux boucles de prestige distinctes pour augmenter la profondeur stratégique :
+C'est un point central de l'UI. Le composant détecte la taille de l'écran et maintient un état `isMobile`.
+-   **Sur Desktop (`isMobile: false`)**: Affiche une `NavBar` latérale et un layout en deux colonnes (`ControlPanel` et `UpgradeList`).
+-   **Sur Mobile (`isMobile: true`)**: Affiche une `MobileNav` en bas de l'écran. Le contenu principal alterne entre `ControlPanel` et `UpgradeList` via un système d'onglets (`activeMobileTab`). Un menu hamburger ouvre le `MobileMenuPopup` pour l'accès aux autres écrans (Succès, Paramètres, etc.).
 
--   **Ascension :** Focalisée sur les bonus globaux. La monnaie (`Points d'Ascension`) s'obtient en atteignant le cap d'énergie.
--   **Réacteur du Cœur :** Focalisé sur l'amélioration d'une mécanique de jeu active (le boost). La monnaie (`Fragments Quantiques`) s'obtient en même temps que les points d'ascension, liant les deux systèmes.
+### 3.3. Système de Tutoriel Dynamique (`TutorialOverlay.tsx`)
 
-### 3.3. Systèmes d'Effets Visuels (UI)
+-   **Logique de Progression :** La progression des étapes du tutoriel est gérée dans `useGameEngine` et `GameUI.tsx` via des `useEffect` qui observent l'état du jeu (ex: `energy >= 10`). Ceci permet de déclencher la prochaine étape de manière contextuelle.
+-   **Positionnement :** Le composant `TutorialOverlay` utilise `useLayoutEffect` et `element.getBoundingClientRect()` pour se positionner dynamiquement par rapport aux éléments du DOM à mettre en évidence.
+-   **Découpage de l'Overlay :** Un `clip-path` CSS est utilisé pour créer un "trou" dans l'overlay semi-transparent, attirant l'attention de l'utilisateur sur l'élément d'interface pertinent.
 
--   **`useParticleSystem` & `useFloatingText` :** Ces hooks gèrent des tableaux d'objets représentant les effets actifs.
--   **Nettoyage Automatique :** Chaque composant d'effet (`FlowingParticle`, `FloatingText`) est responsable de son propre cycle de vie. Il reçoit une fonction `onComplete` en prop et l'appelle à la fin de son animation. Cette fonction, définie dans `useGameEngine`, retire l'effet du tableau d'état, ce qui le retire du DOM et prévient les fuites de mémoire.
+### 3.4. Système de Notifications (`useGameEngine.ts` & `Notification.tsx`)
+
+-   **Gestion d'État :** `useGameEngine` gère un tableau de notifications dans son état. La fonction `addNotification` y ajoute une nouvelle notification avec un ID unique.
+-   **Affichage :** Le composant `NotificationCenter` itère sur ce tableau et affiche un `NotificationToast` pour chaque notification.
+-   **Auto-destruction :** Chaque `NotificationToast` gère son propre cycle de vie. Il utilise un `setTimeout` interne pour se retirer du DOM après son animation de sortie en appelant la fonction `removeNotification` passée en prop. Le timer peut être mis en pause au survol de la souris pour une meilleure UX.
 
 ## 4. Guide pour les Modifications Futures
 
--   **Ajouter une nouvelle Amélioration du Cœur :**
-    1.  `types.ts` : Si nécessaire, ajoutez un nouveau type d'effet à `CoreUpgrade['effect']['type']`.
-    2.  `constants.ts` : Ajoutez un nouvel objet au tableau `CORE_UPGRADES`.
-    3.  `hooks/useGameState.ts` : Dans le `useMemo` de `coreBonuses`, ajoutez un `case` au `switch` pour appliquer le nouvel effet.
+-   **Ajouter une nouvelle Popup (ex: "Statistiques") :**
+    1.  `components/popups/` : Créer `StatsPopup.tsx`.
+    2.  `hooks/usePopupManager.ts` : Si un état spécifique est nécessaire, l'ajouter ici.
+    3.  `components/GameUI.tsx` :
+        -   Ajouter la logique de rendu conditionnel : `{activePopup === 'stats' && <StatsPopup ... />}`.
+    4.  `components/NavBar.tsx` (Desktop) :
+        -   Ajouter un `NavButton` qui appelle `onMenuClick('stats')`.
+    5.  `components/MobileNav.tsx` & `MobileMenuPopup.tsx` (Mobile) :
+        -   Ajouter un `MenuButton` dans le `MobileMenuPopup` qui appelle `onMenuClick('stats')`.
 
 -   **Ajouter une nouvelle variable à sauvegarder :**
-    1.  `types.ts` : Ajoutez la propriété à l'interface `GameState`.
+    1.  `types.ts` : Ajouter la propriété à l'interface `GameState`.
     2.  `hooks/useGameState.ts` :
-        -   Ajoutez un `useState` pour la nouvelle variable.
+        -   Ajouter un `useState` pour la nouvelle variable.
         -   Incluez-la dans l'objet `gameState` de la fonction `saveGameState`.
         -   Gérez son chargement (avec une valeur par défaut) dans le `useEffect` initial de chargement.
-
--   **Modifier une formule de jeu (ex: gains d'ascension) :**
-    -   Localisez le `useMemo` correspondant dans `hooks/useGameState.ts` (ex: `ascensionGain`).
-    -   Ajustez la formule de calcul. La mémorisation garantira que la valeur est mise à jour automatiquement lorsque ses dépendances changent.
-
-## 5. Optimisations de Performance
-
--   **`React.memo` :** Utilisé sur des composants fréquemment rendus avec des props potentiellement identiques, comme `UpgradeItem`, pour éviter des rendus inutiles lorsque la liste est longue.
--   **`useCallback` :** Utilisé pour toutes les fonctions passées en props aux composants enfants. Cela est crucial pour que `React.memo` fonctionne correctement.
--   **`useMemo` :** Utilisé pour les calculs dérivés complexes afin d'éviter de les ré-exécuter à chaque rendu.
--   **Gestion des Timers :** Tous les `setInterval` et `setTimeout` sont créés dans des `useEffect` et systématiquement nettoyés dans la fonction de retour pour éviter les fuites de mémoire et les effets de bord inattendus.
--   **Système de Particules :** Le nombre de particules générées par interaction est volontairement limité pour ne pas surcharger le DOM et le moteur de rendu du navigateur.

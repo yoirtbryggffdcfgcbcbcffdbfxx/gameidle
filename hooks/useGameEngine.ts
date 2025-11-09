@@ -117,30 +117,6 @@ export const useGameEngine = () => {
         }
     }, [isLoaded, setAppState]);
 
-    const productionTotalRef = useRef(productionTotal);
-    const addFloatingTextRef = useRef(addFloatingText);
-    const memoizedFormatNumberRef = useRef(memoizedFormatNumber);
-    const isCoreDischargingRef = useRef(isCoreDischarging);
-    useEffect(() => {
-        productionTotalRef.current = productionTotal;
-        addFloatingTextRef.current = addFloatingText;
-        memoizedFormatNumberRef.current = memoizedFormatNumber;
-        isCoreDischargingRef.current = isCoreDischarging;
-    }, [productionTotal, addFloatingText, memoizedFormatNumber, isCoreDischarging]);
-    
-    useEffect(() => {
-        if (!isLoaded || appState !== 'game') return;
-        
-        const productionTimer = setInterval(() => {
-            const currentProduction = productionTotalRef.current;
-            if (currentProduction > 0 && !isCoreDischargingRef.current) {
-                addFloatingTextRef.current(`+${memoizedFormatNumberRef.current(currentProduction)}`, window.innerWidth / 3, window.innerHeight / 2, '#00ffcc');
-            }
-        }, 1000);
-
-        return () => clearInterval(productionTimer);
-    }, [isLoaded, appState]);
-
     useEffect(() => {
         if (!isLoaded || appState !== 'game') return;
         const saveTimer = setInterval(() => gameState.saveGameState(settings), 5000);
@@ -168,8 +144,8 @@ export const useGameEngine = () => {
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
             unlockAchievement("Premier Investissement");
-            if (popups.tutorialStep === 3 && upgradeId === 'gen_1') {
-                popups.setTutorialStep(4);
+            if (popups.tutorialStep === 4 && upgradeId === 'gen_1') {
+                popups.setTutorialStep(5); // Advance to "Check Achievements" step
             }
         } else {
             addNotification("Pas assez d'énergie !", 'error');
@@ -227,7 +203,6 @@ export const useGameEngine = () => {
     const handleConfirmHardReset = () => {
         playSfx('click');
         gameState.resetGame(true);
-        popups.setActivePopup(null);
         popups.setShowHardResetConfirm(false);
         addNotification("Jeu réinitialisé.", 'info');
     }
@@ -268,8 +243,7 @@ export const useGameEngine = () => {
     const handleConfirmNewGame = () => {
         playSfx('click');
         popups.setShowNewGameConfirm(false);
-        startNewGame();
-        addNotification("Nouvelle partie commencée.", 'info');
+        setAppState('cinematic');
     };
 
     // --- DEV HANDLERS ---
@@ -323,7 +297,7 @@ export const useGameEngine = () => {
             particles,
             floatingTexts,
             notifications,
-            activePopup: popups.activePopup,
+            activePopup: popups.activePopup, // Still used for confirmation dialogs, etc.
             tutorialStep: popups.tutorialStep,
             showHardResetConfirm: popups.showHardResetConfirm,
             showAscensionConfirm: popups.showAscensionConfirm,
@@ -355,5 +329,7 @@ export const useGameEngine = () => {
         setShowCoreTutorial,
         removeParticle,
         removeFloatingText,
+        // FIX: Expose addFloatingText so it can be passed to child components.
+        addFloatingText,
     };
 };

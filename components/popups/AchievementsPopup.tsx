@@ -1,5 +1,4 @@
 import React from 'react';
-import Popup from './Popup';
 import { Achievement } from '../../types';
 import AchievementCard from '../ui/AchievementCard';
 
@@ -11,10 +10,10 @@ interface AchievementsPopupProps {
         coreCharge: number;
         costReduction: number;
     };
-    onClose: () => void;
+    onClose: () => void; // Kept for prop compatibility, but not used
 }
 
-const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, achievementBonuses, onClose }) => {
+const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, achievementBonuses }) => {
     const unlockedCount = achievements.filter(a => a.unlocked).length;
 
     const bonusLabels = {
@@ -32,8 +31,9 @@ const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, ach
     };
 
     return (
-        <Popup title={`Succès (${unlockedCount}/${achievements.length})`} onClose={onClose} widthClass="w-[95%] max-w-3xl">
-            <div className="space-y-4">
+        <div className="h-full flex flex-col">
+            <h2 className="text-2xl text-center text-[var(--text-header)] mb-4">Succès ({unlockedCount}/{achievements.length})</h2>
+            <div className="space-y-4 flex-grow overflow-hidden flex flex-col">
                 <div className="bg-[var(--bg-upgrade)] p-3 rounded-lg text-center">
                     <h3 className="text-base text-yellow-400 mb-2">Bonus Totaux Actifs</h3>
                     <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-xs">
@@ -49,15 +49,15 @@ const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, ach
                         })}
                     </div>
                 </div>
-                <div className="max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar mt-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                         {achievements.map((ach) => (
                             <AchievementCard key={ach.name} achievement={ach} />
                         ))}
                     </div>
                 </div>
             </div>
-        </Popup>
+        </div>
     );
 };
 

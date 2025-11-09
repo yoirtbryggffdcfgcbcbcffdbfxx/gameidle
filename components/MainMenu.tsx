@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import Logo from './Logo';
 
 interface MainMenuProps {
     hasSaveData: boolean;
@@ -27,8 +28,11 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
         }));
     }, []);
 
+    const buttonClasses = "w-full text-xl px-4 py-3 rounded-md border-2 transition-all text-white shadow-lg transform hover:scale-105";
+    const buttonTextStyle = { textShadow: '0 0 8px #fff, 0 0 12px currentColor' };
+
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-[var(--bg-from)] to-[var(--bg-to)] flex flex-col justify-center items-center z-[90] text-center p-4 overflow-hidden">
+        <div className="fixed inset-0 bg-gradient-to-br from-[#0a0a1a] to-[#1a1a2f] flex flex-col justify-center items-center z-[90] text-center p-4 overflow-hidden">
             <button 
                 onClick={onCreditsClick}
                 onMouseEnter={() => playSfx('ui_hover')}
@@ -39,30 +43,31 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
 
             {particles.map(p => <BackgroundParticle key={p.id} style={p.style} />)}
             
-            <div className="relative z-10">
-                <h1 className="text-4xl md:text-6xl text-[var(--text-header)] mb-16 [text-shadow:2px_2px_#000,0_0_15px_var(--text-header)] animate-float">
-                    Quantum Core
-                </h1>
+            <div className="relative z-10 flex flex-col items-center">
+                <div className="scale-75 mb-8">
+                    <Logo />
+                </div>
+               
                 <div className="space-y-4 w-full max-w-xs">
                     {hasSaveData && (
                         <button 
                             onClick={onContinue}
                             onMouseEnter={() => playSfx('ui_hover')}
-                            className="w-full text-2xl px-4 py-3 rounded-md bg-green-600 hover:bg-green-500 transition-all text-white shadow-lg transform hover:scale-105 hover:shadow-lg hover:shadow-green-400/50"
+                            className={`${buttonClasses} border-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 shadow-cyan-400/30`}
                         >
-                            Continuer
+                            <span style={buttonTextStyle}>Continuer</span>
                         </button>
                     )}
                     <button 
                         onClick={onNewGame}
                         onMouseEnter={() => playSfx('ui_hover')} 
-                        className="w-full text-2xl px-4 py-3 rounded-md bg-blue-600 hover:bg-blue-500 transition-all text-white shadow-lg transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/50"
+                        className={`${buttonClasses} border-purple-400 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 shadow-purple-400/30`}
                     >
-                        Nouvelle Partie
+                        <span style={buttonTextStyle}>Nouvelle Partie</span>
                     </button>
                 </div>
             </div>
-             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.4.0</p>
+             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.6.0</p>
         </div>
     );
 };

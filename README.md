@@ -9,15 +9,19 @@ Quantum Core is a futuristic incremental idle game built with React, TypeScript,
 
 The core of the game revolves around a satisfying loop of progression and strategic decisions.
 
+-   **Cinematic Intro:** New players are greeted with a skippable cinematic intro to set the futuristic and high-stakes tone of the game.
+
 -   **Core Loop:** Start by manually collecting energy. Use that energy to buy upgrades that generate more energy passively. Re-invest your earnings into more powerful upgrades to watch your production skyrocket.
 
 -   **The Quantum Core:** A central mechanic that charges over time. Once fully charged, it can be activated to provide a massive, temporary boost to all energy production, allowing you to break through tough upgrade cost barriers.
 
--   **Ascension (Prestige System):** When you reach the maximum energy capacity (currently 1 Billion), you can **Ascend**. This powerful reset starts your game over but grants you two permanent currencies:
+-   **Ascension (Prestige System):** When you reach the maximum energy capacity, you can **Ascend**. This powerful reset starts your game over but grants you two permanent currencies:
     -   **Ascension Points:** Spend these on a dedicated screen for powerful global bonuses, such as increased click power, higher overall production, or reduced upgrade costs.
     -   **Quantum Shards:** Spend these in the **Reactor** to permanently improve the Quantum Core itself, making it charge faster or provide an even stronger boost.
 
--   **Achievements:** Unlock over 20 unique achievements by reaching various milestones in energy, production, or total upgrades. Each unlocked achievement provides a small, permanent, and stacking bonus to your overall production!
+-   **Achievements:** Unlock over 20 unique achievements by reaching various milestones in energy, production, or total upgrades. Each unlocked achievement provides a small, permanent, and stacking bonus to your stats!
+
+-   **Responsive Design:** A fully responsive UI that adapts to any screen size, offering a tailored experience for both desktop and mobile players with dedicated navigation and layouts.
 
 -   **Customization & Settings:** Tailor your experience with a variety of settings, including multiple visual themes, SFX volume control, scientific notation, and more.
 
@@ -26,7 +30,7 @@ The core of the game revolves around a satisfying loop of progression and strate
 -   **Framework:** React 19 (served via importmap, no build step required)
 -   **Language:** TypeScript
 -   **Styling:** Tailwind CSS (via CDN for simplicity)
--   **Architecture:** The entire application is architected around a modern, hook-based system for clean separation of concerns and maximum maintainability. A primary `useGameEngine` hook acts as a central coordinator, managing game state, side effects, and user interactions.
+-   **Architecture:** The entire application is architected around a modern, hook-based system for clean separation of concerns. A primary `useGameEngine` hook acts as a central coordinator, managing game state, side effects, and user interactions.
 
 ## 📁 Project Structure
 
@@ -34,12 +38,24 @@ The project uses a modular, feature-oriented structure.
 
 ```
 /
-├── components/       # UI Components (Popups, Header, UpgradeList, etc.)
+├── components/
+│   ├── popups/       # All popup components (Settings, Achievements, etc.)
+│   ├── ui/           # Reusable UI elements (Buttons, Cards, etc.)
+│   ├── ControlPanel.tsx
+│   ├── GameUI.tsx      # Main UI assembler, handles responsive logic
+│   ├── IntroCinematic.tsx
+│   ├── MobileNav.tsx   # Navigation for mobile view
+│   ├── NavBar.tsx      # Sidebar for desktop view
+│   └── ...
 ├── hooks/            # Custom React hooks containing all game logic
-├── data/             # Static game data (achievements, initial upgrades)
-├── audio/            # Base64 encoded audio files for SFX
-├── utils/            # Pure helper functions (e.g., number formatting)
-├── App.tsx           # Main component that assembles the UI
+│   ├── useGameEngine.ts # The central "façade" hook
+│   ├── useGameState.ts  # Core state management (energy, upgrades)
+│   └── ...
+├── data/             # Static game data (achievements)
+├── audio/            # Base64 encoded audio files
+│   └── sfx.ts
+├── utils/            # Pure helper functions (number formatting)
+├── App.tsx           # Main component, handles app state (loading, cinematic, game)
 ├── index.tsx         # React entry point
 ├── types.ts          # Global TypeScript type definitions
 └── constants.ts      # Core game constants and balancing values

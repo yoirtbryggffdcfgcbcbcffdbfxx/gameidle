@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Types
 import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType, CoreUpgrade } from '../types';
@@ -9,17 +9,15 @@ import FloatingText from './ui/FloatingText';
 import UpgradeList from './UpgradeList';
 import SettingsPopup from './popups/SettingsPopup';
 import AchievementsPopup from './popups/AchievementsPopup';
-import AscensionPopup from './popups/PrestigePopup';
-import TutorialOverlay from './TutorialPopup';
 import ConfirmationPopup from './popups/ConfirmationPopup';
 import DevPanel from './popups/DevPanel';
 import AscensionTutorialPopup from './popups/AscensionTutorialPopup';
-import CoreUpgradesPopup from './popups/CoreUpgradesPopup';
 import CoreTutorialPopup from './popups/CoreTutorialPopup';
-import NavBar from './NavBar';
-import ControlPanel from './ControlPanel';
-import MobileNav from './MobileNav';
-import MobileMenuPopup from './popups/MobileMenuPopup';
+import Logo from './Logo';
+import ScrollspyNav from './ScrollspyNav';
+import AscensionSection from './AscensionSection';
+import ReactorSection from './ReactorSection';
+import TutorialTooltip from './TutorialTooltip';
 
 
 interface GameUIProps {
@@ -32,35 +30,18 @@ interface GameUIProps {
     ascensionPoints: number;
     productionTotal: number;
     clickPower: number;
-
     purchasedAscensionUpgrades: string[];
-    ascensionBonuses: {
-        productionMultiplier: number;
-        clickMultiplier: number;
-        costReduction: number;
-        startingEnergy: number;
-    };
-    achievementBonuses: {
-        production: number;
-        click: number;
-        coreCharge: number;
-        costReduction: number;
-    };
-    coreBonuses: {
-        chargeRate: number;
-        multiplier: number;
-    };
+    ascensionBonuses: { productionMultiplier: number; clickMultiplier: number; costReduction: number; startingEnergy: number; };
+    achievementBonuses: { production: number; click: number; coreCharge: number; costReduction: number; };
+    coreBonuses: { chargeRate: number; multiplier: number; };
     canAscend: boolean;
     ascensionGain: number;
-    totalUpgradesOwned: number;
     unlockedUpgradesForCurrentAscensionCount: number;
     unlockedUpgradesAtMaxLevelCount: number;
     maxEnergy: number;
-    formattedEnergy: string;
     settings: Settings;
     particles: Particle[];
     floatingTexts: FloatingTextType[];
-    activePopup: string | null;
     tutorialStep: number;
     showHardResetConfirm: boolean;
     showAscensionConfirm: boolean;
@@ -83,7 +64,6 @@ interface GameUIProps {
     onConfirmHardReset: () => void;
     onSettingsChange: (newSettings: Partial<Settings>) => void;
     onDischargeCore: () => void;
-    handleStartGameAfterCinematic: () => void; // Added for cinematic completion
     dev: {
         addEnergy: () => void;
         addAscension: () => void;
@@ -96,9 +76,9 @@ interface GameUIProps {
     // Functions
     playSfx: (sound: any) => void;
     formatNumber: (num: number) => string;
+    addFloatingText: (text: string, x: number, y: number, color: string) => void;
     removeParticle: (id: number) => void;
     removeFloatingText: (id: number) => void;
-    setActivePopup: (popup: string | null) => void;
     setTutorialStep: (step: number) => void;
     setShowHardResetConfirm: (show: boolean) => void;
     setShowAscensionConfirm: (show: boolean) => void;
@@ -106,226 +86,267 @@ interface GameUIProps {
     setShowCoreTutorial: (show: boolean) => void;
 }
 
+const StatDisplay: React.FC<{ label: string; value: string; icon: string; colorClass: string; }> = ({ label, value, icon, colorClass }) => (
+    <div className={`bg-black/30 p-2 rounded-lg text-center flex-1 ${colorClass}`}>
+        <div className="text-xs opacity-80">{icon} {label}</div>
+        <div className="text-base md:text-lg font-bold truncate">{value}</div>
+    </div>
+);
+
+const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (
+    <div className="w-full flex justify-between items-center mb-4">
+        <h2 className="text-2xl text-center text-[var(--text-header)]">{title}</h2>
+        <div className="bg-black/30 px-3 py-1 rounded-lg text-xs">
+            <span className="text-cyan-300">⚡ {formatNumber(energy)}</span>
+        </div>
+    </div>
+);
+
 
 const GameUI: React.FC<GameUIProps> = (props) => {
     const {
-        energy, upgrades, achievements, ascensionLevel, ascensionPoints, purchasedAscensionUpgrades, visibleUpgrades, ascensionBonuses, achievementBonuses, coreBonuses,
-        canAscend, ascensionGain, unlockedUpgradesForCurrentAscensionCount, unlockedUpgradesAtMaxLevelCount, maxEnergy, formattedEnergy,
-        settings, particles, floatingTexts, activePopup, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
-        coreCharge, isCoreDischarging, onDischargeCore, quantumShards, purchasedCoreUpgrades, productionTotal, clickPower,
-        onCollect, onBuyUpgrade, unlockSpecificUpgrade, onAscend, onConfirmAscension, onBuyAscensionUpgrade, onBuyCoreUpgrade, onConfirmHardReset, onSettingsChange,
-        playSfx, formatNumber, removeParticle, removeFloatingText, setActivePopup, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
+        upgrades, achievements, ascensionLevel, canAscend, maxEnergy, productionTotal,
+        settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
+        onBuyUpgrade, unlockSpecificUpgrade, onSettingsChange,
+        playSfx, formatNumber, addFloatingText, removeParticle, removeFloatingText, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
         showDevPanel, dev, showCoreTutorial, setShowCoreTutorial
     } = props;
 
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-    const [activeMobileTab, setActiveMobileTab] = useState<'core' | 'upgrades'>('core');
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+    const [activeSection, setActiveSection] = useState('core');
+    const [activeCommandCenterTab, setActiveCommandCenterTab] = useState('achievements');
+    const [showAscensionSection, setShowAscensionSection] = useState(false);
+    const gameContentRef = useRef<HTMLDivElement>(null);
+    
     useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 1024);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        if (canAscend || ascensionLevel > 0) {
+            setShowAscensionSection(true);
+        }
+    }, [canAscend, ascensionLevel]);
+
+    const showReactorSection = ascensionLevel > 0;
+
+    const sections = [
+        { id: 'core', name: 'Cœur' },
+        { id: 'forge', name: 'Forge' },
+        { id: 'command-center', name: 'Commandement' },
+        ...(showAscensionSection ? [{ id: 'ascension-portal', name: 'Ascension' }] : []),
+        ...(showReactorSection ? [{ id: 'reactor', name: 'Réacteur' }] : []),
+    ];
+
+    // On-Reveal & Scrollspy Effect
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            const mostVisibleEntry = entries.reduce((prev, current) => 
+                (prev.intersectionRatio > current.intersectionRatio) ? prev : current
+            );
+
+            if (mostVisibleEntry && mostVisibleEntry.isIntersecting) {
+                setActiveSection(mostVisibleEntry.target.id);
+            }
+
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, { threshold: Array.from(Array(21).keys()).map(i => i / 20) });
+
+        sections.forEach(section => {
+            const el = document.getElementById(section.id);
+            if (el) observer.observe(el);
+        });
+
+        return () => {
+             sections.forEach(section => {
+                const el = document.getElementById(section.id);
+                if (el) observer.unobserve(el);
+            });
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showAscensionSection, showReactorSection]); 
+    
+    // Contextual Floating Text for passive production
+    useEffect(() => {
+        if (activeSection !== 'core' || productionTotal <= 0) return;
+
+        const interval = setInterval(() => {
+            if (productionTotal > 0) {
+                 addFloatingText(`+${formatNumber(productionTotal)}`, window.innerWidth / 3, window.innerHeight / 2, '#00ffcc');
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+
+    }, [activeSection, productionTotal, addFloatingText, formatNumber]);
+    
+    // Drag-to-scroll for mobile-like experience
+    useEffect(() => {
+        const el = gameContentRef.current;
+        if (!el) return;
+
+        let isDown = false;
+        let startY: number;
+        let scrollTop: number;
+
+        const handleMouseDown = (e: MouseEvent | TouchEvent) => {
+            isDown = true;
+            el.classList.add('active');
+            const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+            startY = pageY - el.offsetTop;
+            scrollTop = el.scrollTop;
+        };
+        
+        const handleMouseLeave = () => {
+            isDown = false;
+            el.classList.remove('active');
+        };
+
+        const handleMouseUp = () => {
+            isDown = false;
+            el.classList.remove('active');
+        };
+
+        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+            const y = pageY - el.offsetTop;
+            const walk = (y - startY) * 2; // scroll-fast
+            el.scrollTop = scrollTop - walk;
+        };
+        
+        el.addEventListener('mousedown', handleMouseDown);
+        el.addEventListener('mouseleave', handleMouseLeave);
+        el.addEventListener('mouseup', handleMouseUp);
+        el.addEventListener('mousemove', handleMouseMove);
+        
+        el.addEventListener('touchstart', handleMouseDown);
+        el.addEventListener('touchend', handleMouseUp);
+        el.addEventListener('touchmove', handleMouseMove);
+
+        return () => {
+            el.removeEventListener('mousedown', handleMouseDown);
+            el.removeEventListener('mouseleave', handleMouseLeave);
+            el.removeEventListener('mouseup', handleMouseUp);
+            el.removeEventListener('mousemove', handleMouseMove);
+            
+            el.removeEventListener('touchstart', handleMouseDown);
+            el.removeEventListener('touchend', handleMouseUp);
+            el.removeEventListener('touchmove', handleMouseMove);
+        };
     }, []);
 
-    // Tutorial progression logic, moved from useGameEngine to handle mobile state
     useEffect(() => {
         const firstUpgradeCost = upgrades.find(u => u.id === 'gen_1')?.baseCost || 10;
-        // Check if tutorial is at step 2 and player has enough energy for the next step
-        if (tutorialStep === 2 && energy >= firstUpgradeCost) {
-            // Pre-unlock the first upgrade so it's visible for the next step
+        if (tutorialStep === 2 && props.energy >= firstUpgradeCost) {
             unlockSpecificUpgrade('gen_1');
-            // Branch the tutorial flow based on device type
-            if (isMobile) {
-                setTutorialStep(2.5); // Go to mobile-specific step
-            } else {
-                setTutorialStep(3); // Go directly to buying the upgrade on desktop
-            }
+            setTutorialStep(3); 
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [energy, tutorialStep, isMobile, setTutorialStep, unlockSpecificUpgrade, upgrades]);
-
-    // Mobile-specific tutorial progression from tab switch to upgrade view
-    useEffect(() => {
-        if (isMobile && tutorialStep === 2.5 && activeMobileTab === 'upgrades') {
-            setTutorialStep(3);
+        if (tutorialStep === 3 && activeSection === 'forge') {
+            setTutorialStep(4);
         }
-    }, [isMobile, tutorialStep, activeMobileTab, setTutorialStep]);
+        if (tutorialStep === 5 && activeSection === 'command-center') {
+            setTutorialStep(6);
+        }
+    }, [props.energy, tutorialStep, setTutorialStep, unlockSpecificUpgrade, upgrades, activeSection]);
 
-
-    const commonPopups = (
-        <>
-            {activePopup === 'ascension' && (
-                <AscensionPopup 
-                    canAscend={canAscend} 
-                    ascensionPoints={ascensionPoints}
-                    ascensionLevel={ascensionLevel}
-                    ascensionGain={ascensionGain}
-                    purchasedAscensionUpgrades={purchasedAscensionUpgrades}
-                    onAscend={onAscend} 
-                    onBuyAscensionUpgrade={onBuyAscensionUpgrade}
-                    onClose={() => setActivePopup(null)} 
-                    energy={energy}
-                    maxEnergy={maxEnergy}
-                    formatNumber={formatNumber}
-                    unlockedUpgradesAtMaxLevelCount={unlockedUpgradesAtMaxLevelCount}
-                    unlockedUpgradesForCurrentAscensionCount={unlockedUpgradesForCurrentAscensionCount}
-                />
-            )}
-            {activePopup === 'core' && (
-                <CoreUpgradesPopup
-                    shards={quantumShards}
-                    purchasedUpgrades={purchasedCoreUpgrades}
-                    onBuyUpgrade={onBuyCoreUpgrade}
-                    onClose={() => setActivePopup(null)}
-                />
-            )}
-            {activePopup === 'achievements' && (
-                <AchievementsPopup 
-                    achievements={achievements} 
-                    achievementBonuses={achievementBonuses}
-                    onClose={() => setActivePopup(null)} 
-                />
-            )}
-            {activePopup === 'settings' && (
-                <SettingsPopup 
-                    settings={settings} 
-                    onSettingsChange={onSettingsChange} 
-                    onClose={() => setActivePopup(null)} 
-                    onHardReset={() => setShowHardResetConfirm(true)} 
-                    playSfx={playSfx}
-                />
-            )}
-            
-            <TutorialOverlay step={tutorialStep} setStep={setTutorialStep} />
-            {showAscensionTutorial && <AscensionTutorialPopup onClose={() => setShowAscensionTutorial(false)} />}
-            {showCoreTutorial && <CoreTutorialPopup onClose={() => setShowCoreTutorial(false)} />}
-
-            {showDevPanel && <DevPanel {...dev} />}
-            
-            <ConfirmationPopup
-                show={showHardResetConfirm}
-                title="Confirmer la réinitialisation"
-                message="Êtes-vous sûr de vouloir réinitialiser toute votre progression ? Cette action est irréversible."
-                onConfirm={onConfirmHardReset}
-                onCancel={() => {
-                    playSfx('click');
-                    setShowHardResetConfirm(false);
-                }}
-            />
-            <ConfirmationPopup
-                show={showAscensionConfirm}
-                title="Confirmer l'Ascension"
-                message={`Vous êtes sur le point de réinitialiser votre progression pour gagner ${ascensionGain} point d'ascension et ${ascensionGain} Fragment Quantique. Continuer ?`}
-                onConfirm={onConfirmAscension}
-                onCancel={() => {
-                    playSfx('click');
-                    setShowAscensionConfirm(false);
-                }}
-            />
-        </>
-    );
-
-    const fxElements = (
-        <>
-            {particles.map(p => (
-                <FlowingParticle key={p.id} {...p} animSpeed={settings.animSpeed} onComplete={removeParticle} />
-            ))}
-            {floatingTexts.map(ft => (
-                <FloatingText key={ft.id} {...ft} onComplete={removeFloatingText} />
-            ))}
-        </>
-    );
-
-    if (isMobile) {
-        return (
-            <div className="h-screen flex flex-col text-xs select-none bg-[var(--bg-from)]">
-                {fxElements}
-                <main className="flex-1 p-2 overflow-y-auto custom-scrollbar">
-                    {activeMobileTab === 'core' && (
-                        <ControlPanel 
-                            energy={energy}
-                            maxEnergy={maxEnergy}
-                            productionTotal={productionTotal}
-                            clickPower={clickPower}
-                            ascensionLevel={ascensionLevel}
-                            quantumShards={quantumShards}
-                            ascensionPoints={ascensionPoints}
-                            formatNumber={formatNumber}
-                            onCollect={onCollect}
-                            coreCharge={coreCharge}
-                            isDischarging={isCoreDischarging}
-                            onDischargeCore={onDischargeCore}
-                            coreMultiplier={coreBonuses.multiplier}
-                            isTutorialHighlight={tutorialStep === 1 || tutorialStep === 2}
-                        />
-                    )}
-                    {activeMobileTab === 'upgrades' && (
-                         <UpgradeList 
-                            upgrades={visibleUpgrades}
-                            onBuyUpgrade={onBuyUpgrade}
-                            formatNumber={formatNumber}
-                        />
-                    )}
-                </main>
-                <MobileNav 
-                    activeTab={activeMobileTab}
-                    setActiveTab={setActiveMobileTab}
-                    onMenuClick={() => setIsMobileMenuOpen(true)}
-                    canAscend={canAscend}
-                    ascensionLevel={ascensionLevel}
-                />
-                {isMobileMenuOpen && (
-                    <MobileMenuPopup 
-                        onClose={() => setIsMobileMenuOpen(false)} 
-                        onMenuClick={(popup) => {
-                            setActivePopup(popup);
-                            setIsMobileMenuOpen(false);
-                        }}
-                        canAscend={canAscend}
-                        ascensionLevel={ascensionLevel}
-                    />
-                )}
-                {commonPopups}
-            </div>
-        )
-    }
 
     return (
-        <div className="h-screen flex text-xs md:text-sm select-none bg-[var(--bg-from)]">
-            {fxElements}
+        <div ref={gameContentRef} id="game-content" className="min-h-full text-xs md:text-sm select-none">
+            {particles.map(p => <FlowingParticle key={p.id} {...p} animSpeed={settings.animSpeed} onComplete={removeParticle} />)}
+            {floatingTexts.map(ft => <FloatingText key={ft.id} {...ft} onComplete={removeFloatingText} />)}
+            
+            <ScrollspyNav sections={sections} activeSection={activeSection} />
 
-            <NavBar onMenuClick={(popup) => setActivePopup(popup)} ascensionLevel={ascensionLevel} canAscend={canAscend} />
+            <main>
+                {/* Section 1: Core */}
+                <section id="core" className="fullscreen-section reveal">
+                    <div className="text-center flex flex-col items-center justify-between h-full py-8 w-full max-w-lg">
+                        <Logo />
+                        <div className="w-full space-y-3">
+                            <div id="energy-bar-container" className="relative w-full h-8 bg-black/50 rounded-full overflow-hidden shadow-inner border-2 border-cyan-800/50">
+                                <div id="energyBar" className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#00ffcc] to-[#0044ff] rounded-full transition-all duration-200" style={{ width: `${(props.energy / maxEnergy) * 100}%` }}></div>
+                                <div className="absolute w-full h-full flex items-center justify-center text-sm [text-shadow:1px_1px_#000] font-bold">
+                                    Énergie
+                                </div>
+                            </div>
+                            <div className="text-center text-xs opacity-70">{formatNumber(props.energy)} / {formatNumber(maxEnergy)}</div>
+                            <div className="flex justify-around items-center gap-2">
+                                <StatDisplay label="Prod/sec" value={formatNumber(props.productionTotal)} icon="⚡" colorClass="text-yellow-300" />
+                                <StatDisplay label="Clic" value={formatNumber(props.clickPower)} icon="🖱️" colorClass="text-cyan-300" />
+                            </div>
+                        </div>
 
-            <main className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 p-2 md:p-4 max-h-screen overflow-hidden">
-                <div className="lg:h-full">
-                    <ControlPanel 
-                        energy={energy}
-                        maxEnergy={maxEnergy}
-                        productionTotal={productionTotal}
-                        clickPower={clickPower}
-                        ascensionLevel={ascensionLevel}
-                        quantumShards={quantumShards}
-                        ascensionPoints={ascensionPoints}
-                        formatNumber={formatNumber}
-                        onCollect={onCollect}
-                        coreCharge={coreCharge}
-                        isDischarging={isCoreDischarging}
-                        onDischargeCore={onDischargeCore}
-                        coreMultiplier={coreBonuses.multiplier}
-                        isTutorialHighlight={tutorialStep === 1 || tutorialStep === 2}
-                    />
-                </div>
-                <div className="flex-1 min-h-0 lg:h-full">
-                    <UpgradeList 
-                        upgrades={visibleUpgrades}
-                        onBuyUpgrade={onBuyUpgrade}
-                        formatNumber={formatNumber}
-                    />
-                </div>
+                        <button 
+                            id="collect-button"
+                            onClick={props.onCollect} 
+                            className={`w-48 h-16 text-xl rounded-md bg-red-600 hover:bg-red-500 transition-all text-white shadow-lg transform hover:scale-105 hover:shadow-lg hover:shadow-red-400/50 flex justify-center items-center mx-auto`}
+                        >
+                            Collecter
+                        </button>
+                    </div>
+                </section>
+
+                {/* Section 2: Forge */}
+                <section id="forge" className="fullscreen-section reveal">
+                    <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
+                        <SectionHeader title="La Forge" energy={props.energy} formatNumber={formatNumber} />
+                        <div id="upgrades-hub" className="flex-grow overflow-hidden">
+                            <UpgradeList 
+                                upgrades={props.visibleUpgrades}
+                                onBuyUpgrade={onBuyUpgrade}
+                                formatNumber={formatNumber}
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section 3: Command Center */}
+                <section id="command-center" className="fullscreen-section reveal">
+                    <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
+                         <SectionHeader title="Centre de Commandement" energy={props.energy} formatNumber={formatNumber} />
+                        <div className="flex justify-center border-b border-[var(--border-color)] mb-4">
+                            {['achievements', 'settings'].map(tab => (
+                                <button
+                                    key={tab}
+                                    id={`tab-${tab}`}
+                                    onClick={() => setActiveCommandCenterTab(tab)}
+                                    className={`px-4 py-2 text-sm md:text-base transition-all duration-300 relative ${activeCommandCenterTab === tab ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
+                                >
+                                    {tab === 'achievements' ? 'Succès' : 'Paramètres'}
+                                    {activeCommandCenterTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--text-header)]"></div>}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex-grow overflow-hidden relative">
+                             <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'achievements' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <AchievementsPopup achievements={props.achievements} achievementBonuses={props.achievementBonuses} onClose={() => {}} />
+                            </div>
+                             <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'settings' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <SettingsPopup settings={settings} onSettingsChange={onSettingsChange} onClose={() => {}} onHardReset={() => setShowHardResetConfirm(true)} playSfx={playSfx} />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section 4: Ascension (Conditional) */}
+                {showAscensionSection && (
+                    <AscensionSection {...props} />
+                )}
+
+                {/* Section 5: Reactor (Conditional) */}
+                {showReactorSection && (
+                     <ReactorSection {...props} />
+                )}
             </main>
             
-            {commonPopups}
+            {/* Global Popups & Overlays */}
+            <TutorialTooltip step={tutorialStep} setStep={setTutorialStep} />
+            {showAscensionTutorial && <AscensionTutorialPopup onClose={() => setShowAscensionTutorial(false)} />}
+            {showCoreTutorial && <CoreTutorialPopup onClose={() => setShowCoreTutorial(false)} />}
+            {showDevPanel && <DevPanel {...dev} />}
+            <ConfirmationPopup show={showHardResetConfirm} title="Confirmer la réinitialisation" message="Êtes-vous sûr de vouloir réinitialiser toute votre progression ? Cette action est irréversible." onConfirm={props.onConfirmHardReset} onCancel={() => { playSfx('click'); setShowHardResetConfirm(false); }} />
+            <ConfirmationPopup show={showAscensionConfirm} title="Confirmer l'Ascension" message={`Vous êtes sur le point de réinitialiser votre progression pour gagner ${props.ascensionGain} point d'ascension et ${props.ascensionGain} Fragment Quantique. Continuer ?`} onConfirm={props.onConfirmAscension} onCancel={() => { playSfx('click'); setShowAscensionConfirm(false); }} />
         </div>
     );
 };
