@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // Types
 import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType, CoreUpgrade } from '../types';
@@ -17,7 +17,7 @@ import Logo from './Logo';
 import ScrollspyNav from './ScrollspyNav';
 import AscensionSection from './AscensionSection';
 import ReactorSection from './ReactorSection';
-import TutorialTooltip from './TutorialTooltip';
+import AITutorial from './AITutorial';
 
 
 interface GameUIProps {
@@ -56,7 +56,6 @@ interface GameUIProps {
     // Callbacks & Handlers
     onCollect: (e: React.MouseEvent<HTMLButtonElement>) => void;
     onBuyUpgrade: (index: number) => void;
-    unlockSpecificUpgrade: (id: string) => void;
     onAscend: () => void;
     onConfirmAscension: () => void;
     onBuyAscensionUpgrade: (id: string) => void;
@@ -107,35 +106,76 @@ const GameUI: React.FC<GameUIProps> = (props) => {
     const {
         upgrades, achievements, ascensionLevel, canAscend, maxEnergy, productionTotal,
         settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
-        onBuyUpgrade, unlockSpecificUpgrade, onSettingsChange,
+        onBuyUpgrade, onSettingsChange,
         playSfx, formatNumber, addFloatingText, removeParticle, removeFloatingText, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
         showDevPanel, dev, showCoreTutorial, setShowCoreTutorial
     } = props;
 
     const [activeSection, setActiveSection] = useState('core');
     const [activeCommandCenterTab, setActiveCommandCenterTab] = useState('achievements');
-    const [showAscensionSection, setShowAscensionSection] = useState(false);
     const gameContentRef = useRef<HTMLDivElement>(null);
+    const isScrollingRef = useRef(false);
+    const scrollTimeoutRef = useRef<number | null>(null);
     
-    useEffect(() => {
-        if (canAscend || ascensionLevel > 0) {
-            setShowAscensionSection(true);
-        }
-    }, [canAscend, ascensionLevel]);
+    const showAscensionSection = useMemo(() => canAscend || ascensionLevel > 0, [canAscend, ascensionLevel]);
+    const showReactorSection = useMemo(() => ascensionLevel > 0, [ascensionLevel]);
 
-    const showReactorSection = ascensionLevel > 0;
-
-    const sections = [
+    const sections = useMemo(() => [
         { id: 'core', name: 'Cœur' },
         { id: 'forge', name: 'Forge' },
         { id: 'command-center', name: 'Commandement' },
         ...(showAscensionSection ? [{ id: 'ascension-portal', name: 'Ascension' }] : []),
         ...(showReactorSection ? [{ id: 'reactor', name: 'Réacteur' }] : []),
-    ];
+    ], [showAscensionSection, showReactorSection]);
+
+    const handleNavClick = (id: string) => {
+        // Prevent observer from firing while we scroll
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+        }
+        isScrollingRef.current = true;
+        
+        // Immediately update active section for instant UI feedback
+        setActiveSection(id);
+        
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Re-enable observer after scroll animation
+        scrollTimeoutRef.current = window.setTimeout(() => {
+            isScrollingRef.current = false;
+        }, 1000); // 1s buffer for scroll to complete
+
+        // Tutorial Progression Logic
+        if (id === 'forge' && tutorialStep === 4) {
+            setTutorialStep(5);
+        }
+        if (id === 'command-center' && tutorialStep === 6) {
+            setTutorialStep(7);
+        }
+    };
+
 
     // On-Reveal & Scrollspy Effect
     useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
+        // Observer for making elements visible on scroll
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        const elementsToReveal = document.querySelectorAll('.reveal');
+        elementsToReveal.forEach(el => revealObserver.observe(el));
+        
+        // Observer for updating the navigation
+        const scrollspyObserver = new IntersectionObserver((entries) => {
+            if (isScrollingRef.current) return; // Ignore observer during programmatic scroll
+
             const mostVisibleEntry = entries.reduce((prev, current) => 
                 (prev.intersectionRatio > current.intersectionRatio) ? prev : current
             );
@@ -143,27 +183,22 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             if (mostVisibleEntry && mostVisibleEntry.isIntersecting) {
                 setActiveSection(mostVisibleEntry.target.id);
             }
-
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('revealed');
-                }
-            });
         }, { threshold: Array.from(Array(21).keys()).map(i => i / 20) });
 
         sections.forEach(section => {
             const el = document.getElementById(section.id);
-            if (el) observer.observe(el);
+            if (el) scrollspyObserver.observe(el);
         });
 
         return () => {
+             elementsToReveal.forEach(el => revealObserver.unobserve(el));
              sections.forEach(section => {
                 const el = document.getElementById(section.id);
-                if (el) observer.unobserve(el);
+                if (el) scrollspyObserver.unobserve(el);
             });
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showAscensionSection, showReactorSection]); 
+    // Re-run this effect when the list of sections or visible upgrades changes to attach observers to new elements.
+    }, [props.visibleUpgrades.length, sections]);
     
     // Contextual Floating Text for passive production
     useEffect(() => {
@@ -189,6 +224,12 @@ const GameUI: React.FC<GameUIProps> = (props) => {
         let scrollTop: number;
 
         const handleMouseDown = (e: MouseEvent | TouchEvent) => {
+            const target = e.target as HTMLElement;
+            // Prevent drag-scrolling if clicking on interactive elements like nav or buttons
+            if (target.closest('nav') || target.closest('button')) {
+                return;
+            }
+            
             isDown = true;
             el.classList.add('active');
             const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
@@ -239,16 +280,16 @@ const GameUI: React.FC<GameUIProps> = (props) => {
     useEffect(() => {
         const firstUpgradeCost = upgrades.find(u => u.id === 'gen_1')?.baseCost || 10;
         if (tutorialStep === 2 && props.energy >= firstUpgradeCost) {
-            unlockSpecificUpgrade('gen_1');
             setTutorialStep(3); 
         }
-        if (tutorialStep === 3 && activeSection === 'forge') {
-            setTutorialStep(4);
+    }, [props.energy, tutorialStep, setTutorialStep, upgrades]);
+
+    const handleCommandCenterTabClick = (tab: string) => {
+        setActiveCommandCenterTab(tab);
+        if (tab === 'achievements' && tutorialStep === 7) {
+            setTutorialStep(8);
         }
-        if (tutorialStep === 5 && activeSection === 'command-center') {
-            setTutorialStep(6);
-        }
-    }, [props.energy, tutorialStep, setTutorialStep, unlockSpecificUpgrade, upgrades, activeSection]);
+    };
 
 
     return (
@@ -256,7 +297,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             {particles.map(p => <FlowingParticle key={p.id} {...p} animSpeed={settings.animSpeed} onComplete={removeParticle} />)}
             {floatingTexts.map(ft => <FloatingText key={ft.id} {...ft} onComplete={removeFloatingText} />)}
             
-            <ScrollspyNav sections={sections} activeSection={activeSection} />
+            <ScrollspyNav sections={sections} activeSection={activeSection} onNavClick={handleNavClick} />
 
             <main>
                 {/* Section 1: Core */}
@@ -271,7 +312,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                                 </div>
                             </div>
                             <div className="text-center text-xs opacity-70">{formatNumber(props.energy)} / {formatNumber(maxEnergy)}</div>
-                            <div className="flex justify-around items-center gap-2">
+                            <div id="stats-display-container" className="flex justify-around items-center gap-2">
                                 <StatDisplay label="Prod/sec" value={formatNumber(props.productionTotal)} icon="⚡" colorClass="text-yellow-300" />
                                 <StatDisplay label="Clic" value={formatNumber(props.clickPower)} icon="🖱️" colorClass="text-cyan-300" />
                             </div>
@@ -310,7 +351,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                                 <button
                                     key={tab}
                                     id={`tab-${tab}`}
-                                    onClick={() => setActiveCommandCenterTab(tab)}
+                                    onClick={() => handleCommandCenterTabClick(tab)}
                                     className={`px-4 py-2 text-sm md:text-base transition-all duration-300 relative ${activeCommandCenterTab === tab ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
                                 >
                                     {tab === 'achievements' ? 'Succès' : 'Paramètres'}
@@ -341,7 +382,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             </main>
             
             {/* Global Popups & Overlays */}
-            <TutorialTooltip step={tutorialStep} setStep={setTutorialStep} />
+            <AITutorial step={tutorialStep} setStep={setTutorialStep} />
             {showAscensionTutorial && <AscensionTutorialPopup onClose={() => setShowAscensionTutorial(false)} />}
             {showCoreTutorial && <CoreTutorialPopup onClose={() => setShowCoreTutorial(false)} />}
             {showDevPanel && <DevPanel {...dev} />}

@@ -31,7 +31,9 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
     const [purchasedAscensionUpgrades, setPurchasedAscensionUpgrades] = useState<string[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasSaveData, setHasSaveData] = useState(false);
-    const [unlockedUpgrades, setUnlockedUpgrades] = useState<Set<string>>(new Set());
+    // FIX: Initialize with 'gen_1' unlocked by default to prevent race conditions on new games.
+    // The first upgrade should always be visible from the start.
+    const [unlockedUpgrades, setUnlockedUpgrades] = useState<Set<string>>(new Set(['gen_1']));
     const [hasSeenAscensionTutorial, setHasSeenAscensionTutorial] = useState(false);
     
     // Quantum Core State
@@ -161,9 +163,16 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
     // Effect to check for new upgrades to reveal based on current energy
     useEffect(() => {
         if (!isLoaded || appState !== 'game') return;
+
+        // Failsafe to prevent the tutorial-blocking bug.
+        // If it's the start of a new game, guarantee the first upgrade is unlocked.
+        if (ascensionLevel === 0 && energy < 10 && !unlockedUpgrades.has('gen_1')) {
+            setUnlockedUpgrades(prev => new Set([...prev, 'gen_1']));
+        }
+
         const newlyUnlocked = new Set<string>();
         upgrades.forEach(u => {
-            if (energy >= u.unlockCost && !unlockedUpgrades.has(u.id) && u.requiredAscension <= ascensionLevel && u.id !== 'gen_1') {
+            if (energy >= u.unlockCost && !unlockedUpgrades.has(u.id) && u.requiredAscension <= ascensionLevel) {
                 newlyUnlocked.add(u.id);
             }
         });
@@ -198,9 +207,9 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             if (savedGame) {
                 setHasSaveData(true);
                 const data = JSON.parse(savedGame);
-                const loadedAscensionLevel = data.ascensionLevel || 0;
+
                 setEnergy(data.energy || 0);
-                setAscensionLevel(loadedAscensionLevel);
+                setAscensionLevel(data.ascensionLevel || 0);
                 setAscensionPoints(data.ascensionPoints || 0);
                 setTotalClicks(data.totalClicks || 0);
                 setPurchasedAscensionUpgrades(data.purchasedAscensionUpgrades || []);
@@ -211,18 +220,16 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
                 setPurchasedCoreUpgrades(data.purchasedCoreUpgrades || []);
                 setHasSeenCoreTutorial(data.hasSeenCoreTutorial || false);
 
-                const revealedUpgrades = new Set<string>();
-                if (data.energy > 10) revealedUpgrades.add('gen_1');
+                // Load the explicitly saved set of unlocked upgrades.
+                // Fallback to ['gen_1'] for legacy saves or corrupted data.
+                setUnlockedUpgrades(new Set(data.unlockedUpgrades || ['gen_1']));
+
                 const loadedUpgrades = INITIAL_UPGRADES.map((u) => {
                     const savedUpgrade = data.upgrades?.find((su: any) => su.name === u.name);
                     const owned = savedUpgrade ? savedUpgrade.owned : 0;
-                    if (owned > 0 && u.requiredAscension <= loadedAscensionLevel) {
-                        revealedUpgrades.add(u.id);
-                    }
                     return { ...u, owned, currentCost: calculateCost(u.baseCost, owned) };
                 });
                 setUpgrades(loadedUpgrades);
-                setUnlockedUpgrades(revealedUpgrades);
                 
                 const loadedAchievements = INITIAL_ACHIEVEMENTS.map((a) => {
                      const savedAchievement = data.achievements?.find((sa: any) => sa.name === a.name);
@@ -254,9 +261,10 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             quantumShards,
             purchasedCoreUpgrades,
             hasSeenCoreTutorial,
+            unlockedUpgrades: Array.from(unlockedUpgrades),
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
-    }, [energy, upgrades, ascensionLevel, ascensionPoints, achievements, purchasedAscensionUpgrades, totalClicks, hasSeenAscensionTutorial, coreCharge, isCoreDischarging, quantumShards, purchasedCoreUpgrades, hasSeenCoreTutorial]);
+    }, [energy, upgrades, ascensionLevel, ascensionPoints, achievements, purchasedAscensionUpgrades, totalClicks, hasSeenAscensionTutorial, coreCharge, isCoreDischarging, quantumShards, purchasedCoreUpgrades, hasSeenCoreTutorial, unlockedUpgrades]);
 
     const buyUpgrade = useCallback((index: number) => {
         const upgrade = upgrades[index];
@@ -354,7 +362,7 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
             setQuantumShards(prev => prev + gain);
             setEnergy(ascensionBonuses.startingEnergy);
             setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, ascensionBonuses.costReduction * achievementBonuses.costReduction) })));
-            setUnlockedUpgrades(new Set());
+            setUnlockedUpgrades(new Set(['gen_1']));
             setCoreCharge(0);
             setIsCoreDischarging(false);
             return true;
@@ -410,7 +418,7 @@ export const useGameState = (onAchievementUnlock: (achievement: Achievement) => 
         setTotalClicks(0);
         setUpgrades(INITIAL_UPGRADES.map(u => ({ ...u, owned: 0, currentCost: calculateCost(u.baseCost, 0, hardReset ? 1 : ascensionBonuses.costReduction * achievementBonuses.costReduction) })));
         setAchievements(INITIAL_ACHIEVEMENTS.map(a => ({ ...a, unlocked: false })));
-        setUnlockedUpgrades(new Set());
+        setUnlockedUpgrades(new Set(['gen_1']));
         setCoreCharge(0);
         setIsCoreDischarging(false);
     }, [setEnergy, ascensionBonuses, achievementBonuses]);

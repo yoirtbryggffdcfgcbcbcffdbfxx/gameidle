@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 interface ScrollspyNavProps {
     sections: { id: string; name: string }[];
     activeSection: string;
+    onNavClick: (sectionId: string) => void;
 }
 
-const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection }) => {
+const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection, onNavClick }) => {
     const [scrollProgress, setScrollProgress] = useState(0);
 
     useEffect(() => {
@@ -27,13 +28,6 @@ const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection }) 
         return () => gameContent.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const handleNavClick = (id: string) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
-
     return (
         <nav className="fixed right-0 top-1/2 -translate-y-1/2 z-[1000] p-4 flex items-center">
             <div className="absolute right-4 top-0 h-full w-0.5 bg-white/20">
@@ -45,7 +39,7 @@ const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection }) 
                         <span className={`text-xs mr-3 transition-all opacity-0 group-hover:opacity-100 ${activeSection === section.id ? 'opacity-100 text-white' : 'text-gray-400'}`}>{section.name}</span>
                         <button
                             id={`nav-${section.id}`}
-                            onClick={() => handleNavClick(section.id)}
+                            onClick={() => onNavClick(section.id)}
                             className={`w-3 h-3 rounded-full border-2 border-white transition-all duration-300
                                 ${activeSection === section.id ? 'bg-cyan-400 scale-150 border-cyan-400' : 'bg-transparent group-hover:scale-125'}`}
                             aria-label={`Go to ${section.name} section`}

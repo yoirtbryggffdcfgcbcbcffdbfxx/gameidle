@@ -38,10 +38,11 @@ const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, ach
                     <h3 className="text-base text-yellow-400 mb-2">Bonus Totaux Actifs</h3>
                     <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-xs">
                         {Object.entries(achievementBonuses).map(([key, value]) => {
-                            if ((key !== 'costReduction' && value > 1) || (key === 'costReduction' && value < 1)) {
+                            // FIX: Cast `value` from `unknown` to `number` for comparison and to satisfy `formatBonusValue` signature. `Object.entries` can result in a broad `unknown` type for values.
+                            if ((key !== 'costReduction' && (value as number) > 1) || (key === 'costReduction' && (value as number) < 1)) {
                                 return (
                                     <span key={key} className="bg-black/30 px-2 py-1 rounded">
-                                        {bonusLabels[key as keyof typeof bonusLabels]}: <strong className="text-green-400">{formatBonusValue(key as keyof typeof bonusLabels, value)}</strong>
+                                        {bonusLabels[key as keyof typeof bonusLabels]}: <strong className="text-green-400">{formatBonusValue(key as keyof typeof bonusLabels, value as number)}</strong>
                                     </span>
                                 );
                             }

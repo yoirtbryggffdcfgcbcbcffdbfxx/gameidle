@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
+// FIX: Import the `React` namespace to resolve the type `React.MouseEvent`.
+import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 
 // Hooks
 import { useGameState } from './useGameState';

@@ -47,15 +47,12 @@ L'application suit un cycle de vie simple géré par l'état `appState` dans `us
 
 ### 3.2. Architecture Responsive (`GameUI.tsx`)
 
-C'est un point central de l'UI. Le composant détecte la taille de l'écran et maintient un état `isMobile`.
--   **Sur Desktop (`isMobile: false`)**: Affiche une `NavBar` latérale et un layout en deux colonnes (`ControlPanel` et `UpgradeList`).
--   **Sur Mobile (`isMobile: true`)**: Affiche une `MobileNav` en bas de l'écran. Le contenu principal alterne entre `ControlPanel` et `UpgradeList` via un système d'onglets (`activeMobileTab`). Un menu hamburger ouvre le `MobileMenuPopup` pour l'accès aux autres écrans (Succès, Paramètres, etc.).
+L'interface utilisateur a été unifiée en une expérience de défilement vertical (single-page). `GameUI.tsx` organise le contenu en sections `fullscreen-section` distinctes (`core`, `forge`, `command-center`, etc.). La navigation entre ces sections est gérée par le composant `ScrollspyNav.tsx` qui s'affiche sur le côté droit de l'écran, indiquant la section active et permettant un accès rapide. Cette approche élimine le besoin de maintenir des layouts séparés pour mobile et desktop, offrant une expérience cohérente sur toutes les tailles d'écran.
 
-### 3.3. Système de Tutoriel Dynamique (`TutorialOverlay.tsx`)
+### 3.3. Système de Tutoriel Dynamique (`TutorialTooltip.tsx`)
 
 -   **Logique de Progression :** La progression des étapes du tutoriel est gérée dans `useGameEngine` et `GameUI.tsx` via des `useEffect` qui observent l'état du jeu (ex: `energy >= 10`). Ceci permet de déclencher la prochaine étape de manière contextuelle.
--   **Positionnement :** Le composant `TutorialOverlay` utilise `useLayoutEffect` et `element.getBoundingClientRect()` pour se positionner dynamiquement par rapport aux éléments du DOM à mettre en évidence.
--   **Découpage de l'Overlay :** Un `clip-path` CSS est utilisé pour créer un "trou" dans l'overlay semi-transparent, attirant l'attention de l'utilisateur sur l'élément d'interface pertinent.
+-   **Positionnement :** Le composant `TutorialTooltip.tsx` utilise `useLayoutEffect` et `element.getBoundingClientRect()` pour se positionner dynamiquement par rapport à l'élément du DOM à mettre en évidence. Il s'affiche comme une infobulle (tooltip) pointant vers l'élément pertinent, plutôt qu'un overlay complet.
 
 ### 3.4. Système de Notifications (`useGameEngine.ts` & `Notification.tsx`)
 
@@ -69,11 +66,9 @@ C'est un point central de l'UI. Le composant détecte la taille de l'écran et m
     1.  `components/popups/` : Créer `StatsPopup.tsx`.
     2.  `hooks/usePopupManager.ts` : Si un état spécifique est nécessaire, l'ajouter ici.
     3.  `components/GameUI.tsx` :
-        -   Ajouter la logique de rendu conditionnel : `{activePopup === 'stats' && <StatsPopup ... />}`.
-    4.  `components/NavBar.tsx` (Desktop) :
-        -   Ajouter un `NavButton` qui appelle `onMenuClick('stats')`.
-    5.  `components/MobileNav.tsx` & `MobileMenuPopup.tsx` (Mobile) :
-        -   Ajouter un `MenuButton` dans le `MobileMenuPopup` qui appelle `onMenuClick('stats')`.
+        -   Ajouter la logique de rendu conditionnel dans la section "Command Center" ou une nouvelle section.
+    4.  `components/ScrollspyNav.tsx`:
+        -   Ajouter un nouveau point de navigation si une nouvelle section est créée.
 
 -   **Ajouter une nouvelle variable à sauvegarder :**
     1.  `types.ts` : Ajouter la propriété à l'interface `GameState`.

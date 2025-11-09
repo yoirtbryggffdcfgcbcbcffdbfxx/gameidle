@@ -1,6 +1,6 @@
 # Quantum Core - An Addictive Idle Game
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/your-repo/quantum-core)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/your-repo/quantum-core)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 Quantum Core is a futuristic incremental idle game built with React, TypeScript, and Tailwind CSS. Players generate energy, buy upgrades to automate production, unlock achievements, and aim for Ascension to unlock powerful permanent bonuses.
@@ -21,7 +21,7 @@ The core of the game revolves around a satisfying loop of progression and strate
 
 -   **Achievements:** Unlock over 20 unique achievements by reaching various milestones in energy, production, or total upgrades. Each unlocked achievement provides a small, permanent, and stacking bonus to your stats!
 
--   **Responsive Design:** A fully responsive UI that adapts to any screen size, offering a tailored experience for both desktop and mobile players with dedicated navigation and layouts.
+-   **Responsive Design:** A fully responsive UI that works across all screen sizes. The game is designed as a single-page scrolling experience with distinct sections for the Core, Forge, Command Center, and more. A dynamic scrollspy navigation on the right side of the screen allows for easy jumping between sections.
 
 -   **Customization & Settings:** Tailor your experience with a variety of settings, including multiple visual themes, SFX volume control, scientific notation, and more.
 
@@ -39,18 +39,21 @@ The project uses a modular, feature-oriented structure.
 ```
 /
 ├── components/
-│   ├── popups/       # All popup components (Settings, Achievements, etc.)
-│   ├── ui/           # Reusable UI elements (Buttons, Cards, etc.)
-│   ├── ControlPanel.tsx
-│   ├── GameUI.tsx      # Main UI assembler, handles responsive logic
+│   ├── popups/       # Popup components (Settings, Achievements, Credits...)
+│   ├── ui/           # Reusable UI elements (ToggleSwitch, AchievementCard...)
+│   ├── AscensionSection.tsx # UI for the Ascension portal
+│   ├── GameUI.tsx      # Main game UI, orchestrates all sections
 │   ├── IntroCinematic.tsx
-│   ├── MobileNav.tsx   # Navigation for mobile view
-│   ├── NavBar.tsx      # Sidebar for desktop view
+│   ├── MainMenu.tsx
+│   ├── ReactorSection.tsx # UI for the Quantum Core reactor
+│   ├── ScrollspyNav.tsx # Right-side navigation
+│   ├── TutorialTooltip.tsx # The tutorial component
+│   ├── UpgradeList.tsx
 │   └── ...
 ├── hooks/            # Custom React hooks containing all game logic
 │   ├── useGameEngine.ts # The central "façade" hook
 │   ├── useGameState.ts  # Core state management (energy, upgrades)
-│   └── ...
+│ └── ...
 ├── data/             # Static game data (achievements)
 ├── audio/            # Base64 encoded audio files
 │   └── sfx.ts
