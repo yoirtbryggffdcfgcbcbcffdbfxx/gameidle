@@ -1,7 +1,9 @@
 # Quantum Core - Un Jeu Idle Addictif
 
-[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/your-repo/quantum-core)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/your-repo/quantum-core)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
+**[▶️ Jouer à Quantum Core (Lien de Démo)](https://lien-vers-votre-jeu.com)**
 
 Quantum Core est un jeu incrémental futuriste développé avec React, TypeScript, et Tailwind CSS. Les joueurs génèrent de l'énergie, achètent des améliorations, débloquent des succès, et visent l'Ascension pour débloquer de puissants bonus permanents.
 
@@ -9,11 +11,10 @@ Quantum Core est un jeu incrémental futuriste développé avec React, TypeScrip
 
 - [🕹️ Mécaniques de Jeu](#️-mécaniques-de-jeu)
 - [✨ Fonctionnalités Clés](#-fonctionnalités-clés)
+- [🧠 Philosophie de Conception](#-philosophie-de-conception)
 - [🛠️ Stack Technique](#️-stack-technique)
-- [📁 Structure du Projet](#-structure-du-projet)
 - [🚀 Démarrage Rapide](#-démarrage-rapide)
 - [🤝 Comment Contribuer & Étendre le Jeu](#-comment-contribuer--étendre-le-jeu)
-- [🌟 Feuille de Route](#-feuille-de-route)
 
 ## 🕹️ Mécaniques de Jeu
 
@@ -37,39 +38,24 @@ Le cœur du jeu repose sur une boucle de progression satisfaisante et des décis
 
 -   **Zéro-Build :** Fonctionne directement dans le navigateur sans étape de compilation, grâce aux `importmaps`.
 -   **Design Responsive Unifié :** Une expérience de défilement sur une seule page qui s'adapte à toutes les tailles d'écran, avec une navigation `Scrollspy` pour se déplacer facilement entre les sections.
--   **Personnalisation Visuelle :** Dépensez vos Fragments Quantiques durement gagnés dans la boutique pour débloquer des thèmes d'interface et des curseurs de souris uniques afin de personnaliser votre expérience de jeu.
+-   **Personnalisation Visuelle :** Dépensez vos Fragments Quantiques duremment gagnés dans la boutique pour débloquer des thèmes d'interface et des curseurs de souris uniques.
 -   **Tutoriel Dynamique :** Un système de tutoriel contextuel guide les nouveaux joueurs à travers les mécaniques de base.
 -   **Architecture Moderne :** Entièrement basé sur les Hooks React pour une logique propre et une séparation claire des préoccupations.
+
+## 🧠 Philosophie de Conception
+
+Ce projet adhère à trois principes fondamentaux :
+
+1.  **Simplicité d'Exécution :** Pas d'outils de build complexes. Le jeu doit pouvoir être lancé avec un simple serveur web statique, le rendant accessible et facile à maintenir.
+2.  **Séparation Stricte des Préoccupations :** La logique du jeu (l'état, les calculs, les règles) est entièrement contenue dans les **Hooks** (`/hooks`). Les composants (`/components`) sont responsables uniquement de l'affichage et de la capture des interactions utilisateur.
+3.  **Modularité & Extensibilité :** L'architecture est conçue pour être facilement étendue. Ajouter de nouvelles fonctionnalités (améliorations, succès, mécaniques) se fait de manière prévisible en modifiant des fichiers de constantes et en ajoutant une logique ciblée.
 
 ## 🛠️ Stack Technique
 
 -   **Framework :** React 19 (via `importmap` depuis un CDN)
 -   **Langage :** TypeScript
--   **Styling :** Tailwind CSS (via CDN)
+-   **Styling :** Tailwind CSS (injecté dynamiquement via JavaScript)
 -   **Gestion d'État :** Hooks React (`useState`, `useMemo`, `useCallback`)
-
-## 📁 Structure du Projet
-
-Le projet utilise une structure modulaire orientée par fonctionnalité.
-
-```
-/
-├── components/       # Composants React (UI)
-│   ├── popups/       # Popups (Paramètres, Succès, Boutique...)
-│   ├── ui/           # Éléments d'UI réutilisables (SkillTree, ToggleSwitch...)
-│   └── ...
-├── hooks/            # Hooks React personnalisés (toute la logique du jeu)
-│   ├── useGameEngine.ts # Le hook "façade" qui orchestre tout
-│   ├── useGameState.ts  # Gestion de l'état principal du jeu
-│   └── ...
-├── data/             # Données statiques du jeu (succès)
-├── audio/            # Fichiers audio encodés en Base64
-├── utils/            # Fonctions d'aide pures (formatage de nombres)
-├── App.tsx           # Composant principal, gère la machine d'état de l'application
-├── index.tsx         # Point d'entrée de React
-├── types.ts          # Définitions globales des types TypeScript
-└── constants.ts      # Constantes du jeu et valeurs d'équilibrage
-```
 
 ## 🚀 Démarrage Rapide
 
@@ -86,9 +72,7 @@ Ce projet ne nécessite aucun outil de build.
 
 ## 🤝 Comment Contribuer & Étendre le Jeu
 
-L'architecture est conçue pour être facilement extensible. La philosophie de base est la **séparation des préoccupations** :
--   **Les `hooks/`** contiennent toute la **logique** et l'**état**.
--   **Les `components/`** sont aussi "bêtes" que possible. Ils reçoivent des données et des fonctions en props et s'occupent uniquement de l'**affichage**.
+L'architecture est conçue pour être facilement extensible en suivant la philosophie de **séparation des préoccupations**.
 
 ### Ajouter une nouvelle Amélioration de base :
 
@@ -98,33 +82,5 @@ L'architecture est conçue pour être facilement extensible. La philosophie de b
 
 ### Ajouter un nouveau Succès :
 
-1.  **Ouvrez `data/achievements.ts`** et ajoutez votre nouvel objet de succès au tableau `INITIAL_ACHIEVEMENTS`.
-2.  **Ouvrez `hooks/useGameState.ts`** et trouvez le `useEffect` qui vérifie les succès.
-3.  Ajoutez un nouvel appel à `checkAchievement("Votre Nouveau Succès", condition_pour_le_debloquer);` avec la condition appropriée.
-
-### Ajouter une nouvelle Amélioration d'Ascension :
-
-1.  **Ouvrez `types.ts`** si vous avez besoin d'un nouveau type d'effet.
-2.  **Ouvrez `constants.ts`** et ajoutez un nouvel objet au tableau `ASCENSION_UPGRADES`. Définissez sa `position`, son `coût`, son `effet` et ses prérequis (`required`).
-3.  **Ouvrez `hooks/useGameState.ts`** et dans le `useMemo` `ascensionBonuses`, ajoutez un `case` dans le `switch` pour appliquer l'effet de votre nouvelle amélioration.
-
-### Ajouter un nouveau Thème achetable :
-
-1.  **Ouvrez `constants.ts`**.
-2.  Ajoutez un nouvel objet au tableau `THEMES`.
-3.  Ajoutez un nouvel objet `ShopUpgrade` au tableau `SHOP_UPGRADES` avec `type: ShopUpgradeType.THEME` et `targetId` correspondant à l'ID du thème.
-4.  **Ouvrez `index.html`** et ajoutez le sélecteur CSS `:root[data-theme='votre-theme'] { ... }` avec les variables de couleur.
-
-### Ajouter un nouveau Curseur achetable :
-
-1.  **Ouvrez `constants.ts`**.
-2.  Ajoutez un nouvel objet au tableau `CURSORS`.
-3.  Ajoutez un nouvel objet `ShopUpgrade` au tableau `SHOP_UPGRADES` avec `type: ShopUpgradeType.CURSOR` et `targetId` correspondant à l'ID du curseur.
-4.  **Ouvrez `index.html`** et ajoutez le sélecteur CSS `body[data-cursor='votre-curseur'] #custom-cursor { ... }` pour styliser le curseur.
-
-## 🌟 Feuille de Route
-
--   [ ] Calcul de la progression hors ligne
--   [ ] Plus de paliers d'Ascension avec de nouvelles mécaniques
--   [ ] Sauvegarde dans le cloud / Exportation
--   [ ] Plus de thèmes visuels et d'options de personnalisation
+1.  **Ouvrez `data/achievements.ts`** et ajoutez votre nouvel objet de succès.
+2.  **Ouvrez `hooks/state/useAchievements.ts`** et dans la fonction `checkAll`, ajoutez la condition de déblocage pour votre nouveau succès.

@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { GameState } from '../../types';
-// FIX: Import missing constants to resolve reference errors.
 import { MAX_UPGRADE_LEVEL, ASCENSION_UPGRADES } from '../../constants';
 import { calculateBulkBuy, calculateCost } from '../../utils/helpers';
 
@@ -10,29 +9,33 @@ type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: CheckAchievementFn) => {
     
     const incrementClickCount = useCallback((clickPower: number) => {
-        let newEnergy = 0;
         setGameState(prev => {
             const newTotalClicks = prev.totalClicks + 1;
             checkAchievement("Frénésie du Clic", newTotalClicks >= 1000);
             checkAchievement("Tempête de Clics", newTotalClicks >= 100000);
             
-            const maxEnergy = 1e9 * Math.pow(10, prev.ascensionLevel); // Recalculate locally to avoid stale closures
-            newEnergy = Math.min(prev.energy + clickPower, maxEnergy);
+            // Recalculate maxEnergy locally to avoid stale closures from props/arguments.
+            const maxEnergy = 1e9 * Math.pow(10, prev.ascensionLevel); 
+            const newEnergy = Math.min(prev.energy + clickPower, maxEnergy);
             
             return { ...prev, totalClicks: newTotalClicks, energy: newEnergy };
         });
-        return newEnergy;
     }, [setGameState, checkAchievement]);
 
     const buyUpgrade = useCallback((index: number, amount: number | 'MAX'): boolean => {
         let success = false;
-        
         setGameState(prev => {
-            const costMultiplier = prev.purchasedAscensionUpgrades.reduce((acc, id) => {
+            const costReductionFromAscension = prev.purchasedAscensionUpgrades.reduce((acc, id) => {
                 const upg = ASCENSION_UPGRADES.find(u => u.id === id);
                 if (upg?.effect.type === 'COST_REDUCTION') return acc - upg.effect.value;
                 return acc;
-            }, 1) * prev.achievements.filter(a => a.unlocked && a.bonus.type === 'COST_REDUCTION').reduce((acc, a) => acc * (1 - a.bonus.value / 100), 1);
+            }, 0);
+
+            const costReductionFromAchievements = prev.achievements
+                .filter(a => a.unlocked && a.bonus.type === 'COST_REDUCTION')
+                .reduce((acc, a) => acc * (1 - a.bonus.value / 100), 1);
+            
+            const costMultiplier = (1 - costReductionFromAscension) * costReductionFromAchievements;
 
             const upgrade = prev.upgrades[index];
             if (upgrade.owned >= MAX_UPGRADE_LEVEL) return prev;
@@ -49,11 +52,17 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
             newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier);
             newUpgrades[index] = newUpgrade;
 
+            const totalUpgradesOwned = newUpgrades.reduce((sum, u) => sum + u.owned, 0);
+            checkAchievement("Amorce d'Empire", totalUpgradesOwned >= 50);
+            checkAchievement("Architecte Industriel", totalUpgradesOwned >= 250);
+            checkAchievement("Magnat de la Technologie", totalUpgradesOwned >= 750);
+            checkAchievement("Souverain Galactique", totalUpgradesOwned >= 1500);
+
             return { ...prev, energy: prev.energy - totalCost, upgrades: newUpgrades };
         });
 
         return success;
-    }, [setGameState]);
+    }, [setGameState, checkAchievement]);
 
     const getComputed = (gameState: GameState) => {
         const clickPowerFromUpgrades = gameState.upgrades

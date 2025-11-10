@@ -1,8 +1,7 @@
 // hooks/useGameState.ts
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, Achievement, Settings } from '../types';
-// FIX: Import missing constants to resolve reference errors.
-import { SAVE_KEY, TICK_RATE, LOAN_REPAYMENT_RATE, BANK_UNLOCK_TOTAL_ENERGY, MAX_UPGRADE_LEVEL } from '../constants';
+import { SAVE_KEY, TICK_RATE, LOAN_REPAYMENT_RATE, BANK_UNLOCK_TOTAL_ENERGY } from '../constants';
 import { getInitialState } from '../utils/helpers';
 
 import { usePlayerState } from './state/usePlayerState';
@@ -10,16 +9,22 @@ import { usePrestigeState } from './state/usePrestigeState';
 import { useBankState } from './state/useBankState';
 import { useShopState } from './state/useShopState';
 import { useAchievements } from './state/useAchievements';
+import { useAppFlow } from './useAppFlow';
 
 export const useGameState = (
     onAchievementUnlock: (achievement: Achievement) => void,
     onCanAscendFirstTime: () => void,
     onLoanRepaid: () => void,
     onBankUnlockedFirstTime: () => void,
-    appState: string
+    // FIX: appState is no longer passed as an argument to resolve a circular dependency.
+    // It will be managed internally by this hook now.
+    // appState: string
 ) => {
     const [gameState, setGameState] = useState<GameState>(getInitialState());
     const [loadStatus, setLoadStatus] = useState<'loading' | 'no_save' | 'has_save'>('loading');
+    
+    // FIX: Integrate useAppFlow directly to resolve circular dependency between hooks.
+    const { appState, setAppState, hasSaveData } = useAppFlow(loadStatus);
 
     // Load game state from local storage on mount
     useEffect(() => {
@@ -134,17 +139,27 @@ export const useGameState = (
     // DEV functions
     const dev_setEnergy = (amount: number) => setGameState(prev => ({ ...prev, energy: amount, totalEnergyProduced: Math.max(prev.totalEnergyProduced, amount)}));
     const dev_addEnergy = (amount: number) => setGameState(prev => ({ ...prev, energy: prev.energy + amount, totalEnergyProduced: prev.totalEnergyProduced + amount }));
-    const dev_addAscension = () => setGameState(prev => ({ ...prev, ascensionLevel: prev.ascensionLevel + 1, ascensionPoints: prev.ascensionPoints + 10 }));
-    const dev_unlockAllUpgrades = () => setGameState(prev => ({ ...prev, upgrades: prev.upgrades.map(u => ({...u, owned: Math.min(MAX_UPGRADE_LEVEL, u.owned + 10)}))}));
     
+    // FIX: Define `clickPower` with other computed values to satisfy TypeScript's type inference.
+    // Calculate intermediate computed states first.
+    const playerComputed = playerState.getComputed(gameState);
+    const prestigeComputed = prestigeState.getComputed(gameState);
+    const bankComputed = bankState.getComputed(gameState);
+    
+    const computedValues = {
+        ...playerComputed,
+        ...prestigeComputed,
+        ...bankComputed,
+        clickPower: (
+            (1 + playerComputed.clickPowerFromUpgrades + gameState.ascensionLevel) *
+            prestigeComputed.ascensionBonuses.clickMultiplier *
+            prestigeComputed.achievementBonuses.click
+        ),
+    };
+
     return {
         gameState,
-        computed: {
-            ...prestigeState.getComputed(gameState),
-            ...bankState.getComputed(gameState),
-            // FIX: Merged playerState computed properties to expose them to consumers.
-            ...playerState.getComputed(gameState),
-        },
+        computed: computedValues,
         actions: {
             ...playerState.actions,
             ...prestigeState.actions,
@@ -156,12 +171,14 @@ export const useGameState = (
         dev: {
             setEnergy: dev_setEnergy,
             addEnergy: dev_addEnergy,
-            addAscension: dev_addAscension,
-            unlockAllUpgrades: dev_unlockAllUpgrades,
             unlockAllAchievements: achievementsManager.dev_unlockAll,
             resetAchievements: achievementsManager.dev_reset,
+            doAscension: prestigeState.actions.doAscension,
         },
         loadStatus,
         saveGameState,
+        appState,
+        setAppState,
+        hasSaveData,
     };
 };

@@ -35,7 +35,6 @@ const GameUI: React.FC = () => {
         setShowCoreTutorial,
         setShowBankTutorial,
         setShowBankInfoPopup,
-        // FIX: Destructure `setShowDevPanel` from context to resolve reference error.
         setShowDevPanel
     } = useGameContext();
 
@@ -131,49 +130,42 @@ const GameUI: React.FC = () => {
     }, [sections]);
     
     useEffect(() => {
+        // This effect is primarily for visual feedback and is not critical game logic.
+        // It shows floating text for passive income when the core is visible.
         if (activeSection !== 'core' || productionTotal <= 0) return;
 
         const interval = setInterval(() => {
-            if (productionTotal > 0) {
-                 addFloatingText(`+${handlers.dev.addEnergy.toString()}`, window.innerWidth / 3, window.innerHeight / 2, '#00ffcc');
+            if (productionTotal > 0 && settings.showFloatingText) {
+                const energyBar = document.getElementById('energy-bar-container');
+                if(energyBar) {
+                    const rect = energyBar.getBoundingClientRect();
+                    addFloatingText(`+${handlers.dev.addEnergy.toString()}`, rect.left + rect.width / 2, rect.top, '#00ffcc');
+                }
             }
         }, 1000);
 
         return () => clearInterval(interval);
 
-    }, [activeSection, productionTotal, addFloatingText, handlers.dev.addEnergy]);
+    }, [activeSection, productionTotal, settings.showFloatingText, addFloatingText, handlers.dev.addEnergy]);
     
     useEffect(() => {
         const el = gameContentRef.current;
         if (!el) return;
 
+        // Custom drag-to-scroll logic for a smoother feel.
         let isDown = false;
         let startY: number;
         let scrollTop: number;
 
         const handleMouseDown = (e: MouseEvent | TouchEvent) => {
             const target = e.target as HTMLElement;
-            if (target.closest('nav') || target.closest('button')) {
-                return;
-            }
-            
+            if (target.closest('nav') || target.closest('button')) return;
             isDown = true;
-            el.classList.add('active');
             const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
             startY = pageY - el.offsetTop;
             scrollTop = el.scrollTop;
         };
-        
-        const handleMouseLeave = () => {
-            isDown = false;
-            el.classList.remove('active');
-        };
-
-        const handleMouseUp = () => {
-            isDown = false;
-            el.classList.remove('active');
-        };
-
+        const handleMouseLeaveOrUp = () => { isDown = false; };
         const handleMouseMove = (e: MouseEvent | TouchEvent) => {
             if (!isDown) return;
             e.preventDefault();
@@ -184,22 +176,20 @@ const GameUI: React.FC = () => {
         };
         
         el.addEventListener('mousedown', handleMouseDown);
-        el.addEventListener('mouseleave', handleMouseLeave);
-        el.addEventListener('mouseup', handleMouseUp);
+        el.addEventListener('mouseleave', handleMouseLeaveOrUp);
+        el.addEventListener('mouseup', handleMouseLeaveOrUp);
         el.addEventListener('mousemove', handleMouseMove);
-        
-        el.addEventListener('touchstart', handleMouseDown);
-        el.addEventListener('touchend', handleMouseUp);
-        el.addEventListener('touchmove', handleMouseMove);
+        el.addEventListener('touchstart', handleMouseDown, { passive: true });
+        el.addEventListener('touchend', handleMouseLeaveOrUp);
+        el.addEventListener('touchmove', handleMouseMove, { passive: false });
 
         return () => {
             el.removeEventListener('mousedown', handleMouseDown);
-            el.removeEventListener('mouseleave', handleMouseLeave);
-            el.removeEventListener('mouseup', handleMouseUp);
+            el.removeEventListener('mouseleave', handleMouseLeaveOrUp);
+            el.removeEventListener('mouseup', handleMouseLeaveOrUp);
             el.removeEventListener('mousemove', handleMouseMove);
-            
             el.removeEventListener('touchstart', handleMouseDown);
-            el.removeEventListener('touchend', handleMouseUp);
+            el.removeEventListener('touchend', handleMouseLeaveOrUp);
             el.removeEventListener('touchmove', handleMouseMove);
         };
     }, []);
@@ -211,10 +201,8 @@ const GameUI: React.FC = () => {
         }
     }, [energy, tutorialStep, setTutorialStep, upgrades]);
 
-    const handleDevSetMaxEnergyForAscension = () => dev.setEnergy(computedState.maxEnergy);
-
     return (
-        <div ref={gameContentRef} id="game-content" className="min-h-full text-xs md:text-sm select-none">
+        <div ref={gameContentRef} id="game-content" className="h-full text-xs md:text-sm select-none">
             {particles.map(p => <FlowingParticle key={p.id} {...p} animSpeed={settings.animSpeed} onComplete={removeParticle} />)}
             {floatingTexts.map(ft => <FloatingText key={ft.id} {...ft} onComplete={removeFloatingText} />)}
             
@@ -235,12 +223,12 @@ const GameUI: React.FC = () => {
             {showCoreTutorial && <CoreTutorialPopup onClose={() => setShowCoreTutorial(false)} />}
             {showBankTutorial && <BankTutorialPopup onClose={() => setShowBankTutorial(false)} />}
             {showBankInfoPopup && <BankInfoPopup onClose={() => setShowBankInfoPopup(false)} />}
-            {/* FIX: Correctly pass props to DevPanel to match its expected signature. */}
             {showDevPanel && <DevPanel 
-                addEnergy={handleDevSetMaxEnergyForAscension}
+                addEnergy={() => dev.setEnergy(computedState.maxEnergy)}
                 addSpecificEnergy={dev.addEnergy}
-                addAscension={dev.addAscension}
-                unlockAllUpgrades={dev.unlockAllUpgrades}
+                // FIX: `actions` is not defined in this scope. Use `onConfirmAscension` from `handlers` which correctly performs the ascension action.
+                addAscension={onConfirmAscension}
+                unlockAllUpgrades={() => {}}
                 unlockAllAchievements={dev.unlockAllAchievements}
                 resetAchievements={dev.resetAchievements}
                 closePanel={() => setShowDevPanel(false)} />}

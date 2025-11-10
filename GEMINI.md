@@ -8,87 +8,74 @@ Ce document est ma "mémoire" technique et mon manuel d'ingénierie pour ce proj
 -   **Architecture Orientée Hooks :** Séparation stricte entre la logique (les `hooks/`) et la présentation (les `components/`). Les composants doivent être aussi "bêtes" que possible.
 -   **Flux de Données Unidirectionnel :** `Interaction UI -> Appel de Handler -> Mutation de l'État -> Nouveau Rendu`.
 
-## 2. Architecture & Patterns de Conception
+## 2. Principes Directeurs pour l'IA
 
-### 2.1. Le "Hook Façade Pattern" (`useGameEngine.ts`)
+Ces principes sont fondamentaux pour notre collaboration et mon efficacité en tant que développeur principal IA.
+
+### 2.1. Une Base de Code "IA-First"
+
+Le principe le plus important est que **la base de code est optimisée pour être lue, analysée et modifiée par une IA**. Cela a des implications concrètes :
+
+-   **Clarté et Expliciteté avant tout :** Le code doit être simple, direct et éviter toute "magie". Le flux de données doit être traçable.
+-   **Modularité Stricte :** Privilégier des fichiers et des fonctions de petite taille, avec une seule responsabilité. C'est essentiel pour que je puisse isoler les modifications et éviter les effets de bord.
+-   **Typage Rigoureux :** TypeScript n'est pas une option. Les types (`types.ts`) sont mon schéma de la base de données de l'application. Une structure de types solide est la fondation de ma compréhension.
+-   **La Structure est la Documentation :** Une structure de fichiers et de répertoires logique (`hooks/state`, `hooks/actions`, `components/ui`) est une forme de documentation que je peux parser et comprendre instantanément.
+
+### 2.2. Analyse Impartiale & Prise de Décision
+
+Pour toute demande de modification non triviale, ma réponse doit inclure une analyse impartiale. Je dois systématiquement présenter :
+
+-   **Les "Pour" (Avantages) :** Comment la modification répond à la demande, les bénéfices pour l'utilisateur, les améliorations architecturales, etc.
+-   **Les "Contre" (Inconvénients & Compromis) :** L'impact sur la performance, l'augmentation de la complexité du code, les risques de régression, les potentiels impacts négatifs sur l'expérience utilisateur, le temps de développement estimé.
+
+Cela vous permet de prendre une décision éclairée sur la base de tous les éléments.
+
+### 2.3. Proactivité Architecturale & Création de Fichiers
+
+Je ne dois pas être limité par la structure de fichiers existante. Si une nouvelle fonctionnalité ou un refactoring nécessite de **créer de nouveaux fichiers, de nouveaux hooks, ou même de nouveaux répertoires**, je suis non seulement autorisé mais **encouragé** à le faire.
+
+L'objectif est de maintenir la propreté et la modularité de l'architecture. Ajouter de la complexité à un fichier existant par peur d'en créer un nouveau est une mauvaise pratique qui doit être évitée.
+
+## 3. Architecture & Patterns de Conception
+
+### 3.1. Le "Hook Façade Pattern" (`useGameEngine.ts`)
 
 C'est le pilier de l'architecture. Il agit comme une **façade** :
 
 -   **Orchestrateur Central :** C'est le seul hook consommé directement par l'UI (`App.tsx`). Il initialise et coordonne tous les autres hooks de plus bas niveau.
 -   **Point d'Entrée Unique :** Il agrège l'état et les fonctions de `useGameState`, `useSettings`, `useSfx`, etc., en un seul objet structuré.
--   **Gestionnaire d'Effets Croisés :** C'est ici que les interactions qui traversent plusieurs domaines sont gérées. Par exemple, `handleBuyUpgrade` dans `useGameEngine` appelle `gameState.buyUpgrade` (logique métier), `playSfx` (audio), et `addParticle` (effets visuels).
+-   **Gestionnaire d'Effets Croisés :** C'est ici que les interactions qui traversent plusieurs domaines sont gérées. Par exemple, `handleBuyUpgrade` dans `useGameEngine` appelle une action de `useGameState`, `playSfx` (audio), et `addParticle` (effets visuels).
 
-### 2.2. Gestion de l'État (`useGameState.ts`)
+### 3.2. Gestion de l'État (`useGameState.ts`)
 
--   **Source de Vérité :** Gère l'état fondamental et persistant du jeu (énergie, améliorations, ascension, etc.).
+-   **Source de Vérité :** Gère l'état fondamental et persistant du jeu (`GameState`).
 -   **Persistance :** Gère la sauvegarde et le chargement du jeu depuis `localStorage`.
--   **Calculs Mémorisés (`useMemo`) :** Toutes les valeurs dérivées coûteuses (`productionTotal`, `ascensionBonuses`, `canAscend`) sont calculées avec `useMemo` pour optimiser les performances et ne se recalculer qu'en cas de nécessité.
+-   **Logique d'État Déléguée :** Il utilise des sous-hooks spécialisés (`usePlayerState`, `usePrestigeState`, `useBankState`) pour calculer les états dérivés (valeurs calculées) et gérer les mutations d'état. C'est une application du principe de responsabilité unique.
 
-### 2.3. Hiérarchie des Composants & Flux de Props
+### 3.3. Hiérarchie des Composants & Flux de Props
 
 1.  **`App.tsx`** : Consomme `useGameEngine`. Gère la machine d'état de l'application (`loading`, `cinematic`, `menu`, `game`).
-2.  **`GameUI.tsx`** : Reçoit l'intégralité de l'objet de `useGameEngine` et le déstructure pour le distribuer à ses enfants. C'est le hub principal de l'UI en jeu.
-3.  **Composants de Section (`ForgeSection`, `AscensionSection`, etc.)** : Reçoivent les sous-ensembles de props pertinents de `GameUI`.
-4.  **Composants d'UI (`UpgradeItem`, `SkillTree`, etc.)** : Reçoivent uniquement les données et les callbacks dont ils ont besoin.
+2.  **`GameContext.ts` / `GameUI.tsx`** : Le contexte React est utilisé pour éviter le "prop drilling". `GameUI` reçoit l'objet `game` complet et le met à disposition de tous ses enfants via le `GameContext.Provider`.
+3.  **Composants de Section (`ForgeSection`, etc.)** : Consomment le `GameContext` via le hook `useGameContext()` pour extraire uniquement les données et les fonctions dont ils ont besoin.
 
-### 2.4. Système de Cosmétiques & Boutique
+## 4. Cookbook pour les Modifications Futures
 
-Ce système gère les thèmes visuels et les curseurs de souris personnalisés.
-
--   **Gestion de l'État :**
-    -   **Débloqués :** `unlockedThemes: string[]` et `unlockedCursors: string[]` dans `GameState` (`useGameState.ts`) suivent les cosmétiques achetés par le joueur. Ils sont persistants.
-    -   **Sélectionnés :** `theme: string` et `selectedCursor: string` dans `Settings` (`useSettings.ts`) suivent les cosmétiques actuellement actifs.
-
--   **Flux de Données & Logique :**
-    1.  **Définition :** Les cosmétiques disponibles sont définis dans `constants.ts` (`THEMES`, `CURSORS`).
-    2.  **Achat :** Les articles correspondants sont créés dans `SHOP_UPGRADES` (`constants.ts`) avec un `type` (`THEME` ou `CURSOR`) et un `targetId` qui lie l'article de la boutique à la définition du cosmétique.
-    3.  **Transaction :** `ShopPopup.tsx` affiche ces articles. Un clic sur "Acheter" appelle `handleBuyShopUpgrade` (`useGameEngine.ts`), qui à son tour appelle `buyShopUpgrade` (`useGameState.ts`).
-    4.  **Mise à jour de l'État :** `buyShopUpgrade` vérifie la devise (`quantumShards`), déduit le coût, et ajoute le `targetId` de l'article au tableau approprié (`unlockedThemes` ou `unlockedCursors`).
-    5.  **Sélection :** `SettingsPopup.tsx` lit les tableaux `unlocked...` pour n'afficher que les options disponibles à la sélection.
-    6.  **Application :**
-        -   **Thème :** Un `useEffect` dans `useSettings.ts` applique l'attribut `data-theme` à l'élément `<html>`.
-        -   **Curseur :** Un `useEffect` dans `App.tsx` applique l'attribut `data-cursor` à l'élément `<body>`.
-    7.  **Styling :** Les styles CSS réels pour les thèmes et les curseurs sont définis dans `index.html`.
-
-## 3. Cookbook pour les Modifications Futures
-
-Ceci est un guide pratique pour les modifications courantes afin d'assurer la cohérence architecturale.
-
-### Tâche : Ajouter une nouvelle statistique permanente (ex: "Chance de Critique sur Clic")
+### Tâche : Ajouter une nouvelle statistique (ex: "Chance de Critique")
 
 1.  **`types.ts`** : Ajouter `criticalClickChance: number` à l'interface `GameState`.
-2.  **`hooks/useGameState.ts`** :
-    -   Dans `getInitialState`, ajouter `criticalClickChance: 0`.
-    -   S'assurer qu'elle est sauvegardée et chargée correctement dans les `useEffect` de persistance.
-    -   Dans `ascensionBonuses` ou `achievementBonuses` (`useMemo`), ajouter la logique pour que les améliorations/succès modifient cette nouvelle statistique.
-    -   Dans `doAscension`, décider si cette statistique doit être réinitialisée ou conservée.
-3.  **`constants.ts`** : Ajouter de nouvelles `AscensionUpgrade` ou `CoreUpgrade` dont l'effet est de modifier `criticalClickChance`.
-4.  **`hooks/useGameEngine.ts`** :
-    -   Dans `handleCollect`, implémenter la logique du critique en utilisant la nouvelle statistique de `gameState`.
-5.  **`components/GameUI.tsx`** (ou un sous-composant) : Afficher la nouvelle statistique pour que le joueur puisse la voir.
-
-### Tâche : Ajouter une nouvelle section à l'UI (ex: "Laboratoire")
-
-1.  **Créer le composant** : `components/LabSection.tsx`. Il doit accepter les props nécessaires depuis `GameUI`.
-2.  **`components/GameUI.tsx`** :
-    -   Dans le `useMemo` pour `sections`, ajouter `{ id: 'lab', name: 'Laboratoire' }`.
-    -   Dans le `main` du JSX, ajouter `<LabSection {...props} />` à l'intérieur d'une `<section id="lab" ...>`.
-3.  C'est tout. Le `ScrollspyNav` se mettra à jour automatiquement.
+2.  **`utils/helpers.ts`** : Mettre à jour `getInitialState` pour initialiser `criticalClickChance: 0`.
+3.  **`hooks/state/usePlayerState.ts`** (ou un nouveau `useCombatState.ts`) : Ajouter la logique de calcul qui utilise cette statistique.
+4.  **`constants.ts`** : Créer de nouvelles améliorations (Ascension, Cœur) qui modifient cette stat.
+5.  **`hooks/state/usePrestigeState.ts`** : Mettre à jour `getComputed` pour que les bonus d'ascension/succès affectent `criticalClickChance`.
+6.  **Composant UI** : Ajouter un affichage pour la nouvelle statistique.
 
 ### Tâche : Déboguer un problème d'état (ex: la production n'est pas correcte)
 
-1.  **Point de départ : `hooks/useGameState.ts`**.
-2.  Inspecter le `useMemo` de `productionTotal`.
-3.  Vérifier chaque dépendance de ce `useMemo` :
-    -   `gameState.upgrades` : Les `owned` et `production` sont-ils corrects ?
-    -   `ascensionBonuses` : La valeur de `productionMultiplier` est-elle correcte ? Vérifier les `AscensionUpgrade` achetées.
-    -   `achievementBonuses` : La valeur de `production` est-elle correcte ? Vérifier les succès débloqués.
-    -   `gameState.isCoreDischarging` et `coreBonuses` : Le boost du cœur est-il appliqué au bon moment ?
-4.  Tracer le flux de la prop `productionTotal` depuis `useGameEngine` -> `GameUI` -> `StatDisplay` pour s'assurer qu'elle n'est pas modifiée en cours de route.
-
-## 4. Équilibrage du Jeu
-
-Les principales sources pour l'équilibrage du jeu sont centralisées dans :
--   **`constants.ts`** : Coûts de base, production, effets des améliorations d'ascension/cœur, et coûts des articles de la boutique. La constante `TICK_RATE` influence la vitesse de jeu.
--   **`data/achievements.ts`** : Valeurs des bonus de succès.
--   **`utils/helpers.ts`** : La fonction `calculateCost` contient la formule de croissance des coûts des améliorations (ex: `Math.pow(1.08, owned)`). C'est un levier très puissant pour l'équilibrage.
+1.  **Point de départ : `hooks/state/usePrestigeState.ts`**.
+2.  Inspecter la fonction `getComputed`. C'est là que toutes les valeurs dérivées sont calculées.
+3.  Vérifier chaque source de données qui contribue au calcul :
+    -   `gameState.upgrades`
+    -   `gameState.purchasedAscensionUpgrades` -> `ASCENSION_UPGRADES`
+    -   `gameState.achievements`
+    -   `gameState.isCoreDischarging`
+4.  Grâce à la centralisation des calculs, le débogage est confiné à ce fichier.

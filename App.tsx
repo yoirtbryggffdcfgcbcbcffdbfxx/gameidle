@@ -50,13 +50,13 @@ const App: React.FC = () => {
     
     return (
         <GameContext.Provider value={game}>
-            <div id="game-content">
+            <div id="game-content-wrapper" className="h-full w-full">
                 <GameUI />
                  <NotificationCenter
                     notifications={game.uiState.notifications}
                     removeNotification={game.removeNotification}
                     // Responsive classes for mobile vs desktop
-                    className="fixed top-4 right-4 w-56 sm:w-64 sm:bottom-4 sm:top-auto"
+                    className="fixed top-4 right-4 w-56 sm:w-64 z-[2500]"
                 />
             </div>
         </GameContext.Provider>
