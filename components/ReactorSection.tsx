@@ -1,5 +1,5 @@
 import React from 'react';
-import { CORE_UPGRADES } from '../constants';
+import { CORE_UPGRADES } from '../data/core';
 import QuantumCore from './QuantumCore';
 import SkillTree from './ui/SkillTree';
 import { useGameContext } from '../contexts/GameContext';

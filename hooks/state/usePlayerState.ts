@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GameState } from '../../types';
-import { MAX_UPGRADE_LEVEL, ASCENSION_UPGRADES } from '../../constants';
+import { MAX_UPGRADE_LEVEL } from '../../constants';
+import { ASCENSION_UPGRADES } from '../../data/ascension';
 import { calculateBulkBuy, calculateCost } from '../../utils/helpers';
 
 type CheckAchievementFn = (name: string, condition: boolean) => void;

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { GameState } from '../../types';
-import { SHOP_UPGRADES } from '../../constants';
+import { SHOP_UPGRADES } from '../../data/shop';
 
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 

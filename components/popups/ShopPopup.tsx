@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShopUpgrade } from '../../types';
-import { SHOP_UPGRADES } from '../../constants';
+import { SHOP_UPGRADES } from '../../data/shop';
 
 interface ShopPopupProps {
     quantumShards: number;

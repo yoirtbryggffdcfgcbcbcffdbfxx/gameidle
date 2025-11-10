@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
 import { GameState } from '../../types';
 // FIX: Import missing constant to resolve reference error.
-import { BANK_UPGRADES, LOAN_REPAYMENT_RATE, TICK_RATE } from '../../constants';
+import { BANK_UPGRADES, LOAN_REPAYMENT_RATE } from '../../data/bank';
+import { TICK_RATE } from '../../constants';
 
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 type UnlockAchievementFn = (name: string) => void;
-type OnLoanRepaidFn = () => void;
 
 // FIX: Export interfaces so they can be imported by other modules.
 export interface LoanResult {
@@ -29,7 +29,6 @@ export interface UpgradeBankResult {
 
 export const useBankState = (
     setGameState: SetGameStateFn,
-    onLoanRepaid: OnLoanRepaidFn,
     unlockAchievement: UnlockAchievementFn,
 ) => {
     const getComputed = (gameState: GameState) => {
@@ -80,7 +79,7 @@ export const useBankState = (
                 const remaining = newLoan.remaining - repayment;
                 if (remaining <= 0) {
                     newLoan = null;
-                    onLoanRepaid(); // Callback when loan is fully paid
+                    // The onLoanRepaid callback is now called by the game loop
                 } else {
                     newLoan = { ...newLoan, remaining };
                 }
@@ -89,7 +88,7 @@ export const useBankState = (
             return { ...prev, energy: prev.energy + toEnergyAmount, savingsBalance: prev.savingsBalance - actualWithdrawAmount, currentLoan: newLoan };
         });
         return result;
-    }, [setGameState, onLoanRepaid]);
+    }, [setGameState]);
     
     const takeOutLoan = useCallback((loanAmount: number): LoanResult => {
         let result: LoanResult = { success: false };

@@ -1,7 +1,9 @@
 import { useCallback, useRef } from 'react';
 import { GameState } from '../../types';
 // FIX: Import missing constants and helpers to resolve reference errors.
-import { ASCENSION_UPGRADES, CORE_UPGRADES, MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, TICK_RATE } from '../../constants';
+import { ASCENSION_UPGRADES } from '../../data/ascension';
+import { CORE_UPGRADES } from '../../data/core';
+import { MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, TICK_RATE } from '../../constants';
 import { getInitialState } from '../../utils/helpers';
 
 type CheckAchievementFn = (name: string, condition: boolean) => void;

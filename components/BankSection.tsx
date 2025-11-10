@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BANK_CONSTRUCTION_COST, BANK_UPGRADES, LOAN_REPAYMENT_RATE, LOAN_OPTIONS } from '../constants';
+import { BANK_CONSTRUCTION_COST, BANK_UPGRADES, LOAN_REPAYMENT_RATE, LOAN_OPTIONS } from '../data/bank';
 import { useGameContext } from '../contexts/GameContext';
 
 const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (

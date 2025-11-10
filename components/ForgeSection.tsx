@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Upgrade } from '../types';
+import React from 'react';
 import UpgradeList from './UpgradeList';
 import { useGameContext } from '../contexts/GameContext';
+import { useForge } from '../hooks/ui/useForge'; // Import the new hook
 
 const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (
     <div className="w-full flex justify-between items-center">
@@ -14,61 +14,27 @@ const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n:
 
 const ForgeSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber, playSfx } = useGameContext();
-    // FIX: Get computed properties from `computedState` instead of `gameState`.
     const { energy, purchasedShopUpgrades } = gameState;
     const { visibleUpgrades, productionTotal, costMultiplier } = computedState;
     const { onBuyUpgrade } = handlers;
     
-    const [activeTab, setActiveTab] = useState<'PRODUCTION' | 'CLICK' | 'BOOSTER'>('PRODUCTION');
-    const [buyAmount, setBuyAmount] = useState<1 | 10 | 100 | 'MAX'>(1);
-
-    const tabs: { id: 'PRODUCTION' | 'CLICK' | 'BOOSTER'; name: string; icon: string; }[] = [
-        { id: 'PRODUCTION', name: 'Production', icon: '⚡' },
-        { id: 'CLICK', name: 'Clic', icon: '🖱️' },
-        { id: 'BOOSTER', name: 'Booster', icon: '🚀' },
-    ];
-
-    const buyOptions: (1 | 10 | 100 | 'MAX')[] = [1, 10, 100, 'MAX'];
-
-    const enrichedAndFilteredUpgrades = useMemo(() => {
-        const filtered = visibleUpgrades.filter(item => item.upgradeData.type === activeTab);
-        
-        if (activeTab !== 'PRODUCTION' || productionTotal <= 0) return filtered;
-
-        const withStats = filtered.map(item => {
-            const upgrade = item.upgradeData;
-            let productionContribution = 0;
-            let efficiencyScore = 0;
-            
-            const itemProduction = upgrade.production * upgrade.owned;
-            productionContribution = (itemProduction / productionTotal) * 100;
-            
-            efficiencyScore = upgrade.currentCost > 0 ? upgrade.production / upgrade.currentCost : Infinity;
-
-            return {
-                ...item,
-                productionContribution,
-                efficiencyScore,
-            };
-        });
-
-        return withStats.sort((a, b) => b.efficiencyScore - a.efficiencyScore);
-    }, [visibleUpgrades, activeTab, productionTotal]);
+    const {
+        activeTab,
+        setActiveTab,
+        buyAmount,
+        setBuyAmount,
+        enrichedAndFilteredUpgrades,
+        mostEfficientId,
+        tabs,
+        buyOptions,
+    } = useForge({
+        visibleUpgrades,
+        productionTotal,
+        energy,
+        purchasedShopUpgrades,
+        playSfx,
+    });
     
-    const mostEfficientId = useMemo(() => {
-        if (!purchasedShopUpgrades.includes('efficiency_analyzer')) {
-            return null;
-        }
-
-        if (activeTab === 'PRODUCTION' && enrichedAndFilteredUpgrades.length > 0) {
-            const first = enrichedAndFilteredUpgrades[0];
-            if (energy >= first.upgradeData.currentCost) {
-                return first.upgradeData.id;
-            }
-        }
-        return null;
-    }, [enrichedAndFilteredUpgrades, activeTab, energy, purchasedShopUpgrades]);
-
     return (
         <section id="forge" className="fullscreen-section reveal">
             <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 grid grid-rows-[auto_auto_1fr] gap-y-3">
@@ -79,7 +45,7 @@ const ForgeSection: React.FC = () => {
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
-                                onClick={() => { playSfx('click'); setActiveTab(tab.id); }}
+                                onClick={() => setActiveTab(tab.id)}
                                 className={`px-4 py-2 text-xs sm:text-sm transition-all duration-300 relative ${activeTab === tab.id ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
                             >
                                 {tab.icon} {tab.name}
@@ -92,7 +58,7 @@ const ForgeSection: React.FC = () => {
                         {buyOptions.map(amount => (
                             <button
                                 key={amount}
-                                onClick={() => { playSfx('click'); setBuyAmount(amount); }}
+                                onClick={() => setBuyAmount(amount)}
                                 className={`px-3 py-1 text-xs rounded transition-colors ${buyAmount === amount ? 'bg-cyan-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
                             >
                                 x{amount}

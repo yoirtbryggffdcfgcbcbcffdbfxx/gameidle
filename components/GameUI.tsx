@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
+
+// Hooks
+import { useGameContext } from '../contexts/GameContext';
+import { useDragToScroll } from '../hooks/ui/useDragToScroll';
+import { useRevealOnScroll } from '../hooks/ui/useRevealOnScroll';
+import { useScrollSpy } from '../hooks/ui/useScrollSpy';
 
 // Components
 import FlowingParticle from './ui/FlowingParticle';
@@ -18,8 +24,8 @@ import CommandCenterSection from './CommandCenterSection';
 import BankSection from './BankSection';
 import AscensionSection from './AscensionSection';
 import ReactorSection from './ReactorSection';
-import { useGameContext } from '../contexts/GameContext';
 
+import { BANK_UNLOCK_TOTAL_ENERGY } from '../data/bank';
 
 const GameUI: React.FC = () => {
     const { 
@@ -29,7 +35,6 @@ const GameUI: React.FC = () => {
         handlers, 
         popups,
         playSfx, 
-        addFloatingText, 
         removeParticle, 
         removeFloatingText,
         setShowCoreTutorial,
@@ -38,20 +43,18 @@ const GameUI: React.FC = () => {
         setShowDevPanel
     } = useGameContext();
 
-    const { ascensionLevel, totalEnergyProduced, energy, upgrades } = gameState;
-    const { canAscend, productionTotal } = computedState;
+    const { ascensionLevel, totalEnergyProduced } = gameState;
+    const { canAscend } = computedState;
     const { settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial, showDevPanel, showCoreTutorial, showBankTutorial, showBankInfoPopup } = uiState;
     const { setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial } = popups;
     const { onConfirmHardReset, onConfirmAscension, dev } = handlers;
     
-    const [activeSection, setActiveSection] = useState('core');
     const gameContentRef = useRef<HTMLDivElement>(null);
-    const isScrollingRef = useRef(false);
-    const scrollTimeoutRef = useRef<number | null>(null);
-    
+
+    // --- UI Logic Hooks ---
     const showAscensionSection = useMemo(() => canAscend || ascensionLevel > 0, [canAscend, ascensionLevel]);
     const showReactorSection = useMemo(() => ascensionLevel > 0, [ascensionLevel]);
-    const showBankSection = useMemo(() => totalEnergyProduced >= 100000, [totalEnergyProduced]);
+    const showBankSection = useMemo(() => totalEnergyProduced >= BANK_UNLOCK_TOTAL_ENERGY, [totalEnergyProduced]);
 
     const sections = useMemo(() => [
         { id: 'core', name: 'Cœur' },
@@ -62,23 +65,15 @@ const GameUI: React.FC = () => {
         ...(showReactorSection ? [{ id: 'reactor', name: 'Réacteur' }] : []),
     ], [showAscensionSection, showReactorSection, showBankSection]);
 
-    const handleNavClick = (id: string) => {
-        if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
-        }
-        isScrollingRef.current = true;
-        
-        setActiveSection(id);
-        
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        scrollTimeoutRef.current = window.setTimeout(() => {
-            isScrollingRef.current = false;
-        }, 1000);
+    const { activeSection, handleNavClick: baseHandleNavClick } = useScrollSpy(sections.map(s => s.id));
+    useDragToScroll(gameContentRef);
+    useRevealOnScroll('.reveal', [sections]);
 
+    // --- Combined Logic for Nav Click ---
+    const handleNavClick = (id: string) => {
+        baseHandleNavClick(id);
+
+        // Tutorial progression logic tied to navigation
         if (id === 'forge' && tutorialStep === 3) {
             setTutorialStep(4);
         }
@@ -89,117 +84,6 @@ const GameUI: React.FC = () => {
             setTutorialStep(9);
         }
     };
-
-
-    useEffect(() => {
-        const revealObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('revealed');
-                }
-            });
-        }, { threshold: 0.1 });
-
-        const elementsToReveal = document.querySelectorAll('.reveal');
-        elementsToReveal.forEach(el => revealObserver.observe(el));
-        
-        const scrollspyObserver = new IntersectionObserver((entries) => {
-            if (isScrollingRef.current) return;
-
-            const mostVisibleEntry = entries.reduce((prev, current) => 
-                (prev.intersectionRatio > current.intersectionRatio) ? prev : current
-            );
-
-            if (mostVisibleEntry && mostVisibleEntry.isIntersecting) {
-                setActiveSection(mostVisibleEntry.target.id);
-            }
-        }, { threshold: Array.from(Array(21).keys()).map(i => i / 20) });
-
-        sections.forEach(section => {
-            const el = document.getElementById(section.id);
-            if (el) scrollspyObserver.observe(el);
-        });
-
-        return () => {
-             elementsToReveal.forEach(el => revealObserver.unobserve(el));
-             sections.forEach(section => {
-                const el = document.getElementById(section.id);
-                if (el) scrollspyObserver.unobserve(el);
-            });
-        };
-    }, [sections]);
-    
-    useEffect(() => {
-        // This effect is primarily for visual feedback and is not critical game logic.
-        // It shows floating text for passive income when the core is visible.
-        if (activeSection !== 'core' || productionTotal <= 0) return;
-
-        const interval = setInterval(() => {
-            if (productionTotal > 0 && settings.showFloatingText) {
-                const energyBar = document.getElementById('energy-bar-container');
-                if(energyBar) {
-                    const rect = energyBar.getBoundingClientRect();
-                    addFloatingText(`+${handlers.dev.addEnergy.toString()}`, rect.left + rect.width / 2, rect.top, '#00ffcc');
-                }
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-
-    }, [activeSection, productionTotal, settings.showFloatingText, addFloatingText, handlers.dev.addEnergy]);
-    
-    useEffect(() => {
-        const el = gameContentRef.current;
-        if (!el) return;
-
-        // Custom drag-to-scroll logic for a smoother feel.
-        let isDown = false;
-        let startY: number;
-        let scrollTop: number;
-
-        const handleMouseDown = (e: MouseEvent | TouchEvent) => {
-            const target = e.target as HTMLElement;
-            if (target.closest('nav') || target.closest('button')) return;
-            isDown = true;
-            const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
-            startY = pageY - el.offsetTop;
-            scrollTop = el.scrollTop;
-        };
-        const handleMouseLeaveOrUp = () => { isDown = false; };
-        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-            if (!isDown) return;
-            e.preventDefault();
-            const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
-            const y = pageY - el.offsetTop;
-            const walk = (y - startY) * 2;
-            el.scrollTop = scrollTop - walk;
-        };
-        
-        el.addEventListener('mousedown', handleMouseDown);
-        el.addEventListener('mouseleave', handleMouseLeaveOrUp);
-        el.addEventListener('mouseup', handleMouseLeaveOrUp);
-        el.addEventListener('mousemove', handleMouseMove);
-        el.addEventListener('touchstart', handleMouseDown, { passive: true });
-        el.addEventListener('touchend', handleMouseLeaveOrUp);
-        el.addEventListener('touchmove', handleMouseMove, { passive: false });
-
-        return () => {
-            el.removeEventListener('mousedown', handleMouseDown);
-            el.removeEventListener('mouseleave', handleMouseLeaveOrUp);
-            el.removeEventListener('mouseup', handleMouseLeaveOrUp);
-            el.removeEventListener('mousemove', handleMouseMove);
-            el.removeEventListener('touchstart', handleMouseDown);
-            el.removeEventListener('touchend', handleMouseLeaveOrUp);
-            el.removeEventListener('touchmove', handleMouseMove);
-        };
-    }, []);
-
-    useEffect(() => {
-        const firstUpgradeCost = upgrades.find(u => u.id === 'gen_1')?.baseCost || 10;
-        if (tutorialStep === 2 && energy >= firstUpgradeCost) {
-            setTutorialStep(3); 
-        }
-    }, [energy, tutorialStep, setTutorialStep, upgrades]);
 
     return (
         <div ref={gameContentRef} id="game-content" className="h-full text-xs md:text-sm select-none">
@@ -226,7 +110,6 @@ const GameUI: React.FC = () => {
             {showDevPanel && <DevPanel 
                 addEnergy={() => dev.setEnergy(computedState.maxEnergy)}
                 addSpecificEnergy={dev.addEnergy}
-                // FIX: `actions` is not defined in this scope. Use `onConfirmAscension` from `handlers` which correctly performs the ascension action.
                 addAscension={onConfirmAscension}
                 unlockAllUpgrades={() => {}}
                 unlockAllAchievements={dev.unlockAllAchievements}

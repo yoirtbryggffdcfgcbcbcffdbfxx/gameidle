@@ -1,6 +1,6 @@
 import React from 'react';
 import SkillTree from './ui/SkillTree';
-import { ASCENSION_UPGRADES } from '../constants';
+import { ASCENSION_UPGRADES } from '../data/ascension';
 import { useGameContext } from '../contexts/GameContext';
 
 const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (

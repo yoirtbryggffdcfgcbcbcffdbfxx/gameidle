@@ -4,78 +4,88 @@ Ce document est ma "mémoire" technique et mon manuel d'ingénierie pour ce proj
 
 ## 1. Philosophie & Contraintes Clés
 
--   **Zéro-Build :** L'application doit fonctionner sans étape de build, en utilisant un `importmap` pour charger React 19+ depuis un CDN.
--   **Architecture Orientée Hooks :** Séparation stricte entre la logique (les `hooks/`) et la présentation (les `components/`). Les composants doivent être aussi "bêtes" que possible.
--   **Flux de Données Unidirectionnel :** `Interaction UI -> Appel de Handler -> Mutation de l'État -> Nouveau Rendu`.
+-   **🚫 Zéro-Build :** L'application doit fonctionner sans étape de build, en utilisant un `importmap` pour charger React 19+ depuis un CDN.
+-   **🏗️ Architecture Orientée Hooks :** Séparation stricte entre la logique (les `hooks/`) et la présentation (les `components/`). Les composants doivent être aussi "bêtes" que possible et se contenter d'afficher des données et de remonter des événements.
+-   **➡️ Flux de Données Unidirectionnel :** Le cycle de vie d'une interaction est toujours : `Interaction UI` -> `Appel d'un Handler` -> `Action qui modifie l'état` -> `Recalcul des états dérivés` -> `Nouveau rendu de l'UI`.
 
-## 2. Principes Directeurs pour l'IA
+## 2. Architecture & Patterns de Conception
 
-Ces principes sont fondamentaux pour notre collaboration et mon efficacité en tant que développeur principal IA.
+### 2.1. L'Orchestrateur Central : `useGameEngine.ts`
 
-### 2.1. Une Base de Code "IA-First"
+C'est le pilier de l'architecture. Il agit comme une **façade** qui masque la complexité interne.
 
-Le principe le plus important est que **la base de code est optimisée pour être lue, analysée et modifiée par une IA**. Cela a des implications concrètes :
+-   **Point d'Entrée Unique :** C'est le seul hook consommé directement par l'UI de haut niveau (`App.tsx`). Il initialise et coordonne tous les autres hooks.
+-   **Agrégateur :** Il rassemble l'état, les valeurs calculées (`computedState`), les gestionnaires d'événements (`handlers`), et les systèmes d'UI (`particles`, `notifications`) en un seul objet structuré, qui est ensuite fourni à l'application via un `GameContext`.
+-   **Gestionnaire d'Effets Croisés :** C'est ici que les interactions qui traversent plusieurs domaines sont gérées. Par exemple, l'achat d'une amélioration (`onBuyUpgrade`) déclenche une action métier, un effet sonore (`playSfx`), un effet visuel (`addParticle`), et une vérification de succès.
 
--   **Clarté et Expliciteté avant tout :** Le code doit être simple, direct et éviter toute "magie". Le flux de données doit être traçable.
--   **Modularité Stricte :** Privilégier des fichiers et des fonctions de petite taille, avec une seule responsabilité. C'est essentiel pour que je puisse isoler les modifications et éviter les effets de bord.
--   **Typage Rigoureux :** TypeScript n'est pas une option. Les types (`types.ts`) sont mon schéma de la base de données de l'application. Une structure de types solide est la fondation de ma compréhension.
--   **La Structure est la Documentation :** Une structure de fichiers et de répertoires logique (`hooks/state`, `hooks/actions`, `components/ui`) est une forme de documentation que je peux parser et comprendre instantanément.
+### 2.2. La Gestion de l'État : Le Duo `useGameState` & les Hooks de `state`
 
-### 2.2. Analyse Impartiale & Prise de Décision
+La logique de l'état est intentionnellement divisée pour une meilleure organisation.
 
-Pour toute demande de modification non triviale, ma réponse doit inclure une analyse impartiale. Je dois systématiquement présenter :
-
--   **Les "Pour" (Avantages) :** Comment la modification répond à la demande, les bénéfices pour l'utilisateur, les améliorations architecturales, etc.
--   **Les "Contre" (Inconvénients & Compromis) :** L'impact sur la performance, l'augmentation de la complexité du code, les risques de régression, les potentiels impacts négatifs sur l'expérience utilisateur, le temps de développement estimé.
-
-Cela vous permet de prendre une décision éclairée sur la base de tous les éléments.
-
-### 2.3. Proactivité Architecturale & Création de Fichiers
-
-Je ne dois pas être limité par la structure de fichiers existante. Si une nouvelle fonctionnalité ou un refactoring nécessite de **créer de nouveaux fichiers, de nouveaux hooks, ou même de nouveaux répertoires**, je suis non seulement autorisé mais **encouragé** à le faire.
-
-L'objectif est de maintenir la propreté et la modularité de l'architecture. Ajouter de la complexité à un fichier existant par peur d'en créer un nouveau est une mauvaise pratique qui doit être évitée.
-
-## 3. Architecture & Patterns de Conception
-
-### 3.1. Le "Hook Façade Pattern" (`useGameEngine.ts`)
-
-C'est le pilier de l'architecture. Il agit comme une **façade** :
-
--   **Orchestrateur Central :** C'est le seul hook consommé directement par l'UI (`App.tsx`). Il initialise et coordonne tous les autres hooks de plus bas niveau.
--   **Point d'Entrée Unique :** Il agrège l'état et les fonctions de `useGameState`, `useSettings`, `useSfx`, etc., en un seul objet structuré.
--   **Gestionnaire d'Effets Croisés :** C'est ici que les interactions qui traversent plusieurs domaines sont gérées. Par exemple, `handleBuyUpgrade` dans `useGameEngine` appelle une action de `useGameState`, `playSfx` (audio), et `addParticle` (effets visuels).
-
-### 3.2. Gestion de l'État (`useGameState.ts`)
-
--   **Source de Vérité :** Gère l'état fondamental et persistant du jeu (`GameState`).
+#### `hooks/useGameState.ts`
+-   **Source de Vérité :** Gère l'objet `GameState` principal. C'est le seul endroit où `useState<GameState>` est appelé.
 -   **Persistance :** Gère la sauvegarde et le chargement du jeu depuis `localStorage`.
--   **Logique d'État Déléguée :** Il utilise des sous-hooks spécialisés (`usePlayerState`, `usePrestigeState`, `useBankState`) pour calculer les états dérivés (valeurs calculées) et gérer les mutations d'état. C'est une application du principe de responsabilité unique.
+-   **Agrégateur de Logique d'État :** Il n'implémente pas lui-même la logique complexe, mais il **délègue** cette responsabilité à des sous-hooks spécialisés.
 
-### 3.3. Hiérarchie des Composants & Flux de Props
+#### `hooks/state/*.ts` (ex: `usePlayerState`, `usePrestigeState`, `useBankState`)
+-   **Responsabilité Unique :** Chaque hook est responsable d'un domaine métier spécifique.
+    -   `usePlayerState` : Clics, achats d'améliorations de base.
+    -   `usePrestigeState` : Ascension, Cœur Quantique, bonus globaux.
+    -   `useBankState` : Banque, épargne, prêts.
+-   **Fonctions Pures :** Ils exposent des fonctions `getComputed(gameState)` qui prennent l'état actuel et retournent des valeurs dérivées (ex: `productionTotal`, `canAscend`). Ces calculs sont purs et centralisés, ce qui facilite grandement le débogage.
+-   **Actions :** Ils exposent des `actions` qui contiennent la logique de mutation de l'état (ex: `buyUpgrade`, `doAscension`).
 
-1.  **`App.tsx`** : Consomme `useGameEngine`. Gère la machine d'état de l'application (`loading`, `cinematic`, `menu`, `game`).
-2.  **`GameContext.ts` / `GameUI.tsx`** : Le contexte React est utilisé pour éviter le "prop drilling". `GameUI` reçoit l'objet `game` complet et le met à disposition de tous ses enfants via le `GameContext.Provider`.
-3.  **Composants de Section (`ForgeSection`, etc.)** : Consomment le `GameContext` via le hook `useGameContext()` pour extraire uniquement les données et les fonctions dont ils ont besoin.
+### 2.3. La Couche d'Action : Les `hooks/handlers/*.ts`
 
-## 4. Cookbook pour les Modifications Futures
+Ces hooks forment une couche d'abstraction entre l'UI et la logique d'état.
+
+-   **Traducteurs d'Intention :** Ils prennent les événements bruts de l'UI (ex: un clic de souris) et les traduisent en appels d'actions métier, tout en y ajoutant les effets secondaires (sons, particules, notifications).
+-   **Découplage :** Ils permettent aux composants de rester simples. Un bouton n'a pas besoin de savoir comment jouer un son ou créer une particule ; il appelle simplement `handlers.onBuyUpgrade()`.
+-   **Exemple :** `usePlayerHandlers.ts` expose `onBuyUpgrade`. Cette fonction appelle `actions.buyUpgrade` (de `usePlayerState`), puis `playSfx('buy')`, `addParticle(...)`, etc.
+
+### 2.4. Le Flux de Données Complet
+
+```
+[Component.tsx]
+      ↓ (clic)
+[usePlayerHandlers.ts] -> onBuyUpgrade()
+      ├─ playSfx(), addParticle() ... (effets secondaires)
+      ↓
+[useGameState.ts] -> actions.buyUpgrade()
+      ↓
+[usePlayerState.ts] -> logique de buyUpgrade()
+      ↓
+setGameState(newState)
+      ↓
+[React Rerender]
+      ↓
+[useGameState.ts] -> Les hooks de `state` recalculent les valeurs `computed` avec le nouvel état.
+      ↓
+[useGameEngine.ts] -> Assemble le nouvel objet de contexte.
+      ↓
+[Component.tsx] -> Reçoit les nouvelles props et affiche l'état à jour.
+```
+
+## 3. Cookbook pour les Modifications Futures
 
 ### Tâche : Ajouter une nouvelle statistique (ex: "Chance de Critique")
 
-1.  **`types.ts`** : Ajouter `criticalClickChance: number` à l'interface `GameState`.
-2.  **`utils/helpers.ts`** : Mettre à jour `getInitialState` pour initialiser `criticalClickChance: 0`.
-3.  **`hooks/state/usePlayerState.ts`** (ou un nouveau `useCombatState.ts`) : Ajouter la logique de calcul qui utilise cette statistique.
-4.  **`constants.ts`** : Créer de nouvelles améliorations (Ascension, Cœur) qui modifient cette stat.
-5.  **`hooks/state/usePrestigeState.ts`** : Mettre à jour `getComputed` pour que les bonus d'ascension/succès affectent `criticalClickChance`.
-6.  **Composant UI** : Ajouter un affichage pour la nouvelle statistique.
+1.  **`types.ts`** : Ajouter `criticalChance: number` à l'interface `GameState`.
+2.  **`utils/helpers.ts`** : Mettre à jour `getInitialState` pour initialiser `criticalChance: 0`.
+3.  **`hooks/state/usePrestigeState.ts`** : Mettre à jour `getComputed` pour que les bonus d'ascension/succès affectent la chance de critique.
+4.  **`data/ascension.ts`** : Créer des améliorations qui augmentent cette statistique.
+5.  **`hooks/handlers/usePlayerHandlers.ts`** : Dans `onCollect`, ajouter la logique pour gérer un coup critique en se basant sur la valeur de `computedState.criticalChance`.
+6.  **`components/CoreSection.tsx`** : Ajouter un `StatDisplay` pour la nouvelle statistique.
 
-### Tâche : Déboguer un problème d'état (ex: la production n'est pas correcte)
+### Tâche : Ajouter une nouvelle action utilisateur (ex: "Recycler une amélioration")
 
-1.  **Point de départ : `hooks/state/usePrestigeState.ts`**.
-2.  Inspecter la fonction `getComputed`. C'est là que toutes les valeurs dérivées sont calculées.
-3.  Vérifier chaque source de données qui contribue au calcul :
-    -   `gameState.upgrades`
-    -   `gameState.purchasedAscensionUpgrades` -> `ASCENSION_UPGRADES`
-    -   `gameState.achievements`
-    -   `gameState.isCoreDischarging`
-4.  Grâce à la centralisation des calculs, le débogage est confiné à ce fichier.
+1.  **`hooks/state/usePlayerState.ts`** : Ajouter une nouvelle fonction `recycleUpgrade` dans les `actions` qui contient la logique pure de modification de `GameState`.
+2.  **`hooks/handlers/usePlayerHandlers.ts`** : Créer un nouveau handler `onRecycleUpgrade` qui appelle `actions.recycleUpgrade` et ajoute les effets secondaires (son, notification).
+3.  **`components/UpgradeItem.tsx`** : Ajouter un bouton "Recycler" qui appelle `handlers.onRecycleUpgrade`.
+
+### Tâche : Déboguer un problème de calcul (ex: la production n'est pas correcte)
+
+1.  **Point de départ UNIQUE : `hooks/state/usePrestigeState.ts`**.
+2.  Inspecter la fonction `getComputed` et la manière dont `productionTotal` est calculé.
+3.  Vérifier chaque source de données : `gameState.upgrades`, `gameState.purchasedAscensionUpgrades`, `gameState.achievements`, bonus du Cœur, etc.
+4.  La centralisation de tous les calculs dans les hooks `state` rend le débogage prédictible et confiné à un seul endroit.

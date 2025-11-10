@@ -1,4 +1,5 @@
-import { MAX_UPGRADE_LEVEL, INITIAL_UPGRADES } from '../constants';
+import { MAX_UPGRADE_LEVEL } from '../constants';
+import { INITIAL_UPGRADES } from '../data/upgrades';
 import { GameState, Upgrade } from '../types';
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
 
