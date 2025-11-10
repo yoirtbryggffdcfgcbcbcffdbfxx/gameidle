@@ -80,53 +80,55 @@ const ForgeSection: React.FC<ForgeSectionProps> = (props) => {
     }, [enrichedAndFilteredUpgrades, activeTab, props.energy, props.purchasedShopUpgrades]);
 
     return (
-        <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 grid grid-rows-[auto_auto_1fr] gap-y-3">
-            {/* Row 1: Header */}
-            <SectionHeader title="La Forge" energy={props.energy} formatNumber={props.formatNumber} />
-            
-            {/* Row 2: Controls */}
-            <div className="flex justify-between items-center flex-wrap gap-2">
-                 {/* Tabs */}
-                <div className="flex-grow flex justify-center sm:justify-start border-b border-[var(--border-color)]">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => { props.playSfx('click'); setActiveTab(tab.id); }}
-                            className={`px-4 py-2 text-xs sm:text-sm transition-all duration-300 relative ${activeTab === tab.id ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
-                        >
-                            {tab.icon} {tab.name}
-                            {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--text-header)]"></div>}
-                        </button>
-                    ))}
+        <section id="forge" className="fullscreen-section reveal">
+            <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 grid grid-rows-[auto_auto_1fr] gap-y-3">
+                {/* Row 1: Header */}
+                <SectionHeader title="La Forge" energy={props.energy} formatNumber={props.formatNumber} />
+                
+                {/* Row 2: Controls */}
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                     {/* Tabs */}
+                    <div className="flex-grow flex justify-center sm:justify-start border-b border-[var(--border-color)]">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => { props.playSfx('click'); setActiveTab(tab.id); }}
+                                className={`px-4 py-2 text-xs sm:text-sm transition-all duration-300 relative ${activeTab === tab.id ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
+                            >
+                                {tab.icon} {tab.name}
+                                {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--text-header)]"></div>}
+                            </button>
+                        ))}
+                    </div>
+                     {/* Buy Amount Selector */}
+                    <div className="bg-black/30 p-1 rounded-md flex items-center gap-1">
+                        <span className="text-xs px-2">Acheter:</span>
+                        {buyOptions.map(amount => (
+                            <button
+                                key={amount}
+                                onClick={() => { props.playSfx('click'); setBuyAmount(amount); }}
+                                className={`px-3 py-1 text-xs rounded transition-colors ${buyAmount === amount ? 'bg-cyan-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
+                            >
+                                x{amount}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                 {/* Buy Amount Selector */}
-                <div className="bg-black/30 p-1 rounded-md flex items-center gap-1">
-                    <span className="text-xs px-2">Acheter:</span>
-                    {buyOptions.map(amount => (
-                        <button
-                            key={amount}
-                            onClick={() => { props.playSfx('click'); setBuyAmount(amount); }}
-                            className={`px-3 py-1 text-xs rounded transition-colors ${buyAmount === amount ? 'bg-cyan-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
-                        >
-                            x{amount}
-                        </button>
-                    ))}
-                </div>
-            </div>
 
-            {/* Row 3: List. `min-h-0` is crucial for preventing overflow issues in grid/flex containers. */}
-            <div id="upgrades-hub" className="overflow-y-auto custom-scrollbar pr-2 min-h-0">
-                <UpgradeList 
-                    upgrades={enrichedAndFilteredUpgrades}
-                    onBuyUpgrade={(index) => props.onBuyUpgrade(index, buyAmount)}
-                    formatNumber={props.formatNumber}
-                    energy={props.energy}
-                    costMultiplier={props.costMultiplier}
-                    mostEfficientId={mostEfficientId}
-                    buyAmount={buyAmount}
-                />
+                {/* Row 3: List. `min-h-0` is crucial for preventing overflow issues in grid/flex containers. */}
+                <div id="upgrades-hub" className="overflow-y-auto custom-scrollbar pr-2 min-h-0">
+                    <UpgradeList 
+                        upgrades={enrichedAndFilteredUpgrades}
+                        onBuyUpgrade={(index) => props.onBuyUpgrade(index, buyAmount)}
+                        formatNumber={props.formatNumber}
+                        energy={props.energy}
+                        costMultiplier={props.costMultiplier}
+                        mostEfficientId={mostEfficientId}
+                        buyAmount={buyAmount}
+                    />
+                </div>
             </div>
-        </div>
+        </section>
     );
 };
 

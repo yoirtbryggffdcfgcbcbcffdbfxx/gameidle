@@ -1,27 +1,26 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // Types
-import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType, CoreUpgrade } from '../types';
+import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType } from '../types';
 
 // Components
 import FlowingParticle from './ui/FlowingParticle';
 import FloatingText from './ui/FloatingText';
-import SettingsPopup from './popups/SettingsPopup';
-import AchievementsPopup from './popups/AchievementsPopup';
 import ConfirmationPopup from './popups/ConfirmationPopup';
 import DevPanel from './popups/DevPanel';
 import AscensionTutorialPopup from './popups/AscensionTutorialPopup';
 import CoreTutorialPopup from './popups/CoreTutorialPopup';
 import BankTutorialPopup from './popups/BankTutorialPopup';
 import BankInfoPopup from './popups/BankInfoPopup';
-import Logo from './Logo';
 import ScrollspyNav from './ScrollspyNav';
+import AITutorial from './AITutorial';
+// Section Components
+import CoreSection from './CoreSection';
+import ForgeSection from './ForgeSection';
+import CommandCenterSection from './CommandCenterSection';
+import BankSection from './BankSection';
 import AscensionSection from './AscensionSection';
 import ReactorSection from './ReactorSection';
-import BankSection from './BankSection';
-import AITutorial from './AITutorial';
-import ForgeSection from './ForgeSection';
-import ShopPopup from './popups/ShopPopup';
 
 
 interface GameUIProps {
@@ -109,25 +108,15 @@ interface GameUIProps {
     setShowBankInfoPopup: (show: boolean) => void;
 }
 
-const StatDisplay: React.FC<{ label: string; value: string; icon: string; colorClass: string; }> = ({ label, value, icon, colorClass }) => (
-    <div className={`bg-black/30 p-2 rounded-lg text-center ${colorClass}`}>
-        <div className="text-xs opacity-80">{icon} {label}</div>
-        <div className="text-base md:text-lg font-bold truncate">{value}</div>
-    </div>
-);
-
-
 const GameUI: React.FC<GameUIProps> = (props) => {
     const {
-        upgrades, achievements, ascensionLevel, canAscend, maxEnergy, productionTotal,
+        upgrades, ascensionLevel, canAscend, totalEnergyProduced,
         settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
-        onSettingsChange,
         playSfx, formatNumber, addFloatingText, removeParticle, removeFloatingText, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
-        showDevPanel, dev, showCoreTutorial, setShowCoreTutorial, totalEnergyProduced, showBankTutorial, setShowBankTutorial, showBankInfoPopup, setShowBankInfoPopup
+        showDevPanel, dev, showCoreTutorial, setShowCoreTutorial, showBankTutorial, setShowBankTutorial, showBankInfoPopup, setShowBankInfoPopup, productionTotal
     } = props;
 
     const [activeSection, setActiveSection] = useState('core');
-    const [activeCommandCenterTab, setActiveCommandCenterTab] = useState('achievements');
     const gameContentRef = useRef<HTMLDivElement>(null);
     const isScrollingRef = useRef(false);
     const scrollTimeoutRef = useRef<number | null>(null);
@@ -146,13 +135,11 @@ const GameUI: React.FC<GameUIProps> = (props) => {
     ], [showAscensionSection, showReactorSection, showBankSection]);
 
     const handleNavClick = (id: string) => {
-        // Prevent observer from firing while we scroll
         if (scrollTimeoutRef.current) {
             clearTimeout(scrollTimeoutRef.current);
         }
         isScrollingRef.current = true;
         
-        // Immediately update active section for instant UI feedback
         setActiveSection(id);
         
         const element = document.getElementById(id);
@@ -160,12 +147,10 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             element.scrollIntoView({ behavior: 'smooth' });
         }
         
-        // Re-enable observer after scroll animation
         scrollTimeoutRef.current = window.setTimeout(() => {
             isScrollingRef.current = false;
-        }, 1000); // 1s buffer for scroll to complete
+        }, 1000);
 
-        // Tutorial Progression Logic
         if (id === 'forge' && tutorialStep === 3) {
             setTutorialStep(4);
         }
@@ -178,9 +163,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
     };
 
 
-    // On-Reveal & Scrollspy Effect
     useEffect(() => {
-        // Observer for making elements visible on scroll
         const revealObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -192,9 +175,8 @@ const GameUI: React.FC<GameUIProps> = (props) => {
         const elementsToReveal = document.querySelectorAll('.reveal');
         elementsToReveal.forEach(el => revealObserver.observe(el));
         
-        // Observer for updating the navigation
         const scrollspyObserver = new IntersectionObserver((entries) => {
-            if (isScrollingRef.current) return; // Ignore observer during programmatic scroll
+            if (isScrollingRef.current) return;
 
             const mostVisibleEntry = entries.reduce((prev, current) => 
                 (prev.intersectionRatio > current.intersectionRatio) ? prev : current
@@ -217,10 +199,8 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                 if (el) scrollspyObserver.unobserve(el);
             });
         };
-    // Re-run this effect when the list of sections or visible upgrades changes to attach observers to new elements.
     }, [props.visibleUpgrades.length, sections]);
     
-    // Contextual Floating Text for passive production
     useEffect(() => {
         if (activeSection !== 'core' || productionTotal <= 0) return;
 
@@ -234,7 +214,6 @@ const GameUI: React.FC<GameUIProps> = (props) => {
 
     }, [activeSection, productionTotal, addFloatingText, formatNumber]);
     
-    // Drag-to-scroll for mobile-like experience
     useEffect(() => {
         const el = gameContentRef.current;
         if (!el) return;
@@ -245,7 +224,6 @@ const GameUI: React.FC<GameUIProps> = (props) => {
 
         const handleMouseDown = (e: MouseEvent | TouchEvent) => {
             const target = e.target as HTMLElement;
-            // Prevent drag-scrolling if clicking on interactive elements like nav or buttons
             if (target.closest('nav') || target.closest('button')) {
                 return;
             }
@@ -272,7 +250,7 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             e.preventDefault();
             const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
             const y = pageY - el.offsetTop;
-            const walk = (y - startY) * 2; // scroll-fast
+            const walk = (y - startY) * 2;
             el.scrollTop = scrollTop - walk;
         };
         
@@ -304,14 +282,6 @@ const GameUI: React.FC<GameUIProps> = (props) => {
         }
     }, [props.energy, tutorialStep, setTutorialStep, upgrades]);
 
-    const handleCommandCenterTabClick = (tab: string) => {
-        setActiveCommandCenterTab(tab);
-        if (tab === 'achievements' && tutorialStep === 9) {
-            setTutorialStep(10);
-        }
-    };
-
-
     return (
         <div ref={gameContentRef} id="game-content" className="min-h-full text-xs md:text-sm select-none">
             {particles.map(p => <FlowingParticle key={p.id} {...p} animSpeed={settings.animSpeed} onComplete={removeParticle} />)}
@@ -320,106 +290,45 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             <ScrollspyNav sections={sections} activeSection={activeSection} onNavClick={handleNavClick} />
 
             <main>
-                {/* Section 1: Core */}
-                <section id="core" className="fullscreen-section reveal">
-                    <div className="text-center flex flex-col items-center justify-between h-full py-8 w-full max-w-lg">
-                        <Logo />
-                        <div className="w-full space-y-3">
-                            <div id="energy-bar-container" className="relative w-full h-8 bg-black/50 rounded-full overflow-hidden shadow-inner border-2 border-cyan-800/50">
-                                <div id="energyBar" className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#00ffcc] to-[#0044ff] rounded-full transition-all duration-200" style={{ width: `${(props.energy / maxEnergy) * 100}%` }}></div>
-                                <div className="absolute w-full h-full flex items-center justify-center text-sm [text-shadow:1px_1px_#000] font-bold">
-                                    Énergie
-                                </div>
-                            </div>
-                            <div className="text-center text-xs opacity-70">{formatNumber(props.energy)} / {formatNumber(maxEnergy)}</div>
-                            <div id="stats-display-container" className="flex justify-around items-center gap-2">
-                                <div id="stat-prod" className="flex-1">
-                                    <StatDisplay label="Prod/sec" value={formatNumber(props.productionTotal)} icon="⚡" colorClass="text-yellow-300" />
-                                </div>
-                                <div id="stat-click" className="flex-1">
-                                    <StatDisplay label="Clic" value={formatNumber(props.clickPower)} icon="🖱️" colorClass="text-cyan-300" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <button 
-                            id="collect-button"
-                            onClick={props.onCollect} 
-                            className={`w-48 h-16 text-xl rounded-md bg-red-600 hover:bg-red-500 transition-all text-white shadow-lg transform hover:scale-105 hover:shadow-lg hover:shadow-red-400/50 flex justify-center items-center mx-auto`}
-                        >
-                            Collecter
-                        </button>
-                    </div>
-                </section>
-
-                {/* Section 2: Forge */}
-                <section id="forge" className="fullscreen-section reveal">
-                     <ForgeSection
-                        energy={props.energy}
-                        formatNumber={formatNumber}
-                        visibleUpgrades={props.visibleUpgrades}
-                        onBuyUpgrade={props.onBuyUpgrade}
-                        productionTotal={props.productionTotal}
-                        costMultiplier={props.costMultiplier}
-                        playSfx={playSfx}
-                        purchasedShopUpgrades={props.purchasedShopUpgrades}
-                    />
-                </section>
-
-                {/* Section 3: Command Center */}
-                <section id="command-center" className="fullscreen-section reveal">
-                    <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
-                        <div className="w-full flex justify-between items-center mb-4">
-                            <h2 className="text-2xl text-center text-[var(--text-header)]">Centre de Commandement</h2>
-                            <div className="bg-black/30 px-3 py-1 rounded-lg text-xs flex gap-4">
-                                <span className="text-purple-400">⚛️ {formatNumber(props.quantumShards)}</span>
-                                <span className="text-cyan-300">⚡ {formatNumber(props.energy)}</span>
-                            </div>
-                        </div>
-                        <div className="flex justify-center border-b border-[var(--border-color)] mb-4">
-                            {['achievements', 'shop', 'settings'].map(tab => (
-                                <button
-                                    key={tab}
-                                    id={`tab-${tab}`}
-                                    onClick={() => handleCommandCenterTabClick(tab)}
-                                    className={`px-4 py-2 text-sm md:text-base transition-all duration-300 relative ${activeCommandCenterTab === tab ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
-                                >
-                                    {tab === 'achievements' ? 'Succès' : tab === 'shop' ? 'Boutique' : 'Paramètres'}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex-grow overflow-hidden relative">
-                             <div id="achievements-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'achievements' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                <AchievementsPopup achievements={props.achievements} achievementBonuses={props.achievementBonuses} onClose={() => {}} />
-                            </div>
-                            <div id="shop-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'shop' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                <ShopPopup
-                                    quantumShards={props.quantumShards}
-                                    purchasedShopUpgrades={props.purchasedShopUpgrades}
-                                    onBuy={props.onBuyShopUpgrade}
-                                />
-                            </div>
-                             <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'settings' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                <SettingsPopup settings={settings} onSettingsChange={onSettingsChange} onClose={() => {}} onHardReset={() => setShowHardResetConfirm(true)} playSfx={playSfx} />
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Section 4: Bank (Conditional) */}
-                {showBankSection && (
-                    <BankSection {...props} />
-                )}
-
-                {/* Section 5: Ascension (Conditional) */}
-                {showAscensionSection && (
-                    <AscensionSection {...props} />
-                )}
-
-                {/* Section 6: Reactor (Conditional) */}
-                {showReactorSection && (
-                     <ReactorSection {...props} />
-                )}
+                <CoreSection
+                    energy={props.energy}
+                    maxEnergy={props.maxEnergy}
+                    formatNumber={formatNumber}
+                    productionTotal={props.productionTotal}
+                    clickPower={props.clickPower}
+                    onCollect={props.onCollect}
+                />
+                
+                <ForgeSection
+                    energy={props.energy}
+                    formatNumber={formatNumber}
+                    visibleUpgrades={props.visibleUpgrades}
+                    onBuyUpgrade={props.onBuyUpgrade}
+                    productionTotal={props.productionTotal}
+                    costMultiplier={props.costMultiplier}
+                    playSfx={playSfx}
+                    purchasedShopUpgrades={props.purchasedShopUpgrades}
+                />
+                
+                <CommandCenterSection
+                    energy={props.energy}
+                    quantumShards={props.quantumShards}
+                    achievements={props.achievements}
+                    achievementBonuses={props.achievementBonuses}
+                    purchasedShopUpgrades={props.purchasedShopUpgrades}
+                    onBuyShopUpgrade={props.onBuyShopUpgrade}
+                    settings={settings}
+                    onSettingsChange={props.onSettingsChange}
+                    setShowHardResetConfirm={setShowHardResetConfirm}
+                    playSfx={playSfx}
+                    formatNumber={formatNumber}
+                    tutorialStep={tutorialStep}
+                    setTutorialStep={setTutorialStep}
+                />
+                
+                {showBankSection && <BankSection {...props} />}
+                {showAscensionSection && <AscensionSection {...props} />}
+                {showReactorSection && <ReactorSection {...props} />}
             </main>
             
             {/* Global Popups & Overlays */}

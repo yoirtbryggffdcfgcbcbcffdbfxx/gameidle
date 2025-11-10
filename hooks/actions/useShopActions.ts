@@ -10,16 +10,19 @@ export const useShopActions = (
         const upgrade = SHOP_UPGRADES.find(u => u.id === id);
         if (!upgrade) return false;
 
-        const isPurchased = gameState.purchasedShopUpgrades.includes(id);
-        if (isPurchased) return false;
+        let success = false;
 
-        let canAfford = false;
-        if (upgrade.currency === 'quantumShards') {
-            canAfford = gameState.quantumShards >= upgrade.cost;
-        }
+        setGameState(prev => {
+            const isPurchased = prev.purchasedShopUpgrades.includes(id);
+            if (isPurchased) return prev;
 
-        if (canAfford) {
-            setGameState(prev => {
+            let canAfford = false;
+            if (upgrade.currency === 'quantumShards') {
+                canAfford = prev.quantumShards >= upgrade.cost;
+            }
+
+            if (canAfford) {
+                success = true;
                 const newShopUpgrades = [...prev.purchasedShopUpgrades, id];
                 let newQuantumShards = prev.quantumShards;
 
@@ -32,12 +35,13 @@ export const useShopActions = (
                     purchasedShopUpgrades: newShopUpgrades,
                     quantumShards: newQuantumShards,
                 };
-            });
-            return true;
-        }
+            }
 
-        return false;
-    }, [gameState.purchasedShopUpgrades, gameState.quantumShards, setGameState]);
+            return prev;
+        });
+
+        return success;
+    }, [setGameState]);
 
     return { buyShopUpgrade };
 };

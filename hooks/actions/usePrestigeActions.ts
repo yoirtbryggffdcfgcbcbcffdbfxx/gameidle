@@ -43,77 +43,86 @@ export const usePrestigeActions = (
             };
         });
         return true;
-    }, [canAscend, gameState, ascensionBonuses.startingEnergy, ascensionGain, setGameState, checkAchievement]);
+    }, [canAscend, gameState.ascensionLevel, ascensionBonuses.startingEnergy, ascensionGain, setGameState, checkAchievement]);
     
     const buyAscensionUpgrade = useCallback((id: string): boolean => {
         const upgrade = ASCENSION_UPGRADES.find(u => u.id === id);
         if (!upgrade || upgrade.cost === 0) return false;
 
-        const { ascensionPoints, purchasedAscensionUpgrades } = gameState;
-        const canAfford = ascensionPoints >= upgrade.cost;
-        const isPurchased = purchasedAscensionUpgrades.includes(id);
-        const requirementsMet = upgrade.required.every(reqId => purchasedAscensionUpgrades.includes(reqId));
+        let success = false;
 
-        if (canAfford && !isPurchased && requirementsMet) {
-            // CORRECTION BUG : Vérifie la condition AVANT la mise à jour de l'état pour éviter les problèmes de "stale state".
-            // 'start' est inclus, donc le premier achat fera passer la longueur de 1 à 2.
-            const shouldUnlockAchievement = purchasedAscensionUpgrades.length === 1;
+        setGameState(prev => {
+            const canAfford = prev.ascensionPoints >= upgrade.cost;
+            const isPurchased = prev.purchasedAscensionUpgrades.includes(id);
+            const requirementsMet = upgrade.required.every(reqId => prev.purchasedAscensionUpgrades.includes(reqId));
 
-            setGameState(prev => ({
-                ...prev,
-                ascensionPoints: prev.ascensionPoints - upgrade.cost,
-                purchasedAscensionUpgrades: [...prev.purchasedAscensionUpgrades, id],
-            }));
+            if (canAfford && !isPurchased && requirementsMet) {
+                success = true;
+                const shouldUnlockAchievement = prev.purchasedAscensionUpgrades.length === 1;
 
-            if (shouldUnlockAchievement) {
-                checkAchievement("Première Transcendance", true);
+                if (shouldUnlockAchievement) {
+                    checkAchievement("Première Transcendance", true);
+                }
+
+                return {
+                    ...prev,
+                    ascensionPoints: prev.ascensionPoints - upgrade.cost,
+                    purchasedAscensionUpgrades: [...prev.purchasedAscensionUpgrades, id],
+                };
             }
-            return true;
-        }
-        return false;
-    }, [gameState, setGameState, checkAchievement]);
+            return prev;
+        });
+        return success;
+    }, [setGameState, checkAchievement]);
 
     const buyCoreUpgrade = useCallback((id: string): boolean => {
         const upgrade = CORE_UPGRADES.find(u => u.id === id);
         if (!upgrade || upgrade.cost === 0) return false;
 
-        const { quantumShards, purchasedCoreUpgrades } = gameState;
-        const canAfford = quantumShards >= upgrade.cost;
-        const isPurchased = purchasedCoreUpgrades.includes(id);
-        const requirementsMet = upgrade.required.every(reqId => purchasedCoreUpgrades.includes(reqId));
-        
-        if (canAfford && !isPurchased && requirementsMet) {
-            // CORRECTION BUG : Même logique que pour l'ascension pour éviter le "stale state".
-            const shouldUnlockAchievement = purchasedCoreUpgrades.length === 1;
+        let success = false;
 
-            setGameState(prev => ({
-                ...prev,
-                quantumShards: prev.quantumShards - upgrade.cost,
-                purchasedCoreUpgrades: [...prev.purchasedCoreUpgrades, id],
-            }));
+        setGameState(prev => {
+            const canAfford = prev.quantumShards >= upgrade.cost;
+            const isPurchased = prev.purchasedCoreUpgrades.includes(id);
+            const requirementsMet = upgrade.required.every(reqId => prev.purchasedCoreUpgrades.includes(reqId));
 
-            if (shouldUnlockAchievement) {
-                checkAchievement("Noyau Amélioré", true);
+            if (canAfford && !isPurchased && requirementsMet) {
+                success = true;
+                const shouldUnlockAchievement = prev.purchasedCoreUpgrades.length === 1;
+                
+                if (shouldUnlockAchievement) {
+                    checkAchievement("Noyau Amélioré", true);
+                }
+
+                return {
+                    ...prev,
+                    quantumShards: prev.quantumShards - upgrade.cost,
+                    purchasedCoreUpgrades: [...prev.purchasedCoreUpgrades, id],
+                };
             }
-            return true;
-        }
-        return false;
-    }, [gameState, setGameState, checkAchievement]);
+            return prev;
+        });
+        return success;
+    }, [setGameState, checkAchievement]);
 
     const dischargeCore = useCallback((): boolean => {
-        if (gameState.coreCharge >= 100 && !gameState.isCoreDischarging) {
-            setGameState(prev => ({ ...prev, isCoreDischarging: true, coreCharge: 0 }));
+        let success = false;
+        setGameState(prev => {
+            if (prev.coreCharge >= 100 && !prev.isCoreDischarging) {
+                success = true;
 
-            if (dischargeTimer.current) clearTimeout(dischargeTimer.current);
-            dischargeTimer.current = window.setTimeout(() => {
-                setGameState(prev => ({ ...prev, isCoreDischarging: false }));
-                dischargeTimer.current = null;
-            }, coreBonuses.duration);
+                if (dischargeTimer.current) clearTimeout(dischargeTimer.current);
+                dischargeTimer.current = window.setTimeout(() => {
+                    setGameState(p => ({ ...p, isCoreDischarging: false }));
+                    dischargeTimer.current = null;
+                }, coreBonuses.duration);
 
-            return true;
-        }
-        return false;
-    }, [gameState.coreCharge, gameState.isCoreDischarging, coreBonuses.duration, setGameState]);
+                return { ...prev, isCoreDischarging: true, coreCharge: 0 };
+            }
+            return prev;
+        });
+        return success;
+    }, [coreBonuses.duration, setGameState]);
 
     return { doAscension, buyAscensionUpgrade, buyCoreUpgrade, dischargeCore };
 };

@@ -5,36 +5,44 @@ import { calculateBulkBuy, calculateCost } from '../../utils/helpers';
 
 export const usePlayerActions = (
     setGameState: React.Dispatch<React.SetStateAction<GameState>>,
+    // gameState is no longer directly used in the actions, but the hook signature can remain for compatibility if needed elsewhere.
     gameState: GameState,
     costMultiplier: number,
     checkAchievement: (name: string, condition: boolean) => void
 ) => {
     const incrementClickCount = useCallback(() => {
-        setGameState(prev => ({ ...prev, totalClicks: prev.totalClicks + 1 }));
-        // La vérification du succès utilise la valeur gameState de la portée pour vérifier la condition AVANT la mise à jour de l'état.
-        checkAchievement("Frénésie du Clic", gameState.totalClicks + 1 >= 1000);
-        checkAchievement("Tempête de Clics", gameState.totalClicks + 1 >= 100000);
-    }, [setGameState, checkAchievement, gameState.totalClicks]);
+        setGameState(prev => {
+            const newTotalClicks = prev.totalClicks + 1;
+            checkAchievement("Frénésie du Clic", newTotalClicks >= 1000);
+            checkAchievement("Tempête de Clics", newTotalClicks >= 100000);
+            return { ...prev, totalClicks: newTotalClicks };
+        });
+    }, [setGameState, checkAchievement]);
 
     const buyUpgrade = useCallback((index: number, amount: number | 'MAX'): boolean => {
-        const upgrade = gameState.upgrades[index];
-        if (upgrade.owned >= MAX_UPGRADE_LEVEL) return false;
-
-        const { numToBuy, totalCost } = calculateBulkBuy(upgrade, amount, gameState.energy, costMultiplier);
+        let success = false;
         
-        if (numToBuy === 0) return false;
-
         setGameState(prev => {
+            const upgrade = prev.upgrades[index];
+            if (upgrade.owned >= MAX_UPGRADE_LEVEL) return prev;
+
+            const { numToBuy, totalCost } = calculateBulkBuy(upgrade, amount, prev.energy, costMultiplier);
+            
+            if (numToBuy === 0) return prev;
+
+            success = true;
+
             const newUpgrades = [...prev.upgrades];
             const newUpgrade = { ...newUpgrades[index] };
             newUpgrade.owned += numToBuy;
             newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier);
             newUpgrades[index] = newUpgrade;
+
             return { ...prev, energy: prev.energy - totalCost, upgrades: newUpgrades };
         });
 
-        return true;
-    }, [gameState.upgrades, gameState.energy, costMultiplier, setGameState]);
+        return success;
+    }, [costMultiplier, setGameState]);
 
     return {
         incrementClickCount,
