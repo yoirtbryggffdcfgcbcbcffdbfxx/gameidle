@@ -1,10 +1,14 @@
 // FIX: Create the missing useGameState hook to manage all core game logic.
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GameState, Upgrade, Achievement, Settings } from '../types';
-// FIX: Added CORE_UPGRADES to import to resolve module not found error.
 import { SAVE_KEY, INITIAL_UPGRADES, TICK_RATE, MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, ASCENSION_UPGRADES, CORE_UPGRADES, LOAN_REPAYMENT_RATE, BANK_UPGRADES, BANK_UNLOCK_TOTAL_ENERGY, SHOP_UPGRADES } from '../constants';
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
-import { calculateCost, calculateBulkBuy } from '../utils/helpers';
+import { calculateCost } from '../utils/helpers';
+import { usePlayerActions } from './actions/usePlayerActions';
+import { usePrestigeActions } from './actions/usePrestigeActions';
+import { useBankActions } from './actions/useBankActions';
+import { useShopActions } from './actions/useShopActions';
+import { useAdminActions } from './actions/useAdminActions';
 
 export interface LoanResult {
     success: boolean;
@@ -26,7 +30,7 @@ export interface UpgradeBankResult {
 }
 
 
-const getInitialState = (): GameState => {
+export const getInitialState = (): GameState => {
     const upgradesWithState = INITIAL_UPGRADES.map(u => ({
         ...u,
         owned: 0,
@@ -39,7 +43,6 @@ const getInitialState = (): GameState => {
         ascensionLevel: 0,
         ascensionPoints: 0,
         achievements: INITIAL_ACHIEVEMENTS.map(a => ({...a})),
-        // Start with the 'start' nodes already purchased
         purchasedAscensionUpgrades: ['start'],
         totalClicks: 0,
         hasSeenAscensionTutorial: false,
@@ -48,14 +51,12 @@ const getInitialState = (): GameState => {
         quantumShards: 0,
         purchasedCoreUpgrades: ['core_start'],
         hasSeenCoreTutorial: false,
-        // Bank
         totalEnergyProduced: 0,
         isBankUnlocked: false,
         savingsBalance: 0,
         currentLoan: null,
         bankLevel: 0,
         hasSeenBankTutorial: false,
-        // Shop
         purchasedShopUpgrades: [],
     };
 };
@@ -71,7 +72,6 @@ export const useGameState = (
     const [gameState, setGameState] = useState<GameState>(getInitialState());
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasSaveData, setHasSaveData] = useState(false);
-    const dischargeTimer = useRef<number | null>(null);
 
     const setEnergy = (newEnergy: number) => {
         setGameState(prev => ({...prev, energy: newEnergy}));
@@ -87,12 +87,10 @@ export const useGameState = (
             const savedGame = localStorage.getItem(SAVE_KEY);
             if (savedGame) {
                 const loadedData = JSON.parse(savedGame);
-                // Simple migration: ensure all fields from initial state exist
                 const initialState = getInitialState();
                 const mergedState: GameState = {
                     ...initialState,
                     ...loadedData,
-                     // Ensure 'start' nodes are always included after loading
                     purchasedAscensionUpgrades: [...new Set(['start', ...(loadedData.purchasedAscensionUpgrades || [])])],
                     purchasedCoreUpgrades: [...new Set(['core_start', ...(loadedData.purchasedCoreUpgrades || [])])],
                     achievements: loadedData.achievements ? loadedData.achievements.map((savedAch: Achievement) => {
@@ -105,7 +103,6 @@ export const useGameState = (
             }
         } catch (error) {
             console.error("Failed to load game state:", error);
-            // If loading fails, start with a fresh game
             setGameState(getInitialState());
         } finally {
             setIsLoaded(true);
@@ -130,27 +127,15 @@ export const useGameState = (
             const upgrade = ASCENSION_UPGRADES.find(u => u.id === id);
             if (upgrade) {
                 switch(upgrade.effect.type) {
-                    case 'PRODUCTION_MULTIPLIER': 
-                        if (upgrade.id === 'prod_3_scaling') { // Special case for scaling upgrade
-                            bonuses.productionMultiplier += gameState.ascensionLevel * upgrade.effect.value;
-                        } else {
-                            bonuses.productionMultiplier += upgrade.effect.value;
-                        }
-                        break;
-                    case 'CLICK_POWER_MULTIPLIER': 
-                         if (upgrade.id === 'click_3_scaling') { // Special case for scaling upgrade
-                            bonuses.clickMultiplier += gameState.ascensionLevel * upgrade.effect.value;
-                        } else {
-                            bonuses.clickMultiplier += upgrade.effect.value;
-                        }
-                        break;
+                    case 'PRODUCTION_MULTIPLIER': bonuses.productionMultiplier += upgrade.effect.value; break;
+                    case 'CLICK_POWER_MULTIPLIER': bonuses.clickMultiplier += upgrade.effect.value; break;
                     case 'COST_REDUCTION': bonuses.costReduction -= upgrade.effect.value; break;
                     case 'STARTING_ENERGY': bonuses.startingEnergy += upgrade.effect.value; break;
                 }
             }
         });
         return bonuses;
-    }, [gameState.purchasedAscensionUpgrades, gameState.ascensionLevel]);
+    }, [gameState.purchasedAscensionUpgrades]);
 
     const achievementBonuses = useMemo(() => {
         const bonuses = { production: 1, click: 1, coreCharge: 1, costReduction: 1 };
@@ -212,7 +197,6 @@ export const useGameState = (
     }, [gameState.upgrades]);
     
     const maxEnergy = useMemo(() => {
-        // Nouvelle formule : 1 milliard pour le niveau 0, puis x10 à chaque ascension.
         return 1e9 * Math.pow(10, gameState.ascensionLevel);
     }, [gameState.ascensionLevel]);
 
@@ -234,7 +218,6 @@ export const useGameState = (
     const canAscend = useMemo(() => {
         const energyMet = gameState.energy >= maxEnergy;
         if (gameState.ascensionLevel === 0) {
-            // For first ascension, you must max all available upgrades
             return energyMet && unlockedUpgradesAtMaxLevelCount === unlockedUpgradesForCurrentAscension.length && unlockedUpgradesForCurrentAscension.length > 0;
         }
         return energyMet;
@@ -242,7 +225,6 @@ export const useGameState = (
 
     const ascensionGain = useMemo(() => {
         if (!canAscend) return 1;
-        // Nouvelle règle : le gain augmente de 1 tous les 2 niveaux d'ascension.
         return Math.floor(gameState.ascensionLevel / 2) + 1;
     }, [gameState.ascensionLevel, canAscend]);
     
@@ -257,17 +239,14 @@ export const useGameState = (
             setGameState(prev => {
                 const productionThisTick = productionTotal / (1000 / TICK_RATE);
                 const newTotalEnergyProduced = prev.totalEnergyProduced + productionThisTick;
-
                 let energyFromProduction = productionThisTick;
                 let newLoan = prev.currentLoan;
                 let wasLoanRepaid = false;
 
-                // Loan repayment
                 if (newLoan && newLoan.remaining > 0 && productionThisTick > 0) {
                     const repaymentAmount = productionThisTick * LOAN_REPAYMENT_RATE;
                     const actualRepayment = Math.min(repaymentAmount, newLoan.remaining);
                     energyFromProduction -= actualRepayment;
-
                     const remaining = newLoan.remaining - actualRepayment;
                     if (remaining <= 0) {
                         newLoan = null;
@@ -277,11 +256,9 @@ export const useGameState = (
                     }
                 }
                 
-                // Savings interest - uses dynamic rate from bank level
                 const currentBankBonus = BANK_UPGRADES[Math.min(prev.bankLevel, BANK_UPGRADES.length - 1)];
                 const interestThisTick = prev.savingsBalance * currentBankBonus.savingsInterest / (1000 / TICK_RATE);
                 const newSavingsBalance = prev.savingsBalance + interestThisTick;
-
                 const newEnergy = Math.min(prev.energy + energyFromProduction, maxEnergy);
 
                 let newCoreCharge = prev.coreCharge;
@@ -290,20 +267,10 @@ export const useGameState = (
                     newCoreCharge = Math.min(100, newCoreCharge + chargeRate);
                 }
                 
-                if (wasLoanRepaid) {
-                    onLoanRepaid();
-                }
+                if (wasLoanRepaid) onLoanRepaid();
 
-                return {
-                    ...prev,
-                    energy: newEnergy,
-                    coreCharge: newCoreCharge,
-                    totalEnergyProduced: newTotalEnergyProduced,
-                    savingsBalance: newSavingsBalance,
-                    currentLoan: newLoan
-                };
+                return { ...prev, energy: newEnergy, coreCharge: newCoreCharge, totalEnergyProduced: newTotalEnergyProduced, savingsBalance: newSavingsBalance, currentLoan: newLoan };
             });
-
         }, TICK_RATE);
         return () => clearInterval(gameTick);
     }, [productionTotal, maxEnergy, appState, coreBonuses.chargeRate, achievementBonuses.coreCharge, isLoaded, onLoanRepaid]);
@@ -314,10 +281,7 @@ export const useGameState = (
             const achievement = prev.achievements.find(a => a.name === name);
             if (achievement && !achievement.unlocked) {
                 onAchievementUnlock({...achievement, unlocked: true});
-                return {
-                    ...prev,
-                    achievements: prev.achievements.map(a => a.name === name ? {...a, unlocked: true} : a)
-                };
+                return { ...prev, achievements: prev.achievements.map(a => a.name === name ? {...a, unlocked: true} : a) };
             }
             return prev;
         });
@@ -326,31 +290,23 @@ export const useGameState = (
     // Check for achievements
     useEffect(() => {
         if (appState !== 'game' || !isLoaded) return;
-
         checkAchievement("Allumage", gameState.energy >= 1000);
         checkAchievement("Fusion Stellaire", gameState.energy >= 100000);
         checkAchievement("Horizon des Événements", gameState.energy >= 10000000);
         checkAchievement("Milliardaire Quantique", gameState.energy >= 1000000000);
         checkAchievement("Divinité Énergétique", gameState.energy >= maxEnergy);
-        
         checkAchievement("Flux Constant", productionTotal >= 1000);
         checkAchievement("Automatisation Complète", productionTotal >= 100000);
         checkAchievement("Moteur de l'Infini", productionTotal >= 1e7);
         checkAchievement("Singularité Déchaînée", productionTotal >= 1e9);
-        
         checkAchievement("Amorce d'Empire", totalUpgradesOwned >= 50);
         checkAchievement("Architecte Industriel", totalUpgradesOwned >= 250);
         checkAchievement("Magnat de la Technologie", totalUpgradesOwned >= 750);
         checkAchievement("Souverain Galactique", totalUpgradesOwned >= 1500);
-        
         const galacCollector = gameState.upgrades.find(u => u.name === "Collecteur Galactique Theta");
-        if (galacCollector) {
-            checkAchievement("Collectionneur Cosmique", galacCollector.owned >= 100);
-        }
-
+        if (galacCollector) checkAchievement("Collectionneur Cosmique", galacCollector.owned >= 100);
     }, [gameState.energy, productionTotal, totalUpgradesOwned, appState, gameState.upgrades, checkAchievement, isLoaded, maxEnergy]);
     
-    // Check for ascension tutorial
     useEffect(() => {
         if (canAscend && !gameState.hasSeenAscensionTutorial) {
             onCanAscendFirstTime();
@@ -358,7 +314,6 @@ export const useGameState = (
         }
     }, [canAscend, gameState.hasSeenAscensionTutorial, onCanAscendFirstTime]);
 
-    // Check for bank unlock tutorial
     useEffect(() => {
         if (gameState.totalEnergyProduced >= BANK_UNLOCK_TOTAL_ENERGY && !gameState.hasSeenBankTutorial) {
             onBankUnlockedFirstTime();
@@ -371,306 +326,14 @@ export const useGameState = (
         checkAchievement(name, true);
     }, [checkAchievement]);
 
-    const incrementClickCount = () => {
-        setGameState(prev => ({ ...prev, totalClicks: prev.totalClicks + 1 }));
-        checkAchievement("Frénésie du Clic", gameState.totalClicks + 1 >= 1000);
-        checkAchievement("Tempête de Clics", gameState.totalClicks + 1 >= 100000);
-    };
+    const playerActions = usePlayerActions(setGameState, gameState, costMultiplier, checkAchievement);
+    const prestigeActions = usePrestigeActions(setGameState, gameState, canAscend, ascensionGain, ascensionBonuses, coreBonuses, checkAchievement);
+    const bankActions = useBankActions(setGameState, gameState, maxEnergy, bankBonuses, onLoanRepaid, unlockAchievement, checkAchievement);
+    const shopActions = useShopActions(setGameState, gameState);
+    const adminActions = useAdminActions(setGameState, setHasSaveData);
 
-    const buyUpgrade = (index: number, amount: number | 'MAX') => {
-        const upgrade = gameState.upgrades[index];
-        if (upgrade.owned >= MAX_UPGRADE_LEVEL) return false;
-
-        const { numToBuy, totalCost } = calculateBulkBuy(upgrade, amount, gameState.energy, costMultiplier);
-        
-        if (numToBuy === 0) return false;
-
-        setGameState(prev => {
-            const newUpgrades = [...prev.upgrades];
-            const newUpgrade = { ...newUpgrades[index] };
-            newUpgrade.owned += numToBuy;
-            newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier);
-            newUpgrades[index] = newUpgrade;
-            return { ...prev, energy: prev.energy - totalCost, upgrades: newUpgrades };
-        });
-
-        return true;
-    };
-    
-    const doAscension = () => {
-        if (!canAscend) return false;
-        
-        const nextAscensionLevel = gameState.ascensionLevel + 1;
-        checkAchievement("Transcendance", nextAscensionLevel >= 5);
-        checkAchievement("Maître du Multivers", nextAscensionLevel >= 10);
-        checkAchievement("Légende Éternelle", nextAscensionLevel >= 25);
-        
-        setGameState(prev => {
-            const initialState = getInitialState();
-            return {
-                ...initialState,
-                energy: ascensionBonuses.startingEnergy,
-                ascensionLevel: prev.ascensionLevel + 1,
-                ascensionPoints: prev.ascensionPoints + ascensionGain,
-                quantumShards: prev.quantumShards + ascensionGain,
-                achievements: prev.achievements, // Keep achievements
-                purchasedAscensionUpgrades: prev.purchasedAscensionUpgrades,
-                purchasedCoreUpgrades: prev.purchasedCoreUpgrades,
-                purchasedShopUpgrades: prev.purchasedShopUpgrades,
-                hasSeenAscensionTutorial: true,
-                hasSeenCoreTutorial: prev.hasSeenCoreTutorial,
-                hasSeenBankTutorial: prev.hasSeenBankTutorial,
-                totalClicks: prev.totalClicks, // Keep total clicks
-                isBankUnlocked: prev.isBankUnlocked, // Keep bank unlocked status
-                bankLevel: prev.bankLevel, // Keep bank level
-            };
-        });
-        return true;
-    };
-    
-    const buyAscensionUpgrade = (id: string) => {
-        const upgrade = ASCENSION_UPGRADES.find(u => u.id === id);
-        if (!upgrade || upgrade.cost === 0) return false;
-
-        const canAfford = gameState.ascensionPoints >= upgrade.cost;
-        const isPurchased = gameState.purchasedAscensionUpgrades.includes(id);
-        const requirementsMet = upgrade.required.every(reqId => gameState.purchasedAscensionUpgrades.includes(reqId));
-
-        if (canAfford && !isPurchased && requirementsMet) {
-            setGameState(prev => ({
-                ...prev,
-                ascensionPoints: prev.ascensionPoints - upgrade.cost,
-                purchasedAscensionUpgrades: [...prev.purchasedAscensionUpgrades, id],
-            }));
-            checkAchievement("Première Transcendance", gameState.purchasedAscensionUpgrades.length === 2);
-            return true;
-        }
-        return false;
-    };
-
-    const buyCoreUpgrade = (id: string) => {
-        const upgrade = CORE_UPGRADES.find(u => u.id === id);
-        if (!upgrade || upgrade.cost === 0) return false;
-
-        const canAfford = gameState.quantumShards >= upgrade.cost;
-        const isPurchased = gameState.purchasedCoreUpgrades.includes(id);
-        const requirementsMet = upgrade.required.every(reqId => gameState.purchasedCoreUpgrades.includes(reqId));
-        
-        if (canAfford && !isPurchased && requirementsMet) {
-            setGameState(prev => ({
-                ...prev,
-                quantumShards: prev.quantumShards - upgrade.cost,
-                purchasedCoreUpgrades: [...prev.purchasedCoreUpgrades, id],
-            }));
-            checkAchievement("Noyau Amélioré", gameState.purchasedCoreUpgrades.length === 2);
-            return true;
-        }
-        return false;
-    };
-
-    const buyShopUpgrade = (id: string) => {
-        const upgrade = SHOP_UPGRADES.find(u => u.id === id);
-        if (!upgrade) return false;
-
-        const isPurchased = gameState.purchasedShopUpgrades.includes(id);
-        if (isPurchased) return false;
-
-        let canAfford = false;
-        if (upgrade.currency === 'quantumShards') {
-            canAfford = gameState.quantumShards >= upgrade.cost;
-        }
-
-        if (canAfford) {
-            setGameState(prev => {
-                const newShopUpgrades = [...prev.purchasedShopUpgrades, id];
-                let newQuantumShards = prev.quantumShards;
-
-                if (upgrade.currency === 'quantumShards') {
-                    newQuantumShards -= upgrade.cost;
-                }
-                
-                return {
-                    ...prev,
-                    purchasedShopUpgrades: newShopUpgrades,
-                    quantumShards: newQuantumShards,
-                };
-            });
-            return true;
-        }
-
-        return false;
-    };
-
-    const dischargeCore = () => {
-        if (gameState.coreCharge >= 100 && !gameState.isCoreDischarging) {
-            setGameState(prev => ({ ...prev, isCoreDischarging: true, coreCharge: 0 }));
-
-            if (dischargeTimer.current) clearTimeout(dischargeTimer.current);
-            dischargeTimer.current = window.setTimeout(() => {
-                setGameState(prev => ({ ...prev, isCoreDischarging: false }));
-                dischargeTimer.current = null;
-            }, coreBonuses.duration);
-
-            return true;
-        }
-        return false;
-    };
-    
-    const buildBank = (cost: number) => {
-        if (gameState.energy >= cost && !gameState.isBankUnlocked) {
-            setGameState(prev => ({
-                ...prev,
-                energy: prev.energy - cost,
-                isBankUnlocked: true,
-            }));
-            unlockAchievement("Capitaliste Quantique");
-            return true;
-        }
-        return false;
-    };
-
-    const depositSavings = (amount: number) => {
-        const actualAmount = Math.min(amount, gameState.energy);
-        if (actualAmount > 0) {
-            setGameState(prev => ({
-                ...prev,
-                energy: prev.energy - actualAmount,
-                savingsBalance: prev.savingsBalance + actualAmount,
-            }));
-            return true;
-        }
-        return false;
-    };
-
-    const withdrawSavings = (amount: number): WithdrawResult => {
-        const actualWithdrawAmount = Math.min(amount, gameState.savingsBalance);
-        if (actualWithdrawAmount <= 0) return { success: false, reason: 'zero_amount' };
-
-        let repaidAmount = 0;
-        let toEnergyAmount = actualWithdrawAmount;
-
-        if (gameState.currentLoan) {
-            const repayment = Math.min(actualWithdrawAmount, gameState.currentLoan.remaining);
-            repaidAmount = repayment;
-            toEnergyAmount -= repayment;
-        }
-
-        setGameState(prev => {
-            let newLoan = prev.currentLoan;
-            let loanFullyRepaid = false;
-            
-            if (newLoan) {
-                const remaining = newLoan.remaining - repaidAmount;
-                if (remaining <= 0) {
-                    newLoan = null;
-                    loanFullyRepaid = true;
-                } else {
-                    newLoan = { ...newLoan, remaining };
-                }
-            }
-            
-            if (loanFullyRepaid) {
-                onLoanRepaid();
-            }
-
-            return {
-                ...prev,
-                energy: prev.energy + toEnergyAmount,
-                savingsBalance: prev.savingsBalance - actualWithdrawAmount,
-                currentLoan: newLoan,
-            };
-        });
-        
-        return { success: true, withdrawnAmount: actualWithdrawAmount, repaidAmount, toEnergyAmount };
-    };
-    
-    const takeOutLoan = (loanAmount: number): LoanResult => {
-        if (gameState.currentLoan) {
-            return { success: false, reason: "loan_exists" };
-        }
-
-        if (isNaN(loanAmount) || loanAmount <= 0) {
-            return { success: false, reason: "invalid_amount" };
-        }
-
-        const maxLoan = maxEnergy * 0.10;
-        if (loanAmount > maxLoan) {
-            return { success: false, reason: "exceeds_max" };
-        }
-
-        const repaymentTotal = loanAmount * (1 + bankBonuses.loanInterest);
-        const requiredCollateral = repaymentTotal * 0.10;
-
-        if (gameState.energy < requiredCollateral) {
-            return { success: false, reason: "insufficient_collateral" };
-        }
-        
-        setGameState(prev => ({
-            ...prev,
-            energy: prev.energy + loanAmount,
-            currentLoan: { amount: loanAmount, remaining: repaymentTotal },
-        }));
-        return { success: true };
-    };
-
-    const upgradeBank = (): UpgradeBankResult => {
-        const currentLevel = gameState.bankLevel;
-        if (currentLevel >= BANK_UPGRADES.length - 1) {
-            return { success: false, reason: 'max_level' };
-        }
-        
-        const nextUpgrade = BANK_UPGRADES[currentLevel + 1];
-        if (gameState.energy < nextUpgrade.cost) {
-            return { success: false, reason: 'insufficient_energy' };
-        }
-        
-        if (gameState.currentLoan) {
-            return { success: false, reason: 'loan_active' };
-        }
-
-        setGameState(prev => ({
-            ...prev,
-            energy: prev.energy - nextUpgrade.cost,
-            bankLevel: prev.bankLevel + 1,
-        }));
-        // FIX: Provide the required boolean 'condition' argument to the checkAchievement function.
-        checkAchievement("Magnat de la Finance", true);
-        return { success: true, newLevel: currentLevel + 1 };
-    };
-
-
-    const resetGame = (hardReset: boolean) => {
-        if (hardReset) {
-            localStorage.removeItem(SAVE_KEY);
-        }
-        setGameState(getInitialState());
-        setHasSaveData(false);
-    };
-    
     const unlockSpecificUpgrade = () => { /* Placeholder if needed */ };
-
-    // Dev Functions
-    const dev_setEnergy = (amount: number) => {
-        setGameState(prev => ({
-            ...prev,
-            energy: amount,
-            totalEnergyProduced: Math.max(prev.totalEnergyProduced, amount),
-        }));
-    };
-
-    const dev_addEnergy = (amount: number) => {
-        setGameState(prev => ({
-            ...prev,
-            energy: prev.energy + amount,
-            totalEnergyProduced: prev.totalEnergyProduced + amount,
-        }));
-    };
-
-    const dev_addAscension = () => setGameState(prev => ({ ...prev, ascensionLevel: prev.ascensionLevel + 1, ascensionPoints: prev.ascensionPoints + 10 }));
-    const dev_unlockAllUpgrades = () => setGameState(prev => ({ ...prev, upgrades: prev.upgrades.map(u => ({...u, owned: Math.min(MAX_UPGRADE_LEVEL, u.owned + 10)}))}));
-    const dev_unlockAllAchievements = () => setGameState(prev => ({ ...prev, achievements: prev.achievements.map(a => ({...a, unlocked: true}))}));
-    const dev_resetAchievements = () => setGameState(prev => ({ ...prev, achievements: INITIAL_ACHIEVEMENTS.map(a => ({...a}))}));
-
+    
     return {
         ...gameState,
         isLoaded,
@@ -694,28 +357,15 @@ export const useGameState = (
         costMultiplier,
         
         // Actions
-        buyUpgrade,
-        doAscension,
-        buyAscensionUpgrade,
-        buyCoreUpgrade,
-        buyShopUpgrade,
-        dischargeCore,
-        resetGame,
-        incrementClickCount,
+        ...playerActions,
+        ...prestigeActions,
+        ...bankActions,
+        ...shopActions,
+        ...adminActions,
         unlockAchievement,
         unlockSpecificUpgrade,
-        buildBank,
-        depositSavings,
-        withdrawSavings,
-        takeOutLoan,
-        upgradeBank,
 
-        // Dev
-        dev_setEnergy,
-        dev_addEnergy,
-        dev_addAscension,
-        dev_unlockAllUpgrades,
-        dev_unlockAllAchievements,
-        dev_resetAchievements,
+        // Dev functions are now part of adminActions
+        ...Object.keys(adminActions).filter(k => k.startsWith('dev_')).reduce((acc, key) => ({...acc, [key]: (adminActions as any)[key]}), {}),
     };
 };
