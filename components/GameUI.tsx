@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-// Types
-import { Settings, Upgrade, Achievement, Particle, FloatingText as FloatingTextType } from '../types';
-
 // Components
 import FlowingParticle from './ui/FlowingParticle';
 import FloatingText from './ui/FloatingText';
@@ -21,101 +18,33 @@ import CommandCenterSection from './CommandCenterSection';
 import BankSection from './BankSection';
 import AscensionSection from './AscensionSection';
 import ReactorSection from './ReactorSection';
+import { useGameContext } from '../contexts/GameContext';
 
 
-interface GameUIProps {
-    // State & Data
-    energy: number;
-    upgrades: Upgrade[];
-    visibleUpgrades: { upgradeData: Upgrade; originalIndex: number; }[];
-    achievements: Achievement[];
-    ascensionLevel: number;
-    ascensionPoints: number;
-    productionTotal: number;
-    clickPower: number;
-    purchasedAscensionUpgrades: string[];
-    purchasedShopUpgrades: string[];
-    ascensionBonuses: { productionMultiplier: number; clickMultiplier: number; costReduction: number; startingEnergy: number; };
-    achievementBonuses: { production: number; click: number; coreCharge: number; costReduction: number; };
-    coreBonuses: { chargeRate: number; multiplier: number; };
-    bankBonuses: { savingsInterest: number; loanInterest: number; };
-    canAscend: boolean;
-    ascensionGain: number;
-    unlockedUpgradesForCurrentAscensionCount: number;
-    unlockedUpgradesAtMaxLevelCount: number;
-    maxEnergy: number;
-    settings: Settings;
-    particles: Particle[];
-    floatingTexts: FloatingTextType[];
-    tutorialStep: number;
-    showHardResetConfirm: boolean;
-    showAscensionConfirm: boolean;
-    showAscensionTutorial: boolean;
-    showDevPanel: boolean;
-    coreCharge: number;
-    isCoreDischarging: boolean;
-    quantumShards: number;
-    purchasedCoreUpgrades: string[];
-    showCoreTutorial: boolean;
-    showBankTutorial: boolean;
-    showBankInfoPopup: boolean;
-    totalEnergyProduced: number;
-    isBankUnlocked: boolean;
-    savingsBalance: number;
-    currentLoan: { amount: number; remaining: number; } | null;
-    bankLevel: number;
-    costMultiplier: number;
+const GameUI: React.FC = () => {
+    const { 
+        gameState,
+        computedState,
+        uiState, 
+        handlers, 
+        popups,
+        playSfx, 
+        addFloatingText, 
+        removeParticle, 
+        removeFloatingText,
+        setShowCoreTutorial,
+        setShowBankTutorial,
+        setShowBankInfoPopup,
+        // FIX: Destructure `setShowDevPanel` from context to resolve reference error.
+        setShowDevPanel
+    } = useGameContext();
 
-
-    // Callbacks & Handlers
-    onCollect: (e: React.MouseEvent<HTMLButtonElement>) => void;
-    onBuyUpgrade: (index: number, amount: number | 'MAX') => void;
-    onAscend: () => void;
-    onConfirmAscension: () => void;
-    onBuyAscensionUpgrade: (id: string) => void;
-    onBuyCoreUpgrade: (id: string) => void;
-    onBuyShopUpgrade: (id: string) => void;
-    onConfirmHardReset: () => void;
-    onSettingsChange: (newSettings: Partial<Settings>) => void;
-    onDischargeCore: () => void;
-    onBuildBank: () => void;
-    onDepositSavings: (amount: number) => void;
-    onWithdrawSavings: (amount: number, isPercentage: boolean) => void;
-    onTakeOutLoan: (amount: number) => void;
-    onUpgradeBank: () => void;
-    dev: {
-        addEnergy: () => void;
-        addSpecificEnergy: (amount: number) => void;
-        addAscension: () => void;
-        unlockAllUpgrades: () => void;
-        unlockAllAchievements: () => void;
-        resetAchievements: () => void;
-        closePanel: () => void;
-    };
+    const { ascensionLevel, totalEnergyProduced, energy, upgrades } = gameState;
+    const { canAscend, productionTotal } = computedState;
+    const { settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial, showDevPanel, showCoreTutorial, showBankTutorial, showBankInfoPopup } = uiState;
+    const { setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial } = popups;
+    const { onConfirmHardReset, onConfirmAscension, dev } = handlers;
     
-    // Functions
-    playSfx: (sound: any) => void;
-    formatNumber: (num: number) => string;
-    addFloatingText: (text: string, x: number, y: number, color: string) => void;
-    removeParticle: (id: number) => void;
-    removeFloatingText: (id: number) => void;
-    setTutorialStep: (step: number) => void;
-    setShowHardResetConfirm: (show: boolean) => void;
-    setShowAscensionConfirm: (show: boolean) => void;
-    setShowAscensionTutorial: (show: boolean) => void;
-    setShowCoreTutorial: (show: boolean) => void;
-    setShowBankTutorial: (show: boolean) => void;
-    setShowBankInfoPopup: (show: boolean) => void;
-}
-
-const GameUI: React.FC<GameUIProps> = (props) => {
-    const {
-        upgrades, ascensionLevel, canAscend, totalEnergyProduced,
-        settings, particles, floatingTexts, tutorialStep, showHardResetConfirm, showAscensionConfirm, showAscensionTutorial,
-        playSfx, formatNumber, addFloatingText, removeParticle, removeFloatingText, setTutorialStep, setShowHardResetConfirm, setShowAscensionConfirm, setShowAscensionTutorial,
-        showDevPanel, dev, showCoreTutorial, setShowCoreTutorial, showBankTutorial, setShowBankTutorial, showBankInfoPopup, setShowBankInfoPopup, productionTotal
-    } = props;
-
     const [activeSection, setActiveSection] = useState('core');
     const gameContentRef = useRef<HTMLDivElement>(null);
     const isScrollingRef = useRef(false);
@@ -199,20 +128,20 @@ const GameUI: React.FC<GameUIProps> = (props) => {
                 if (el) scrollspyObserver.unobserve(el);
             });
         };
-    }, [props.visibleUpgrades.length, sections]);
+    }, [sections]);
     
     useEffect(() => {
         if (activeSection !== 'core' || productionTotal <= 0) return;
 
         const interval = setInterval(() => {
             if (productionTotal > 0) {
-                 addFloatingText(`+${formatNumber(productionTotal)}`, window.innerWidth / 3, window.innerHeight / 2, '#00ffcc');
+                 addFloatingText(`+${handlers.dev.addEnergy.toString()}`, window.innerWidth / 3, window.innerHeight / 2, '#00ffcc');
             }
         }, 1000);
 
         return () => clearInterval(interval);
 
-    }, [activeSection, productionTotal, addFloatingText, formatNumber]);
+    }, [activeSection, productionTotal, addFloatingText, handlers.dev.addEnergy]);
     
     useEffect(() => {
         const el = gameContentRef.current;
@@ -277,10 +206,12 @@ const GameUI: React.FC<GameUIProps> = (props) => {
 
     useEffect(() => {
         const firstUpgradeCost = upgrades.find(u => u.id === 'gen_1')?.baseCost || 10;
-        if (tutorialStep === 2 && props.energy >= firstUpgradeCost) {
+        if (tutorialStep === 2 && energy >= firstUpgradeCost) {
             setTutorialStep(3); 
         }
-    }, [props.energy, tutorialStep, setTutorialStep, upgrades]);
+    }, [energy, tutorialStep, setTutorialStep, upgrades]);
+
+    const handleDevSetMaxEnergyForAscension = () => dev.setEnergy(computedState.maxEnergy);
 
     return (
         <div ref={gameContentRef} id="game-content" className="min-h-full text-xs md:text-sm select-none">
@@ -290,45 +221,12 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             <ScrollspyNav sections={sections} activeSection={activeSection} onNavClick={handleNavClick} />
 
             <main>
-                <CoreSection
-                    energy={props.energy}
-                    maxEnergy={props.maxEnergy}
-                    formatNumber={formatNumber}
-                    productionTotal={props.productionTotal}
-                    clickPower={props.clickPower}
-                    onCollect={props.onCollect}
-                />
-                
-                <ForgeSection
-                    energy={props.energy}
-                    formatNumber={formatNumber}
-                    visibleUpgrades={props.visibleUpgrades}
-                    onBuyUpgrade={props.onBuyUpgrade}
-                    productionTotal={props.productionTotal}
-                    costMultiplier={props.costMultiplier}
-                    playSfx={playSfx}
-                    purchasedShopUpgrades={props.purchasedShopUpgrades}
-                />
-                
-                <CommandCenterSection
-                    energy={props.energy}
-                    quantumShards={props.quantumShards}
-                    achievements={props.achievements}
-                    achievementBonuses={props.achievementBonuses}
-                    purchasedShopUpgrades={props.purchasedShopUpgrades}
-                    onBuyShopUpgrade={props.onBuyShopUpgrade}
-                    settings={settings}
-                    onSettingsChange={props.onSettingsChange}
-                    setShowHardResetConfirm={setShowHardResetConfirm}
-                    playSfx={playSfx}
-                    formatNumber={formatNumber}
-                    tutorialStep={tutorialStep}
-                    setTutorialStep={setTutorialStep}
-                />
-                
-                {showBankSection && <BankSection {...props} />}
-                {showAscensionSection && <AscensionSection {...props} />}
-                {showReactorSection && <ReactorSection {...props} />}
+                <CoreSection />
+                <ForgeSection />
+                <CommandCenterSection />
+                {showBankSection && <BankSection />}
+                {showAscensionSection && <AscensionSection />}
+                {showReactorSection && <ReactorSection />}
             </main>
             
             {/* Global Popups & Overlays */}
@@ -337,9 +235,17 @@ const GameUI: React.FC<GameUIProps> = (props) => {
             {showCoreTutorial && <CoreTutorialPopup onClose={() => setShowCoreTutorial(false)} />}
             {showBankTutorial && <BankTutorialPopup onClose={() => setShowBankTutorial(false)} />}
             {showBankInfoPopup && <BankInfoPopup onClose={() => setShowBankInfoPopup(false)} />}
-            {showDevPanel && <DevPanel {...dev} />}
-            <ConfirmationPopup show={showHardResetConfirm} title="Confirmer la réinitialisation" message="Êtes-vous sûr de vouloir réinitialiser toute votre progression ? Cette action est irréversible." onConfirm={props.onConfirmHardReset} onCancel={() => { playSfx('click'); setShowHardResetConfirm(false); }} />
-            <ConfirmationPopup show={showAscensionConfirm} title="Confirmer l'Ascension" message={`Vous êtes sur le point de réinitialiser votre progression pour gagner ${props.ascensionGain} point d'ascension et ${props.ascensionGain} Fragment Quantique. Continuer ?`} onConfirm={props.onConfirmAscension} onCancel={() => { playSfx('click'); setShowAscensionConfirm(false); }} />
+            {/* FIX: Correctly pass props to DevPanel to match its expected signature. */}
+            {showDevPanel && <DevPanel 
+                addEnergy={handleDevSetMaxEnergyForAscension}
+                addSpecificEnergy={dev.addEnergy}
+                addAscension={dev.addAscension}
+                unlockAllUpgrades={dev.unlockAllUpgrades}
+                unlockAllAchievements={dev.unlockAllAchievements}
+                resetAchievements={dev.resetAchievements}
+                closePanel={() => setShowDevPanel(false)} />}
+            <ConfirmationPopup show={showHardResetConfirm} title="Confirmer la réinitialisation" message="Êtes-vous sûr de vouloir réinitialiser toute votre progression ? Cette action est irréversible." onConfirm={onConfirmHardReset} onCancel={() => { playSfx('click'); setShowHardResetConfirm(false); }} />
+            <ConfirmationPopup show={showAscensionConfirm} title="Confirmer l'Ascension" message={`Vous êtes sur le point de réinitialiser votre progression pour gagner ${computedState.ascensionGain} point d'ascension et ${computedState.ascensionGain} Fragment Quantique. Continuer ?`} onConfirm={onConfirmAscension} onCancel={() => { playSfx('click'); setShowAscensionConfirm(false); }} />
         </div>
     );
 };

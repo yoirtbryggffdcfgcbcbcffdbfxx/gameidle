@@ -1,4 +1,7 @@
 const cssStyles = `
+    /* ============================================= */
+    /*          1. THEMES                            */
+    /* ============================================= */
     :root {
         --bg-from: #1e1e2f;
         --bg-to: #2a2a3f;
@@ -49,6 +52,10 @@ const cssStyles = `
         --border-color: #00f5d4;
         --cursor-color: #ff00c8;
     }
+
+    /* ============================================= */
+    /*          2. BASE STYLES & LAYOUT              */
+    /* ============================================= */
     html, body {
         height: 100%;
         margin: 0;
@@ -60,25 +67,6 @@ const cssStyles = `
         font-family: 'Press Start 2P', cursive;
         color: var(--text-main);
     }
-    #custom-cursor {
-        position: fixed;
-        width: 20px;
-        height: 20px;
-        border: 2px solid var(--cursor-color);
-        border-radius: 50%;
-        left: 0;
-        top: 0;
-        pointer-events: none;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        transition: transform 0.1s ease-out;
-    }
-    #custom-cursor.pointer {
-        transform: translate(-50%, -50%) scale(1.5);
-        background-color: var(--cursor-color);
-        opacity: 0.5;
-    }
-
     #parallax-bg {
         position: fixed;
         top: 0;
@@ -112,6 +100,30 @@ const cssStyles = `
         padding: 2rem;
         position: relative;
     }
+
+    /* ============================================= */
+    /*      3. COMPONENTS & UI ELEMENTS              */
+    /* ============================================= */
+    /* Custom Cursor */
+    #custom-cursor {
+        position: fixed;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--cursor-color);
+        border-radius: 50%;
+        left: 0;
+        top: 0;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        transition: transform 0.1s ease-out;
+    }
+    #custom-cursor.pointer {
+        transform: translate(-50%, -50%) scale(1.5);
+        background-color: var(--cursor-color);
+        opacity: 0.5;
+    }
+    /* Tooltip */
     .tooltip {
         position: absolute;
         bottom: 125%;
@@ -132,6 +144,40 @@ const cssStyles = `
         opacity: 1;
         visibility: visible;
     }
+    /* Scrollbar Utilities */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    /* Custom Bank Scrollbar */
+    .custom-scrollbar-bank::-webkit-scrollbar {
+        width: 8px;
+    }
+    .custom-scrollbar-bank::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.3);
+        border-radius: 4px;
+    }
+    .custom-scrollbar-bank::-webkit-scrollbar-thumb {
+        background-color: var(--text-header);
+        border-radius: 4px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+    }
+    .custom-scrollbar-bank::-webkit-scrollbar-thumb:hover {
+        background-color: var(--cursor-color);
+    }
+    .custom-scrollbar-bank {
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-header) rgba(0,0,0,0.3);
+    }
+
+    /* ============================================= */
+    /*      4. ANIMATIONS & VISUAL EFFECTS           */
+    /* ============================================= */
+    /* Generic Popup */
     @keyframes pop {
         0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
         50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
@@ -140,6 +186,7 @@ const cssStyles = `
     .animate-pop {
         animation: pop 0.3s ease-in-out;
     }
+    /* Button Pulse on Click */
     @keyframes pulseAnim {
         0% { transform: scale(1); box-shadow: 0 0 3px #fff; }
         50% { transform: scale(1.05); box-shadow: 0 0 10px #fff; }
@@ -148,6 +195,7 @@ const cssStyles = `
     .animate-pulse-effect {
         animation: pulseAnim 0.3s ease-out;
     }
+    /* Main Popup Scale-in */
     @keyframes popup-scale-in {
         0% { transform: scale(0.5); opacity: 0; }
         50% { transform: scale(1.1); opacity: 1; }
@@ -156,6 +204,7 @@ const cssStyles = `
     .animate-popup-scale {
         animation: popup-scale-in 0.3s ease-in-out;
     }
+    /* Quantum Core Effects */
     @keyframes core-breathe {
          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px #00ffff); }
          50% { transform: scale(1.1); filter: drop-shadow(0 0 15px #00ffff); }
@@ -163,6 +212,7 @@ const cssStyles = `
     .animate-core-breathe {
         animation: core-breathe 4s ease-in-out infinite;
     }
+    /* Logo Orbits */
     @keyframes spin-clockwise {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
@@ -174,13 +224,14 @@ const cssStyles = `
     .animate-spin-clockwise-1 { animation: spin-clockwise 12s linear infinite; }
     .animate-spin-counter-clockwise-1 { animation: spin-counter-clockwise 15s linear infinite; }
     .animate-spin-clockwise-2 { animation: spin-clockwise 18s linear infinite; }
-
+    /* Loading Bar */
     @keyframes loading-pulse {
         50% { transform: scale(1.1); filter: drop-shadow(0 0 10px #00ffff); }
     }
     .animate-loading-pulse {
         animation: loading-pulse 1.5s ease-in-out infinite;
     }
+    /* Progress Bar Animations */
     @keyframes progress-fill {
         from { width: 0%; }
         to { width: 100%; }
@@ -195,6 +246,7 @@ const cssStyles = `
     .animate-progress-shrink {
         animation: progress-shrink linear forwards;
     }
+    /* Main Logo Float */
     @keyframes float {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-10px); }
@@ -202,6 +254,7 @@ const cssStyles = `
     .animate-float {
         animation: float 6s ease-in-out infinite;
     }
+    /* Main Menu Background Particles */
     @keyframes particle-fade {
         0% { transform: translateY(0) scale(0.5); opacity: 0; }
         50% { opacity: 1; }
@@ -214,6 +267,7 @@ const cssStyles = `
         border-radius: 50%;
         pointer-events: none;
     }
+    /* Floating Text (+Energy) */
     @keyframes float-up {
         from { transform: translateY(0) scale(1); opacity: 1; }
         to { transform: translateY(-60px) scale(1.5); opacity: 0; }
@@ -221,6 +275,7 @@ const cssStyles = `
     .animate-float-up {
         animation: float-up 1.5s ease-out forwards;
     }
+    /* Attention Pulse (Buyable Upgrades, etc.) */
     @keyframes attention-pulse {
         0%, 100% {
             transform: scale(1);
@@ -237,7 +292,7 @@ const cssStyles = `
     .animate-attention-pulse-once {
         animation: attention-pulse 1.5s ease-in-out 2;
     }
-    /* On-reveal scroll animations */
+    /* On-Scroll Reveal Effect */
     .reveal {
         opacity: 0;
         transform: translateY(30px);
@@ -247,7 +302,7 @@ const cssStyles = `
         opacity: 1;
         transform: translateY(0);
     }
-    /* Notification Toast Animations */
+    /* Notification Toast */
     @keyframes toast-in {
         from { transform: translateY(-100%); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
@@ -262,7 +317,7 @@ const cssStyles = `
     .animate-toast-out {
         animation: toast-out 0.3s ease-out forwards;
     }
-    /* AI Tutorial animations */
+    /* AI Tutorial Effects */
     @keyframes ai-bob {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-8px); }
@@ -298,35 +353,6 @@ const cssStyles = `
     }
     .animate-tutorial-pulse {
         animation: tutorial-highlight-pulse 1.5s ease-in-out infinite;
-    }
-    /* No scrollbar utility */
-    .no-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-    .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-    /* Custom bank scrollbar */
-    .custom-scrollbar-bank::-webkit-scrollbar {
-        width: 8px;
-    }
-    .custom-scrollbar-bank::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.3);
-        border-radius: 4px;
-    }
-    .custom-scrollbar-bank::-webkit-scrollbar-thumb {
-        background-color: var(--text-header);
-        border-radius: 4px;
-        border: 2px solid transparent;
-        background-clip: content-box;
-    }
-    .custom-scrollbar-bank::-webkit-scrollbar-thumb:hover {
-        background-color: var(--cursor-color);
-    }
-    .custom-scrollbar-bank {
-        scrollbar-width: thin;
-        scrollbar-color: var(--text-header) rgba(0,0,0,0.3);
     }
 `;
 

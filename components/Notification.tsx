@@ -15,11 +15,11 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onD
     const remainingTime = useRef(duration);
     const startTime = useRef(Date.now());
 
-    const handleDismiss = () => {
+    const handleDismiss = useCallback(() => {
         setIsExiting(true);
         // Delay dismissal to allow for exit animation
         setTimeout(() => onDismiss(notification.id), 300);
-    };
+    }, [notification.id, onDismiss]);
 
     const pauseTimer = useCallback(() => {
         clearTimeout(dismissTimer.current);

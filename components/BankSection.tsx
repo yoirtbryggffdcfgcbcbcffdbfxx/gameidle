@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BANK_CONSTRUCTION_COST, BANK_UPGRADES, LOAN_REPAYMENT_RATE, LOAN_OPTIONS } from '../constants';
-
-interface BankSectionProps {
-    isBankUnlocked: boolean;
-    onBuildBank: () => void;
-    energy: number;
-    savingsBalance: number;
-    currentLoan: { amount: number; remaining: number; } | null;
-    onDepositSavings: (amount: number) => void;
-    onWithdrawSavings: (amount: number, isPercentage: boolean) => void;
-    onTakeOutLoan: (amount: number) => void;
-    onUpgradeBank: () => void;
-    formatNumber: (n: number) => string;
-    bankLevel: number;
-    bankBonuses: { savingsInterest: number; loanInterest: number; };
-    setShowBankInfoPopup: (show: boolean) => void;
-}
+import { useGameContext } from '../contexts/GameContext';
 
 const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (
     <div className="w-full flex justify-between items-center mb-4">
@@ -26,8 +11,12 @@ const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n:
     </div>
 );
 
-const BankSection: React.FC<BankSectionProps> = (props) => {
-    const { isBankUnlocked, onBuildBank, energy, savingsBalance, currentLoan, formatNumber, onDepositSavings, onWithdrawSavings, onTakeOutLoan, bankLevel, bankBonuses, onUpgradeBank, setShowBankInfoPopup } = props;
+const BankSection: React.FC = () => {
+    const { gameState, computedState, handlers, memoizedFormatNumber, setShowBankInfoPopup } = useGameContext();
+    // FIX: Get `bankBonuses` from computed state.
+    const { isBankUnlocked, energy, savingsBalance, currentLoan, bankLevel } = gameState;
+    const { bankBonuses } = computedState;
+    const { onBuildBank, onDepositSavings, onWithdrawSavings, onTakeOutLoan, onUpgradeBank } = handlers;
     
     const [activeTab, setActiveTab] = useState<'compte' | 'améliorations'>('compte');
     const [savingsAmount, setSavingsAmount] = useState('');
@@ -62,7 +51,8 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
         if (isNaN(amount) || amount <= 0) return;
 
         if (action === 'deposit') onDepositSavings(amount);
-        else onWithdrawSavings(amount, !!percentage);
+        // FIX: `onWithdrawSavings` expects only one argument.
+        else onWithdrawSavings(amount);
         
         setSavingsAmount('');
     };
@@ -103,7 +93,7 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
                     <div className="bg-[var(--bg-upgrade)] p-3 sm:p-4 rounded-lg flex flex-col">
                         <h3 className="text-base sm:text-lg text-yellow-400 mb-2">🐷 Compte Épargne</h3>
                         <p className="text-xs mb-2">Solde:</p>
-                        <p className="text-xl sm:text-2xl text-green-400 font-bold mb-4">{formatNumber(savingsBalance)} ⚡</p>
+                        <p className="text-xl sm:text-2xl text-green-400 font-bold mb-4">{memoizedFormatNumber(savingsBalance)} ⚡</p>
                         <div className="mt-auto space-y-4">
                              <input type="text" value={savingsAmount} onChange={handleSavingsAmountChange} placeholder="Montant personnalisé" className="w-full bg-black/50 p-2 rounded border border-[var(--border-color)] text-white text-right"/>
                             
@@ -146,11 +136,11 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
                             <>
                                 <h3 className="text-base sm:text-lg text-red-400 mb-2">⚠️ Prêt Actif</h3>
                                 <div className="text-xs space-y-2 flex-grow flex flex-col">
-                                    <p>Restant à payer: <strong className="text-red-400 text-lg sm:text-xl">{formatNumber(currentLoan.remaining)}</strong></p>
+                                    <p>Restant à payer: <strong className="text-red-400 text-lg sm:text-xl">{memoizedFormatNumber(currentLoan.remaining)}</strong></p>
                                     <div className="w-full bg-black/50 rounded-full h-2.5 my-1">
                                         <div className="bg-red-600 h-2.5 rounded-full" style={{width: `${100 - (currentLoan.remaining / (currentLoan.amount * (1 + bankBonuses.loanInterest))) * 100}%`}}></div>
                                     </div>
-                                    <p className="opacity-70">Total à rembourser: {formatNumber(currentLoan.amount * (1 + bankBonuses.loanInterest))}</p>
+                                    <p className="opacity-70">Total à rembourser: {memoizedFormatNumber(currentLoan.amount * (1 + bankBonuses.loanInterest))}</p>
                                     <p className="mt-auto pt-4 opacity-80"><strong className="text-cyan-400">{LOAN_REPAYMENT_RATE * 100}%</strong> de votre production est utilisé pour le remboursement.</p>
                                 </div>
                             </>
@@ -175,7 +165,7 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
                                 <div className="text-xs space-y-2 flex flex-col h-full">
                                     <p className="opacity-70 mb-2">Remboursement automatique.</p>
                                     <div className="space-y-2">
-                                        {LOAN_OPTIONS.map(o => (<button key={o} onClick={() => handleTakeLoan(o)} className="w-full p-2 bg-cyan-800/80 hover:bg-cyan-700 transition-colors rounded">Emprunter {formatNumber(o)}</button>))}
+                                        {LOAN_OPTIONS.map(o => (<button key={o} onClick={() => handleTakeLoan(o)} className="w-full p-2 bg-cyan-800/80 hover:bg-cyan-700 transition-colors rounded">Emprunter {memoizedFormatNumber(o)}</button>))}
                                     </div>
                                     <div className="mt-auto space-y-2 pt-2">
                                         <input type="text" value={loanAmount} onChange={handleLoanAmountChange} placeholder="Montant personnalisé" className="w-full bg-black/50 p-2 rounded border border-[var(--border-color)] text-white text-right" />
@@ -220,7 +210,7 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
                                 <p className="text-sm">Prochaine Amélioration :</p>
                                 <p className="text-base sm:text-lg text-cyan-300 my-2">{nextUpgrade.description}</p>
                                 <button onClick={onUpgradeBank} disabled={energy < nextUpgrade.cost || !!currentLoan} className="px-3 py-2 sm:px-4 rounded bg-cyan-700 hover:enabled:bg-cyan-600 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed">
-                                    Coût: {formatNumber(nextUpgrade.cost)} ⚡
+                                    Coût: {memoizedFormatNumber(nextUpgrade.cost)} ⚡
                                 </button>
                                 {!!currentLoan && (
                                     <p className="text-red-400 text-center text-xs mt-2 flex items-center justify-center gap-2">
@@ -247,7 +237,7 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
                 disabled={energy < BANK_CONSTRUCTION_COST}
                 className="p-3 rounded-md bg-green-700 text-white transition-all disabled:bg-gray-600 disabled:cursor-not-allowed hover:enabled:bg-green-600 text-base sm:text-lg"
             >
-                Construire la Banque ({formatNumber(BANK_CONSTRUCTION_COST)} ⚡)
+                Construire la Banque ({memoizedFormatNumber(BANK_CONSTRUCTION_COST)} ⚡)
             </button>
         </div>
     );
@@ -255,7 +245,7 @@ const BankSection: React.FC<BankSectionProps> = (props) => {
     return (
         <section id="bank" className="fullscreen-section reveal">
             <div className="w-full max-w-4xl h-[85vh] sm:h-[80vh] bg-black/20 rounded-lg p-2 sm:p-4 flex flex-col">
-                <SectionHeader title="Banque Quantique" energy={props.energy} formatNumber={props.formatNumber} />
+                <SectionHeader title="Banque Quantique" energy={energy} formatNumber={memoizedFormatNumber} />
                 {isBankUnlocked ? renderBankUI() : renderUnlockUI()}
             </div>
         </section>

@@ -23,7 +23,6 @@ const FlowingParticle: React.FC<FlowingParticleProps> = ({ id, startX, startY, c
   });
   // FIX: Explicitly initialize useRef with undefined and provide a more accurate type.
   // This resolves the "Expected 1 arguments, but got 0" error, which is likely from a strict linter rule.
-  // The error on the subsequent blank line is likely a cascading parser error.
   const requestRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef<number | undefined>(undefined);
 

@@ -2,7 +2,8 @@ import { useCallback } from 'react';
 import { GameState } from '../../types';
 import { SAVE_KEY, MAX_UPGRADE_LEVEL } from '../../constants';
 import { INITIAL_ACHIEVEMENTS } from '../../data/achievements';
-import { getInitialState } from '../useGameState';
+// FIX: Corrected import path for `getInitialState`. It is exported from `utils/helpers.ts`, not `useGameState.ts`.
+import { getInitialState } from '../../utils/helpers';
 
 export const useAdminActions = (
     setGameState: React.Dispatch<React.SetStateAction<GameState>>,

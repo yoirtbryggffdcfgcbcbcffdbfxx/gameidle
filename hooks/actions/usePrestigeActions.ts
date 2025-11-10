@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { GameState } from '../../types';
 import { ASCENSION_UPGRADES, CORE_UPGRADES } from '../../constants';
-import { getInitialState } from '../useGameState';
+// FIX: Corrected import path for `getInitialState`. It is exported from `utils/helpers.ts`, not `useGameState.ts`.
+import { getInitialState } from '../../utils/helpers';
 
 export const usePrestigeActions = (
     setGameState: React.Dispatch<React.SetStateAction<GameState>>,

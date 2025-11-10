@@ -8,6 +8,7 @@ import GameUI from './components/GameUI';
 import NotificationCenter from './components/Notification';
 import CreditsPopup from './components/popups/CreditsPopup';
 import IntroCinematic from './components/IntroCinematic';
+import { GameContext } from './contexts/GameContext';
 
 const App: React.FC = () => {
     const game = useGameEngine();
@@ -48,38 +49,17 @@ const App: React.FC = () => {
     }
     
     return (
-        <div id="game-content">
-            <GameUI
-                // State & Data
-                {...game.gameState}
-                {...game.computedState}
-                {...game.uiState}
-                // Callbacks & Handlers
-                {...game.handlers}
-                // Functions
-                playSfx={game.playSfx}
-                formatNumber={game.memoizedFormatNumber}
-                // FIX: Removed unused 'setActivePopup' prop which is not defined on GameUIProps.
-                // FIX: Pass 'addFloatingText' prop to GameUI to satisfy its prop requirements.
-                addFloatingText={game.addFloatingText}
-                removeParticle={game.removeParticle}
-                removeFloatingText={game.removeFloatingText}
-                setTutorialStep={game.popups.setTutorialStep}
-                setShowHardResetConfirm={game.popups.setShowHardResetConfirm}
-                setShowAscensionConfirm={game.popups.setShowAscensionConfirm}
-                setShowAscensionTutorial={game.popups.setShowAscensionTutorial}
-                setShowCoreTutorial={game.setShowCoreTutorial}
-                // FIX: Add missing 'setShowBankTutorial' prop to satisfy GameUIProps.
-                setShowBankTutorial={game.setShowBankTutorial}
-                setShowBankInfoPopup={game.setShowBankInfoPopup}
-            />
-             <NotificationCenter
-                notifications={game.uiState.notifications}
-                removeNotification={game.removeNotification}
-                // Responsive classes for mobile vs desktop
-                className="fixed top-4 right-4 w-56 sm:w-64 sm:bottom-4 sm:top-auto"
-            />
-        </div>
+        <GameContext.Provider value={game}>
+            <div id="game-content">
+                <GameUI />
+                 <NotificationCenter
+                    notifications={game.uiState.notifications}
+                    removeNotification={game.removeNotification}
+                    // Responsive classes for mobile vs desktop
+                    className="fixed top-4 right-4 w-56 sm:w-64 sm:bottom-4 sm:top-auto"
+                />
+            </div>
+        </GameContext.Provider>
     );
 };
 

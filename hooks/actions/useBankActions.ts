@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { GameState } from '../../types';
 import { BANK_UPGRADES } from '../../constants';
-import { LoanResult, WithdrawResult, UpgradeBankResult } from '../useGameState';
+// FIX: Corrected import path for type definitions. They are exported from `useBankState.ts`.
+import type { LoanResult, WithdrawResult, UpgradeBankResult } from '../state/useBankState';
 
 export const useBankActions = (
     setGameState: React.Dispatch<React.SetStateAction<GameState>>,

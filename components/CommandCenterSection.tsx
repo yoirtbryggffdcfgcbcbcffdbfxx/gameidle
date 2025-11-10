@@ -1,32 +1,24 @@
 import React, { useState } from 'react';
-import { Settings, Achievement } from '../types';
 import AchievementsPopup from './popups/AchievementsPopup';
 import ShopPopup from './popups/ShopPopup';
 import SettingsPopup from './popups/SettingsPopup';
+import { useGameContext } from '../contexts/GameContext';
 
-interface CommandCenterSectionProps {
-    energy: number;
-    quantumShards: number;
-    achievements: Achievement[];
-    achievementBonuses: { production: number; click: number; coreCharge: number; costReduction: number; };
-    purchasedShopUpgrades: string[];
-    onBuyShopUpgrade: (id: string) => void;
-    settings: Settings;
-    onSettingsChange: (newSettings: Partial<Settings>) => void;
-    setShowHardResetConfirm: (show: boolean) => void;
-    playSfx: (sound: any) => void;
-    formatNumber: (num: number) => string;
-    tutorialStep: number;
-    setTutorialStep: (step: number) => void;
-}
-
-const CommandCenterSection: React.FC<CommandCenterSectionProps> = (props) => {
+const CommandCenterSection: React.FC = () => {
+    const { gameState, computedState, uiState, handlers, popups, playSfx, memoizedFormatNumber } = useGameContext();
+    // FIX: Get `achievementBonuses` from computed state.
+    const { energy, quantumShards, achievements, purchasedShopUpgrades } = gameState;
+    const { achievementBonuses } = computedState;
+    const { settings, tutorialStep } = uiState;
+    const { onBuyShopUpgrade, onSettingsChange } = handlers;
+    const { setShowHardResetConfirm, setTutorialStep } = popups;
+    
     const [activeCommandCenterTab, setActiveCommandCenterTab] = useState('achievements');
 
     const handleCommandCenterTabClick = (tab: string) => {
         setActiveCommandCenterTab(tab);
-        if (tab === 'achievements' && props.tutorialStep === 9) {
-            props.setTutorialStep(10);
+        if (tab === 'achievements' && tutorialStep === 9) {
+            setTutorialStep(10);
         }
     };
 
@@ -36,8 +28,8 @@ const CommandCenterSection: React.FC<CommandCenterSectionProps> = (props) => {
                 <div className="w-full flex justify-between items-center mb-4">
                     <h2 className="text-2xl text-center text-[var(--text-header)]">Centre de Commandement</h2>
                     <div className="bg-black/30 px-3 py-1 rounded-lg text-xs flex gap-4">
-                        <span className="text-purple-400">⚛️ {props.formatNumber(props.quantumShards)}</span>
-                        <span className="text-cyan-300">⚡ {props.formatNumber(props.energy)}</span>
+                        <span className="text-purple-400">⚛️ {memoizedFormatNumber(quantumShards)}</span>
+                        <span className="text-cyan-300">⚡ {memoizedFormatNumber(energy)}</span>
                     </div>
                 </div>
                 <div className="flex justify-center border-b border-[var(--border-color)] mb-4">
@@ -54,17 +46,17 @@ const CommandCenterSection: React.FC<CommandCenterSectionProps> = (props) => {
                 </div>
                 <div className="flex-grow overflow-hidden relative">
                     <div id="achievements-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'achievements' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        <AchievementsPopup achievements={props.achievements} achievementBonuses={props.achievementBonuses} onClose={() => { }} />
+                        <AchievementsPopup achievements={achievements} achievementBonuses={achievementBonuses} onClose={() => { }} />
                     </div>
                     <div id="shop-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'shop' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <ShopPopup
-                            quantumShards={props.quantumShards}
-                            purchasedShopUpgrades={props.purchasedShopUpgrades}
-                            onBuy={props.onBuyShopUpgrade}
+                            quantumShards={quantumShards}
+                            purchasedShopUpgrades={purchasedShopUpgrades}
+                            onBuy={onBuyShopUpgrade}
                         />
                     </div>
                     <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'settings' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        <SettingsPopup settings={props.settings} onSettingsChange={props.onSettingsChange} onClose={() => { }} onHardReset={() => props.setShowHardResetConfirm(true)} playSfx={props.playSfx} />
+                        <SettingsPopup settings={settings} onSettingsChange={onSettingsChange} onClose={() => { }} onHardReset={() => setShowHardResetConfirm(true)} playSfx={playSfx} />
                     </div>
                 </div>
             </div>
