@@ -1,16 +1,8 @@
 import React from 'react';
 import UpgradeList from './UpgradeList';
 import { useGameContext } from '../contexts/GameContext';
-import { useForge } from '../hooks/ui/useForge'; // Import the new hook
-
-const SectionHeader: React.FC<{ title: string; energy: number; formatNumber: (n: number) => string; }> = ({ title, energy, formatNumber }) => (
-    <div className="w-full flex justify-between items-center">
-        <h2 className="text-2xl text-center text-[var(--text-header)]">{title}</h2>
-        <div className="bg-black/30 px-3 py-1 rounded-lg text-xs">
-            <span className="text-cyan-300">⚡ {formatNumber(energy)}</span>
-        </div>
-    </div>
-);
+import { useForge } from '../hooks/ui/useForge';
+import SectionHeader from './ui/SectionHeader';
 
 const ForgeSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber, playSfx } = useGameContext();
