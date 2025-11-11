@@ -1,6 +1,6 @@
 # Quantum Core - Un Jeu Idle Addictif
 
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/your-repo/quantum-core)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/your-repo/quantum-core)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 **[▶️ Jouer à Quantum Core (Lien de Démo)](https://lien-vers-votre-jeu.com)**
@@ -15,6 +15,7 @@ Quantum Core est un jeu incrémental futuriste développé avec React, TypeScrip
 - [🛠️ Stack Technique](#️-stack-technique)
 - [🚀 Démarrage Rapide](#-démarrage-rapide)
 - [🤝 Comment Contribuer & Étendre le Jeu](#-comment-contribuer--étendre-le-jeu)
+- [📜 Changelog](#-changelog)
 
 ## 🕹️ Mécaniques de Jeu
 
@@ -94,3 +95,9 @@ L'architecture est conçue pour être facilement extensible en suivant la philos
 #### Ajouter un nouveau Succès :
 1.  **Ouvrez `data/achievements.ts`** et ajoutez votre nouvel objet de succès.
 2.  **Ouvrez `hooks/state/useAchievements.ts`** et dans la fonction `checkAll`, ajoutez la condition de déblocage pour votre nouveau succès.
+
+## 📜 Changelog
+
+### Version 1.8.0 - "Stabilité Quantique"
+-   **Correction de Bugs Majeurs :** Correction de conditions de concurrence critiques dans les boutiques d'améliorations, éliminant les faux messages d'erreur "fonds insuffisants" lors d'achats rapides.
+-   **Fiabilité Améliorée :** Le raccourci du panneau de développeur (`Ctrl+Shift+D`) a été rendu plus fiable.

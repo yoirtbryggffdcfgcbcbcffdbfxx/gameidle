@@ -67,7 +67,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ hasSaveData, onContinue, onNewGame,
                     </button>
                 </div>
             </div>
-             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.6.0</p>
+             <p className="absolute bottom-4 text-xs opacity-50 z-10">Version 1.8.0</p>
         </div>
     );
 };

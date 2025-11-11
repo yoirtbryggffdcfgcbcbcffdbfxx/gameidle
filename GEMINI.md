@@ -48,23 +48,40 @@ Ces hooks forment une couche d'abstraction entre l'UI et la logique d'état.
 ```
 [Component.tsx]
       ↓ (clic)
-[usePlayerHandlers.ts] -> onBuyUpgrade()
-      ├─ playSfx(), addParticle() ... (effets secondaires)
-      ↓
-[useGameState.ts] -> actions.buyUpgrade()
-      ↓
+[usePlayerHandlers.ts] -> onBuyUpgrade(gameState) // Reçoit l'état actuel
+      ├─ **1. PRÉ-VALIDATION :** Vérifie si l'achat est possible avec `gameState`.
+      ├─ Si OUI:
+      |    ├─ **2. ACTION (Fire-and-forget) :** Appelle `actions.buyUpgrade()`.
+      |    └─ **3. EFFETS SECONDAIRES :** `playSfx('buy')`, `addNotification('Succès')`.
+      |
+      └─ Si NON:
+           └─ **3. EFFETS SECONDAIRES :** `addNotification('Erreur')`.
+      ↓ (Uniquement si l'action a été appelée)
 [usePlayerState.ts] -> logique de buyUpgrade()
       ↓
 setGameState(newState)
       ↓
-[React Rerender]
-      ↓
-[useGameState.ts] -> Les hooks de `state` recalculent les valeurs `computed` avec le nouvel état.
-      ↓
-[useGameEngine.ts] -> Assemble le nouvel objet de contexte.
-      ↓
-[Component.tsx] -> Reçoit les nouvelles props et affiche l'état à jour.
+[React Rerender] -> Le cycle de rendu se poursuit comme avant.
 ```
+
+### 2.5. Pattern : Mises à Jour d'État Asynchrones & Gestion des Effets Secondaires
+
+**Problème :** Les mises à jour d'état de React (`setGameState`) sont asynchrones. Tenter de lire l'état immédiatement après avoir appelé `setGameState` dans la même fonction lira l'ancienne valeur ("stale state"). Cela a causé un bug critique où l'achat rapide de plusieurs améliorations entraînait des notifications d'erreur "fonds insuffisants", car la vérification des fonds pour le deuxième achat se basait sur l'état *avant* que le coût du premier achat ne soit déduit.
+
+**Solution :** Une séparation stricte des responsabilités entre le *handler* et l'*action*.
+
+1.  **Le Handler (`hooks/handlers/*.ts`) est le Pré-validateur et le Gestionnaire d'Effets :**
+    *   Il reçoit l'état le plus récent (`gameState`) en tant que prop depuis `useGameEngine`.
+    *   **AVANT** d'appeler une action, il effectue toutes les vérifications nécessaires (ex: `if (gameState.energy >= cost)`).
+    *   Si la validation réussit, il appelle l'action de manière "fire-and-forget" (sans attendre de retour).
+    *   Il déclenche immédiatement les effets secondaires optimistes (son, particules, notification de succès).
+    *   Si la validation échoue, il déclenche les effets secondaires d'échec (notification d'erreur).
+
+2.  **L'Action (`hooks/state/*.ts`) est le Mutateur d'État Pur :**
+    *   La fonction d'action (ex: `buyUpgrade`) ne retourne plus de valeur (elle est de type `void`).
+    *   Sa seule responsabilité est de calculer et de définir le nouvel état (`setGameState(prev => ...)`). Elle suppose que les conditions ont déjà été validées.
+
+Ce pattern garantit que les retours utilisateur sont immédiats et basés sur l'état au moment de l'interaction, éliminant complètement les problèmes de concurrence.
 
 ## 3. Cookbook pour les Modifications Futures
 
