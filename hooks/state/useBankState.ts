@@ -1,4 +1,6 @@
-import { useCallback } from 'react';
+// hooks/state/useBankState.ts
+// FIX: Import React to provide namespace for types.
+import React, { useCallback } from 'react';
 import { GameState } from '../../types';
 // FIX: Import missing constant to resolve reference error.
 import { BANK_UPGRADES, LOAN_REPAYMENT_RATE } from '../../data/bank';
@@ -6,33 +8,6 @@ import { TICK_RATE } from '../../constants';
 
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 type UnlockAchievementFn = (name: string) => void;
-
-// FIX: Export interfaces so they can be imported by other modules.
-export interface LoanResult {
-    success: boolean;
-    reason?: 'loan_exists' | 'exceeds_max' | 'insufficient_collateral' | 'invalid_amount';
-}
-
-export interface WithdrawResult {
-    success: boolean;
-    reason?: 'zero_amount';
-    withdrawnAmount?: number;
-    repaidAmount?: number;
-    toEnergyAmount?: number;
-}
-
-export interface UpgradeBankResult {
-    success: boolean;
-    reason?: 'max_level' | 'insufficient_energy' | 'loan_active';
-    newLevel?: number;
-}
-
-export interface RepayLoanResult {
-    success: boolean;
-    reason?: 'no_loan' | 'invalid_amount' | 'insufficient_energy';
-    repaidAmount?: number;
-}
-
 
 export const useBankState = (
     setGameState: SetGameStateFn,
@@ -44,44 +19,36 @@ export const useBankState = (
         return { bankBonuses };
     };
 
-    const buildBank = useCallback((cost: number): boolean => {
-        let success = false;
+    const buildBank = useCallback((cost: number): void => {
         setGameState(prev => {
             if (prev.energy >= cost && !prev.isBankUnlocked) {
-                success = true;
                 unlockAchievement("Capitaliste Quantique");
                 return { ...prev, energy: prev.energy - cost, isBankUnlocked: true };
             }
             return prev;
         });
-        return success;
     }, [setGameState, unlockAchievement]);
 
-    const depositSavings = useCallback((amount: number): boolean => {
-        let success = false;
+    const depositSavings = useCallback((amount: number): void => {
         setGameState(prev => {
             const actualAmount = Math.min(amount, prev.energy);
             if (actualAmount > 0) {
-                success = true;
                 return { ...prev, energy: prev.energy - actualAmount, savingsBalance: prev.savingsBalance + actualAmount };
             }
             return prev;
         });
-        return success;
     }, [setGameState]);
 
-    const withdrawSavings = useCallback((amount: number): WithdrawResult => {
-        let result: WithdrawResult = { success: false, reason: 'zero_amount' };
+    const withdrawSavings = useCallback((amount: number): void => {
         setGameState(prev => {
             const actualWithdrawAmount = Math.min(amount, prev.savingsBalance);
             if (actualWithdrawAmount <= 0) return prev;
-            let repaidAmount = 0;
+            
             let toEnergyAmount = actualWithdrawAmount;
             let newLoan = prev.currentLoan;
             
             if (newLoan) {
                 const repayment = Math.min(actualWithdrawAmount, newLoan.remaining);
-                repaidAmount = repayment;
                 toEnergyAmount -= repayment;
                 const remaining = newLoan.remaining - repayment;
                 if (remaining <= 0) {
@@ -91,43 +58,26 @@ export const useBankState = (
                     newLoan = { ...newLoan, remaining };
                 }
             }
-            result = { success: true, withdrawnAmount: actualWithdrawAmount, repaidAmount, toEnergyAmount };
             return { ...prev, energy: prev.energy + toEnergyAmount, savingsBalance: prev.savingsBalance - actualWithdrawAmount, currentLoan: newLoan };
         });
-        return result;
     }, [setGameState]);
     
-    const takeOutLoan = useCallback((loanAmount: number): LoanResult => {
-        let result: LoanResult = { success: false };
+    const takeOutLoan = useCallback((loanAmount: number): void => {
         setGameState(prev => {
-            if (prev.currentLoan) { result = { success: false, reason: "loan_exists" }; return prev; }
-            if (isNaN(loanAmount) || loanAmount <= 0) { result = { success: false, reason: "invalid_amount" }; return prev; }
-            const maxEnergy = 1e9 * Math.pow(10, prev.ascensionLevel);
-            const maxLoan = maxEnergy * 0.10;
-            if (loanAmount > maxLoan) { result = { success: false, reason: "exceeds_max" }; return prev; }
+            // All checks are now in the handler. This action assumes it's valid.
             const { bankBonuses } = getComputed(prev);
             const repaymentTotal = loanAmount * (1 + bankBonuses.loanInterest);
-            const requiredCollateral = repaymentTotal * 0.10;
-            if (prev.energy < requiredCollateral) { result = { success: false, reason: "insufficient_collateral" }; return prev; }
-            
-            result = { success: true };
             return { ...prev, energy: prev.energy + loanAmount, currentLoan: { amount: loanAmount, remaining: repaymentTotal } };
         });
-        return result;
     }, [setGameState]);
 
-    const upgradeBank = useCallback((): UpgradeBankResult => {
-        let result: UpgradeBankResult = { success: false };
+    const upgradeBank = useCallback((): void => {
         setGameState(prev => {
-            if (prev.bankLevel >= BANK_UPGRADES.length - 1) { result = { success: false, reason: 'max_level' }; return prev; }
+            // All checks are now in the handler.
             const nextUpgrade = BANK_UPGRADES[prev.bankLevel + 1];
-            if (prev.energy < nextUpgrade.cost) { result = { success: false, reason: 'insufficient_energy' }; return prev; }
-            if (prev.currentLoan) { result = { success: false, reason: 'loan_active' }; return prev; }
             unlockAchievement("Magnat de la Finance");
-            result = { success: true, newLevel: prev.bankLevel + 1 };
             return { ...prev, energy: prev.energy - nextUpgrade.cost, bankLevel: prev.bankLevel + 1 };
         });
-        return result;
     }, [setGameState, unlockAchievement]);
 
     const handleLoanRepayment = (currentLoan: GameState['currentLoan'], productionThisTick: number) => {
@@ -153,20 +103,13 @@ export const useBankState = (
         return gameState.savingsBalance + interestThisTick;
     };
 
-    const repayLoanManually = useCallback((amount: number): RepayLoanResult => {
-        let result: RepayLoanResult = { success: false };
+    const repayLoanManually = useCallback((amount: number): void => {
         setGameState(prev => {
             if (!prev.currentLoan) {
-                result = { success: false, reason: 'no_loan' };
-                return prev;
-            }
-            if (isNaN(amount) || amount <= 0) {
-                result = { success: false, reason: 'invalid_amount' };
                 return prev;
             }
             const actualRepayment = Math.min(amount, prev.energy, prev.currentLoan.remaining);
             if (actualRepayment <= 0) {
-                result = { success: false, reason: 'insufficient_energy' };
                 return prev;
             }
 
@@ -174,15 +117,12 @@ export const useBankState = (
             let newLoan = prev.currentLoan;
             if (remaining <= 0) {
                 newLoan = null;
-                // Callback for full repayment is handled in the game loop or by the handler
             } else {
                 newLoan = { ...prev.currentLoan, remaining };
             }
 
-            result = { success: true, repaidAmount: actualRepayment };
             return { ...prev, energy: prev.energy - actualRepayment, currentLoan: newLoan };
         });
-        return result;
     }, [setGameState]);
 
     return { 

@@ -11,6 +11,7 @@ export const usePopupManager = () => {
     // FIX: Add missing state for Core and Bank tutorials to resolve property access errors.
     const [showCoreTutorial, setShowCoreTutorial] = useState(false);
     const [showBankTutorial, setShowBankTutorial] = useState(false);
+    const [showShopTutorial, setShowShopTutorial] = useState(false);
 
     return {
         activePopup,
@@ -22,6 +23,7 @@ export const usePopupManager = () => {
         showBankInfoPopup,
         showCoreTutorial,
         showBankTutorial,
+        showShopTutorial,
         setActivePopup,
         setTutorialStep,
         setShowHardResetConfirm,
@@ -31,5 +33,6 @@ export const usePopupManager = () => {
         setShowBankInfoPopup,
         setShowCoreTutorial,
         setShowBankTutorial,
+        setShowShopTutorial,
     };
 };

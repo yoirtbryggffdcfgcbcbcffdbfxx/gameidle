@@ -30,7 +30,6 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   // Ascension & Cœur
   { name: "Au-delà du Voile", unlocked: false, description: "Effectuer votre première ascension.", hidden: false, bonus: { type: 'PRODUCTION', value: 5 } },
   { name: "Première Transcendance", unlocked: false, description: "Acheter votre première amélioration d'ascension.", hidden: false, bonus: { type: 'COST_REDUCTION', value: 2 } },
-  { name: "Noyau Amélioré", unlocked: false, description: "Acheter votre première amélioration du cœur.", hidden: false, bonus: { type: 'CORE_CHARGE', value: 5 } },
   { name: "Transcendance", unlocked: false, description: "Atteindre le niveau d'ascension 5.", hidden: false, bonus: { type: 'PRODUCTION', value: 5 } },
   { name: "Maître du Multivers", unlocked: false, description: "Atteindre le niveau d'ascension 10.", hidden: false, bonus: { type: 'PRODUCTION', value: 5 } },
   { name: "Légende Éternelle", unlocked: false, description: "Atteindre le niveau d'ascension 25.", hidden: true, bonus: { type: 'PRODUCTION', value: 10 } },

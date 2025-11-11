@@ -18,12 +18,13 @@ export const getInitialState = (): GameState => {
         ascensionPoints: 0,
         achievements: INITIAL_ACHIEVEMENTS.map(a => ({...a})),
         purchasedAscensionUpgrades: ['start'],
+        // FIX: Initialize purchasedCoreUpgrades in the initial state.
+        purchasedCoreUpgrades: ['core_start'],
         totalClicks: 0,
         hasSeenAscensionTutorial: false,
         coreCharge: 0,
         isCoreDischarging: false,
         quantumShards: 0,
-        purchasedCoreUpgrades: ['core_start'],
         hasSeenCoreTutorial: false,
         totalEnergyProduced: 0,
         isBankUnlocked: false,
@@ -33,6 +34,16 @@ export const getInitialState = (): GameState => {
         hasSeenBankTutorial: false,
         purchasedShopUpgrades: [],
         productionHistory: [],
+        seenUpgrades: [],
+        viewedCategories: [],
+        isShopUnlocked: false,
+        isCoreUnlocked: false,
+        hasUnseenShopItems: false,
+        
+        // New Quantum Path system
+        chosenQuantumPath: null,
+        quantumPathLevel: 0,
+        hasInteractedWithQuantumCore: false,
     };
 };
 
@@ -46,6 +57,29 @@ export const formatNumber = (num: number, scientificNotation: boolean): string =
     return num.toExponential(2);
   }
   return Math.floor(num).toLocaleString('fr-FR');
+};
+
+export const formatDuration = (totalSeconds: number): string => {
+    if (totalSeconds <= 0 || !isFinite(totalSeconds)) {
+        return '0s';
+    }
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+
+    let result = '';
+    if (hours > 0) {
+        result += `${hours}h `;
+    }
+    if (minutes > 0) {
+        result += `${minutes}m `;
+    }
+    if (seconds > 0 || (hours === 0 && minutes === 0)) {
+        result += `${seconds}s`;
+    }
+
+    return result.trim();
 };
 
 /**

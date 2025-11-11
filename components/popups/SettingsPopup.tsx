@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Settings } from '../../types';
 import ToggleSwitch from '../ui/ToggleSwitch';
+import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
 
 interface SettingsPopupProps {
     settings: Settings;
@@ -26,6 +27,8 @@ const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = 
 );
 
 const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChange, onHardReset, playSfx }) => {
+    const scrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(scrollableRef);
 
     const handleToggle = (key: keyof Settings, value: boolean) => {
         playSfx('click');
@@ -35,7 +38,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
     return (
         <div className="h-full flex flex-col">
             <h2 className="text-2xl text-center text-[var(--text-header)] mb-4">Paramètres</h2>
-            <div className="space-y-5 flex-grow overflow-y-auto pr-2 custom-scrollbar">
+            <div ref={scrollableRef} className="space-y-5 flex-grow overflow-y-auto pr-2 custom-scrollbar scroll-contain">
                 
                 <SettingsSection title="Général">
                     <ToggleSwitch 

@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import Popup from './Popup';
+import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
 
 interface BankInfoPopupProps {
     onClose: () => void;
 }
 
 const BankInfoPopup: React.FC<BankInfoPopupProps> = ({ onClose }) => {
+    const scrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(scrollableRef);
+
     return (
         <Popup title="Manuel de la Banque Quantique" onClose={onClose} widthClass="w-[500px]">
-            <div className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+            <div ref={scrollableRef} className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar scroll-contain">
                 
                 <div className="bg-black/20 p-3 rounded-lg">
                     <h3 className="text-lg text-yellow-400 mb-2">🐷 Compte Épargne</h3>

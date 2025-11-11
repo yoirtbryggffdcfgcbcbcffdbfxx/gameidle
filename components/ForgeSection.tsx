@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useRef, useMemo } from 'react';
 import UpgradeList from './UpgradeList';
 import { useGameContext } from '../contexts/GameContext';
 import { useForge } from '../hooks/ui/useForge';
 import SectionHeader from './ui/SectionHeader';
+import { useDragToScroll } from '../hooks/ui/useDragToScroll';
 
 const ForgeSection: React.FC = () => {
-    const { gameState, computedState, handlers, memoizedFormatNumber, playSfx } = useGameContext();
-    const { energy, purchasedShopUpgrades } = gameState;
-    const { visibleUpgrades, productionTotal, costMultiplier } = computedState;
-    const { onBuyUpgrade } = handlers;
+    const { gameState, computedState, uiState, handlers, memoizedFormatNumber, playSfx } = useGameContext();
+    const { energy, purchasedShopUpgrades, viewedCategories } = gameState;
+    const { visibleUpgrades, costMultiplier, newlyVisibleUpgradeIds, newlyVisibleUpgradeTypes } = computedState;
+    const { tutorialStep } = uiState;
+    const { onBuyUpgrade, markCategoryAsViewed } = handlers;
     
     const {
         activeTab,
@@ -22,31 +24,41 @@ const ForgeSection: React.FC = () => {
         showEfficiencyPercentage,
     } = useForge({
         visibleUpgrades,
-        productionTotal,
         energy,
         purchasedShopUpgrades,
         playSfx,
+        newlyVisibleUpgradeIds: tutorialStep === 0 ? newlyVisibleUpgradeIds : [],
+        newlyVisibleUpgradeTypes: tutorialStep === 0 ? newlyVisibleUpgradeTypes : new Set(),
+        viewedCategories: useMemo(() => new Set(viewedCategories), [viewedCategories]),
+        onTabClick: markCategoryAsViewed,
     });
+    const scrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(scrollableRef);
     
     return (
         <section id="forge" className="fullscreen-section reveal">
             <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 grid grid-rows-[auto_auto_1fr] gap-y-3">
                 <SectionHeader title="La Forge" energy={energy} formatNumber={memoizedFormatNumber} />
                 
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                    <div className="flex-grow flex justify-center sm:justify-start border-b border-[var(--border-color)]">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <div className="flex flex-wrap justify-center sm:justify-start border-b sm:border-b-0 border-[var(--border-color)] w-full sm:w-auto">
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`px-4 py-2 text-xs sm:text-sm transition-all duration-300 relative ${activeTab === tab.id ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
                             >
-                                {tab.icon} {tab.name}
+                                <span className="relative flex items-center">
+                                    {tab.icon} {tab.name}
+                                    {tab.hasNotification && (
+                                        <span className="absolute -top-1 -right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse-red"></span>
+                                    )}
+                                </span>
                                 {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--text-header)]"></div>}
                             </button>
                         ))}
                     </div>
-                    <div className="bg-black/30 p-1 rounded-md flex items-center gap-1">
+                    <div className="bg-black/30 p-1 rounded-md flex flex-wrap items-center gap-1 justify-center w-full sm:w-auto">
                         <span className="text-xs px-2">Acheter:</span>
                         {buyOptions.map(amount => (
                             <button
@@ -60,7 +72,7 @@ const ForgeSection: React.FC = () => {
                     </div>
                 </div>
 
-                <div id="upgrades-hub" className="overflow-y-auto custom-scrollbar pr-2 min-h-0">
+                <div ref={scrollableRef} id="upgrades-hub" className="overflow-y-auto custom-scrollbar pr-2 min-h-0 scroll-contain">
                     <UpgradeList 
                         upgrades={enrichedAndFilteredUpgrades}
                         onBuyUpgrade={(index) => onBuyUpgrade(index, buyAmount)}

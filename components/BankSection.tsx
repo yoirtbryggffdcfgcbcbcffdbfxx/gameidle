@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useGameContext } from '../contexts/GameContext';
 import { BANK_CONSTRUCTION_COST } from '../data/bank';
 
@@ -8,6 +8,7 @@ import BankUnlockPrompt from './bank/BankUnlockPrompt';
 import SavingsPanel from './bank/SavingsPanel';
 import LoanPanel from './bank/LoanPanel';
 import UpgradesPanel from './bank/UpgradesPanel';
+import { useDragToScroll } from '../hooks/ui/useDragToScroll';
 
 const BankSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber, setShowBankInfoPopup } = useGameContext();
@@ -17,6 +18,11 @@ const BankSection: React.FC = () => {
     
     const [activeTab, setActiveTab] = useState<'compte' | 'améliorations'>('compte');
     const [activeAccountTab, setActiveAccountTab] = useState<'savings' | 'loan'>('savings');
+
+    const accountScrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(accountScrollableRef);
+    const upgradesScrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(upgradesScrollableRef);
 
     const renderBankUI = () => (
         <>
@@ -55,7 +61,7 @@ const BankSection: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                    <div className="flex-grow overflow-y-auto no-scrollbar pr-2">
+                    <div ref={accountScrollableRef} className="flex-grow overflow-y-auto no-scrollbar pr-2 scroll-contain">
                         {activeAccountTab === 'savings' && (
                             <SavingsPanel 
                                 savingsBalance={savingsBalance}
@@ -81,7 +87,7 @@ const BankSection: React.FC = () => {
             )}
             
             {activeTab === 'améliorations' && (
-                <div className="flex-grow overflow-y-auto custom-scrollbar-bank pr-2">
+                <div ref={upgradesScrollableRef} className="flex-grow overflow-y-auto custom-scrollbar-bank pr-2 scroll-contain">
                     <UpgradesPanel 
                         bankLevel={bankLevel}
                         energy={energy}

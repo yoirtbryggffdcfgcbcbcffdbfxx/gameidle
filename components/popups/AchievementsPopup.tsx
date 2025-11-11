@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Achievement } from '../../types';
 import AchievementCard from '../ui/AchievementCard';
+import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
 
 interface AchievementsPopupProps {
     achievements: Achievement[];
@@ -15,6 +16,8 @@ interface AchievementsPopupProps {
 
 const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, achievementBonuses }) => {
     const unlockedCount = achievements.filter(a => a.unlocked).length;
+    const scrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(scrollableRef);
 
     const bonusLabels = {
         production: "Production",
@@ -50,7 +53,7 @@ const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, ach
                         })}
                     </div>
                 </div>
-                <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar mt-4">
+                <div ref={scrollableRef} className="flex-grow overflow-y-auto pr-2 custom-scrollbar mt-4 scroll-contain">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                         {achievements.map((ach) => (
                             <AchievementCard key={ach.name} achievement={ach} />

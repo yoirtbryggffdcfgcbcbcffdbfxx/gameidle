@@ -14,9 +14,10 @@ interface UpgradeItemProps {
     efficiencyPercentage?: number;
     isMostEfficient: boolean;
     showEfficiencyPercentage: boolean;
+    isNew?: boolean;
 }
 
-const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber, energy, costMultiplier, buyAmount, efficiencyPercentage, isMostEfficient, showEfficiencyPercentage }) => {
+const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber, energy, costMultiplier, buyAmount, efficiencyPercentage, isMostEfficient, showEfficiencyPercentage, isNew }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [isOnScreen, setIsOnScreen] = useState(false);
 
@@ -114,7 +115,7 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
     const buttonShadow = isUltimate ? 'hover:shadow-black/50' : 'hover:shadow-white/50';
 
     const containerClasses = [
-        "bg-[var(--bg-upgrade)] p-1 my-0.5 rounded-lg w-[98%] mx-auto shadow-lg relative transition-all duration-500",
+        "bg-[var(--bg-upgrade)] p-2 my-0.5 rounded-lg w-[98%] mx-auto shadow-lg relative transition-all duration-500",
         isMostEfficient ? 'border-2 border-green-500 shadow-[0_0_15px_rgba(74,222,128,0.7)]' : 'border-2 border-transparent',
         'opacity-0 translate-y-5',
         isOnScreen ? 'opacity-100 translate-y-0' : '',
@@ -129,7 +130,10 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
 
     return (
         <div ref={containerRef} id={id} className={containerClasses}>
-            <div className="flex justify-between items-center flex-wrap gap-1">
+            {isNew && (
+                <div className="absolute -left-1 top-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse-red" title="Nouvelle amélioration disponible !"></div>
+            )}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                 <div className="flex-grow">
                     <strong style={{ color: upgrade.color, textShadow: '1px 1px 1px #000' }}>
                         {upgrade.name} <span className="text-xs opacity-80">({effectText})</span>
@@ -150,12 +154,12 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
                     onClick={onBuy} 
                     style={{ background: isMaxLevel ? '#555' : (canAfford ? upgrade.color : '#444') }} 
                     disabled={isButtonDisabled}
-                    className={`${buttonTextColor} px-2 py-0.5 rounded-md transition-all text-xs ${buttonDynamicClasses}`}
+                    className={`${buttonTextColor} px-6 sm:px-2 py-1.5 sm:py-0.5 rounded-md transition-all text-xs ${buttonDynamicClasses} w-auto self-center sm:self-auto`}
                 >
                     {buttonText()}
                 </button>
             </div>
-            <div className="h-1.5 rounded-md bg-[#222] overflow-hidden mt-1">
+            <div className="h-1.5 rounded-md bg-[#222] overflow-hidden mt-2">
                 <div className="h-full rounded-md bg-gradient-to-r from-[#00ccff] to-[#0044ff] transition-all duration-300" style={{ width: `${Math.min((upgrade.owned / MAX_UPGRADE_LEVEL) * 100, 100)}%` }}></div>
             </div>
         </div>

@@ -1,7 +1,15 @@
-import { useEffect, useRef } from 'react';
+// hooks/ui/useDragToScroll.ts
+// FIX: Import React to provide namespace for types.
+import React, { useEffect, useRef } from 'react';
 
 export const useDragToScroll = (ref: React.RefObject<HTMLElement>) => {
     useEffect(() => {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // On mobile, native scrolling is a much better experience than JS-based dragging.
+        if (isTouchDevice) {
+            return;
+        }
+
         const el = ref.current;
         if (!el) return;
 
@@ -9,13 +17,12 @@ export const useDragToScroll = (ref: React.RefObject<HTMLElement>) => {
         let startY: number;
         let scrollTop: number;
 
-        const handleMouseDown = (e: MouseEvent | TouchEvent) => {
+        const handleMouseDown = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             // Ignore clicks on nav or buttons to allow their default behavior
             if (target.closest('nav') || target.closest('button')) return;
             isDown = true;
-            const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
-            startY = pageY - el.offsetTop;
+            startY = e.pageY - el.offsetTop;
             scrollTop = el.scrollTop;
             el.style.cursor = 'grabbing';
         };
@@ -23,11 +30,10 @@ export const useDragToScroll = (ref: React.RefObject<HTMLElement>) => {
             isDown = false;
             el.style.cursor = 'grab';
         };
-        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+        const handleMouseMove = (e: MouseEvent) => {
             if (!isDown) return;
             e.preventDefault();
-            const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
-            const y = pageY - el.offsetTop;
+            const y = e.pageY - el.offsetTop;
             const walk = (y - startY) * 2; // Multiplier for faster scrolling
             el.scrollTop = scrollTop - walk;
         };
@@ -38,19 +44,11 @@ export const useDragToScroll = (ref: React.RefObject<HTMLElement>) => {
         el.addEventListener('mouseup', handleMouseLeaveOrUp);
         el.addEventListener('mousemove', handleMouseMove);
         
-        // Touch events for mobile
-        el.addEventListener('touchstart', handleMouseDown, { passive: true });
-        el.addEventListener('touchend', handleMouseLeaveOrUp);
-        el.addEventListener('touchmove', handleMouseMove, { passive: false });
-
         return () => {
             el.removeEventListener('mousedown', handleMouseDown);
             el.removeEventListener('mouseleave', handleMouseLeaveOrUp);
             el.removeEventListener('mouseup', handleMouseLeaveOrUp);
             el.removeEventListener('mousemove', handleMouseMove);
-            el.removeEventListener('touchstart', handleMouseDown);
-            el.removeEventListener('touchend', handleMouseLeaveOrUp);
-            el.removeEventListener('touchmove', handleMouseMove);
             el.style.cursor = 'default';
         };
     }, [ref]);

@@ -28,7 +28,7 @@ const DevPanel: React.FC<DevPanelProps> = ({
                 <button onClick={closePanel} className="text-sm hover:text-red-500">X</button>
             </div>
             <div className="flex flex-col">
-                <button onClick={addEnergy} className={buttonStyle}>Max Énergie pour Ascension</button>
+                <button onClick={addEnergy} className={buttonStyle}>Remplir Barre Énergie</button>
                 <button onClick={() => addSpecificEnergy(100000)} className={buttonStyle}>+100k Énergie (Bank)</button>
                 <button onClick={addAscension} className={buttonStyle}>+1 Lvl / +10 Pts Asc.</button>
                 <button onClick={unlockAllUpgrades} className={buttonStyle}>+10 All Upgrades</button>

@@ -1,5 +1,7 @@
 import { CoreUpgrade } from '../types';
 
+export const CORE_UNLOCK_TOTAL_ENERGY = 10000;
+
 export const CORE_UPGRADES: CoreUpgrade[] = [
     // Center
     { id: 'core_start', name: 'Noyau Actif', description: 'Le cœur quantique est en ligne.', cost: 0, effect: { type: 'CORE_CHARGE_RATE', value: 0 }, required: [], position: { angle: 0, radius: 0 } },

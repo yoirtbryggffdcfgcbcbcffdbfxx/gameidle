@@ -1,16 +1,24 @@
-import { useCallback, useRef } from 'react';
+// hooks/state/usePrestigeState.ts
+// FIX: Import React to provide namespace for types.
+import React, { useCallback, useRef, useEffect } from 'react';
 import { GameState } from '../../types';
 // FIX: Import missing constants and helpers to resolve reference errors.
 import { ASCENSION_UPGRADES } from '../../data/ascension';
-import { CORE_UPGRADES } from '../../data/core';
 import { MAX_UPGRADE_LEVEL, CORE_CHARGE_RATE, CORE_DISCHARGE_DURATION, TICK_RATE } from '../../constants';
 import { getInitialState } from '../../utils/helpers';
+import { QUANTUM_PATHS } from '../../data/quantumPaths';
 
 type CheckAchievementFn = (name: string, condition: boolean) => void;
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
+type ResetViewedCategoriesFn = () => void;
 
-export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement: CheckAchievementFn) => {
+export const usePrestigeState = (
+    setGameState: SetGameStateFn,
+    checkAchievement: CheckAchievementFn,
+    resetViewedCategories: ResetViewedCategoriesFn
+) => {
     const dischargeTimer = useRef<number | null>(null);
+    const lastKnownNewUpgradeCount = useRef(0);
 
     const getComputed = (gameState: GameState) => {
         const ascensionBonuses = { productionMultiplier: 1, clickMultiplier: 1, costReduction: 1, startingEnergy: 0 };
@@ -36,17 +44,19 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
             }
         });
         
-        const coreBonuses = { chargeRate: 1, multiplier: 2, duration: CORE_DISCHARGE_DURATION };
-        gameState.purchasedCoreUpgrades.forEach(id => {
-            const upgrade = CORE_UPGRADES.find(u => u.id === id);
-            if (upgrade) {
-                switch(upgrade.effect.type) {
-                    case 'CORE_CHARGE_RATE': coreBonuses.chargeRate += upgrade.effect.value; break;
-                    case 'CORE_BOOST_MULTIPLIER': coreBonuses.multiplier += upgrade.effect.value; break;
-                    case 'CORE_BOOST_DURATION': coreBonuses.duration += upgrade.effect.value; break;
+        const coreBonuses = { chargeRate: 1, multiplier: 5, duration: CORE_DISCHARGE_DURATION };
+        
+        // From new Quantum Path system
+        if (gameState.chosenQuantumPath) {
+            const pathData = QUANTUM_PATHS[gameState.chosenQuantumPath];
+            for (let i = 0; i < gameState.quantumPathLevel; i++) {
+                const upgrade = pathData.upgrades[i];
+                if (upgrade) {
+                    if (upgrade.effects.rate) coreBonuses.chargeRate += upgrade.effects.rate;
+                    if (upgrade.effects.multiplier) coreBonuses.multiplier += upgrade.effects.multiplier;
                 }
             }
-        });
+        }
 
         const costMultiplier = ascensionBonuses.costReduction * achievementBonuses.costReduction;
         
@@ -82,6 +92,22 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
             .filter(({ upgradeData }) => upgradeData.unlockCost <= gameState.energy || upgradeData.owned > 0)
             .filter(({ upgradeData }) => upgradeData.requiredAscension <= gameState.ascensionLevel);
 
+        const newlyVisibleUpgradeIds = visibleUpgrades
+            .map(u => u.upgradeData.id)
+            .filter(id => !gameState.seenUpgrades.includes(id));
+
+        const newlyVisibleUpgradeTypes = new Set<string>();
+        if (newlyVisibleUpgradeIds.length > 0) {
+            const newUpgrades = visibleUpgrades.filter(u => newlyVisibleUpgradeIds.includes(u.upgradeData.id));
+            newUpgrades.forEach(u => newlyVisibleUpgradeTypes.add(u.upgradeData.type));
+        }
+        
+        const finalChargeRatePerSecond = CORE_CHARGE_RATE * coreBonuses.chargeRate * achievementBonuses.coreCharge;
+        const remainingCharge = 100 - gameState.coreCharge;
+        const timeToFullSeconds = remainingCharge > 0 && finalChargeRatePerSecond > 0
+            ? remainingCharge / finalChargeRatePerSecond
+            : 0;
+
         return {
             ascensionBonuses,
             achievementBonuses,
@@ -94,8 +120,28 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
             visibleUpgrades,
             unlockedUpgradesAtMaxLevelCount,
             unlockedUpgradesForCurrentAscensionCount: unlockedUpgradesForCurrentAscension.length,
+            newlyVisibleUpgradeIds,
+            newlyVisibleUpgradeTypes,
+            timeToFullSeconds,
         };
     };
+
+    // Effect to reset viewed categories when new upgrades appear
+    useEffect(() => {
+        setGameState(prev => {
+            const { newlyVisibleUpgradeIds } = getComputed(prev);
+            if (newlyVisibleUpgradeIds.length > 0 && lastKnownNewUpgradeCount.current === 0) {
+                // New upgrades just appeared, reset the viewed tabs
+                lastKnownNewUpgradeCount.current = newlyVisibleUpgradeIds.length;
+                return { ...prev, viewedCategories: [] };
+            } else if (newlyVisibleUpgradeIds.length === 0 && lastKnownNewUpgradeCount.current > 0) {
+                // All new upgrades have been seen, reset the counter for the next batch
+                lastKnownNewUpgradeCount.current = 0;
+            }
+            return prev;
+        });
+    }, [setGameState, getComputed]);
+
 
     const doAscension = useCallback((): boolean => {
         let success = false;
@@ -115,10 +161,9 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
                 energy: ascensionBonuses.startingEnergy,
                 ascensionLevel: nextAscensionLevel,
                 ascensionPoints: prev.ascensionPoints + ascensionGain,
-                quantumShards: prev.quantumShards + ascensionGain,
+                quantumShards: prev.quantumShards, // Les fragments ne sont plus gagnés par l'ascension
                 achievements: prev.achievements,
                 purchasedAscensionUpgrades: prev.purchasedAscensionUpgrades,
-                purchasedCoreUpgrades: prev.purchasedCoreUpgrades,
                 purchasedShopUpgrades: prev.purchasedShopUpgrades,
                 hasSeenAscensionTutorial: true,
                 hasSeenCoreTutorial: prev.hasSeenCoreTutorial,
@@ -126,10 +171,18 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
                 totalClicks: prev.totalClicks,
                 isBankUnlocked: prev.isBankUnlocked,
                 bankLevel: prev.bankLevel,
+                seenUpgrades: prev.seenUpgrades,
+                viewedCategories: [], // Reset viewed categories on ascension
+                // Preserve Quantum Path progress
+                chosenQuantumPath: prev.chosenQuantumPath,
+                quantumPathLevel: prev.quantumPathLevel,
             };
         });
+        if (success) {
+            resetViewedCategories();
+        }
         return success;
-    }, [setGameState, checkAchievement]);
+    }, [setGameState, checkAchievement, resetViewedCategories, getComputed]);
     
     const buyAscensionUpgrade = useCallback((id: string): boolean => {
         const upgrade = ASCENSION_UPGRADES.find(u => u.id === id);
@@ -140,21 +193,6 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
                 success = true;
                 if (prev.purchasedAscensionUpgrades.length === 1) checkAchievement("Première Transcendance", true);
                 return { ...prev, ascensionPoints: prev.ascensionPoints - upgrade.cost, purchasedAscensionUpgrades: [...prev.purchasedAscensionUpgrades, id] };
-            }
-            return prev;
-        });
-        return success;
-    }, [setGameState, checkAchievement]);
-
-    const buyCoreUpgrade = useCallback((id: string): boolean => {
-        const upgrade = CORE_UPGRADES.find(u => u.id === id);
-        if (!upgrade || upgrade.cost === 0) return false;
-        let success = false;
-        setGameState(prev => {
-            if (prev.quantumShards >= upgrade.cost && !prev.purchasedCoreUpgrades.includes(id) && upgrade.required.every(req => prev.purchasedCoreUpgrades.includes(req))) {
-                success = true;
-                if (prev.purchasedCoreUpgrades.length === 1) checkAchievement("Noyau Amélioré", true);
-                return { ...prev, quantumShards: prev.quantumShards - upgrade.cost, purchasedCoreUpgrades: [...prev.purchasedCoreUpgrades, id] };
             }
             return prev;
         });
@@ -177,7 +215,7 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
             return prev;
         });
         return success;
-    }, [setGameState]);
+    }, [setGameState, getComputed]);
 
     const setHasSeenCoreTutorial = useCallback((seen: boolean) => {
         setGameState(prev => ({ ...prev, hasSeenCoreTutorial: seen }));
@@ -197,6 +235,6 @@ export const usePrestigeState = (setGameState: SetGameStateFn, checkAchievement:
             }
             return newCoreCharge;
         },
-        actions: { doAscension, buyAscensionUpgrade, buyCoreUpgrade, dischargeCore, setHasSeenCoreTutorial },
+        actions: { doAscension, buyAscensionUpgrade, dischargeCore, setHasSeenCoreTutorial },
     };
 };

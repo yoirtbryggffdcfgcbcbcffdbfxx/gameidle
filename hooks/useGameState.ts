@@ -9,6 +9,7 @@ import { usePrestigeState } from './state/usePrestigeState';
 import { useBankState } from './state/useBankState';
 import { useShopState } from './state/useShopState';
 import { useAchievements } from './state/useAchievements';
+import { useQuantumCoreState } from './state/useQuantumCoreState';
 
 export const useGameState = (
     onAchievementUnlock: (achievement: Achievement) => void,
@@ -28,11 +29,20 @@ export const useGameState = (
                     ...initialState,
                     ...loadedData,
                     purchasedAscensionUpgrades: [...new Set(['start', ...(loadedData.purchasedAscensionUpgrades || [])])],
+                    // FIX: Ensure purchasedCoreUpgrades from save data is loaded correctly.
                     purchasedCoreUpgrades: [...new Set(['core_start', ...(loadedData.purchasedCoreUpgrades || [])])],
                     achievements: initialState.achievements.map(initialAch => {
                         const savedAch = loadedData.achievements?.find((sa: Achievement) => sa.name === initialAch.name);
                         return { ...initialAch, ...(savedAch || {}) };
                     }),
+                    seenUpgrades: loadedData.seenUpgrades || [],
+                    viewedCategories: loadedData.viewedCategories || [],
+                    isShopUnlocked: loadedData.isShopUnlocked || false,
+                    isCoreUnlocked: loadedData.isCoreUnlocked || false,
+                    hasUnseenShopItems: loadedData.hasUnseenShopItems || false,
+                    chosenQuantumPath: loadedData.chosenQuantumPath || null,
+                    quantumPathLevel: loadedData.quantumPathLevel || 0,
+                    hasInteractedWithQuantumCore: loadedData.hasInteractedWithQuantumCore || false,
                 };
                 setGameState(mergedState);
             }
@@ -51,15 +61,13 @@ export const useGameState = (
         }
     }, [gameState]);
     
-    // FIX: Removed redundant autosave logic. This is now handled in `useGameEngine`.
-
-
     // --- State Management Hooks ---
     const achievementsManager = useAchievements(setGameState, onAchievementUnlock);
     const playerState = usePlayerState(setGameState, achievementsManager.checkAchievement);
-    const prestigeState = usePrestigeState(setGameState, achievementsManager.checkAchievement);
+    const prestigeState = usePrestigeState(setGameState, achievementsManager.checkAchievement, playerState.actions.resetViewedCategories);
     const bankState = useBankState(setGameState, achievementsManager.unlockAchievement);
     const shopState = useShopState(setGameState);
+    const quantumCoreState = useQuantumCoreState(setGameState, achievementsManager.checkAchievement);
 
     const resetGame = useCallback((hardReset: boolean) => {
         if (hardReset) {
@@ -105,6 +113,7 @@ export const useGameState = (
             ...prestigeState.actions,
             ...bankState.actions,
             ...shopState.actions,
+            ...quantumCoreState.actions,
             unlockAchievement: achievementsManager.unlockAchievement,
             resetGame,
         },

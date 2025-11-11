@@ -10,6 +10,7 @@ type PrestigeHandlersProps = {
     settings: Settings;
     popups: ReturnType<typeof usePopupManager>;
     playSfx: (sound: 'buy' | 'click') => void;
+    addParticle: (x: number, y: number, color: string) => void;
     addNotification: (message: string, type: Notification['type'], options?: { title?: string; achievement?: Achievement }) => void;
     setShowCoreTutorial: React.Dispatch<React.SetStateAction<boolean>>;
 };
@@ -21,6 +22,7 @@ export const usePrestigeHandlers = ({
     settings,
     popups,
     playSfx,
+    addParticle,
     addNotification,
     setShowCoreTutorial,
 }: PrestigeHandlersProps) => {
@@ -43,8 +45,19 @@ export const usePrestigeHandlers = ({
         }
     };
     
-    const onDischargeCore = () => {
+    const onDischargeCore = (e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
         if (actions.dischargeCore()) {
+            let x: number, y: number;
+            if ('touches' in e) { // TouchEvent
+                x = e.touches[0].clientX;
+                y = e.touches[0].clientY;
+            } else { // MouseEvent
+                x = e.clientX;
+                y = e.clientY;
+            }
+            addParticle(x, y, '#ff00c8'); // Magenta discharge particles
+
             playSfx('buy'); // Use a powerful sound
             if (!gameState.hasSeenCoreTutorial) {
                 setShowCoreTutorial(true);
@@ -65,20 +78,10 @@ export const usePrestigeHandlers = ({
         }
     };
 
-    const onBuyCoreUpgrade = (id: string) => {
-        if (actions.buyCoreUpgrade(id)) {
-            playSfx('buy');
-            addNotification("Réacteur du cœur amélioré !", 'info');
-        } else {
-            addNotification("Pas assez de fragments quantiques !", 'error');
-        }
-    };
-
     return {
         onAscend,
         onConfirmAscension,
         onDischargeCore,
         onBuyAscensionUpgrade,
-        onBuyCoreUpgrade,
     };
 };

@@ -1,4 +1,6 @@
-import { useCallback } from 'react';
+// hooks/state/usePlayerState.ts
+// FIX: Import React to provide namespace for types.
+import React, { useCallback } from 'react';
 import { GameState } from '../../types';
 import { MAX_UPGRADE_LEVEL } from '../../constants';
 import { ASCENSION_UPGRADES } from '../../data/ascension';
@@ -56,9 +58,32 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
             checkAchievement("Magnat de la Technologie", totalUpgradesOwned >= 750);
             checkAchievement("Souverain Galactique", totalUpgradesOwned >= 1500);
 
-            return { ...prev, energy: prev.energy - totalCost, upgrades: newUpgrades };
+            // Mark the upgrade as "seen" upon purchase
+            const newSeenUpgrades = prev.seenUpgrades.includes(upgrade.id) 
+                ? prev.seenUpgrades 
+                : [...prev.seenUpgrades, upgrade.id];
+
+            return { 
+                ...prev, 
+                energy: prev.energy - totalCost, 
+                upgrades: newUpgrades,
+                seenUpgrades: newSeenUpgrades,
+            };
         });
     }, [setGameState, checkAchievement]);
+
+    const markCategoryAsViewed = useCallback((category: string) => {
+        setGameState(prev => {
+            if (prev.viewedCategories.includes(category) || category === 'all') {
+                return prev;
+            }
+            return { ...prev, viewedCategories: [...prev.viewedCategories, category] };
+        });
+    }, [setGameState]);
+
+    const resetViewedCategories = useCallback(() => {
+        setGameState(prev => ({ ...prev, viewedCategories: [] }));
+    }, [setGameState]);
 
     const getComputed = (gameState: GameState) => {
         const clickPowerFromUpgrades = gameState.upgrades
@@ -72,6 +97,8 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
         actions: {
             incrementClickCount,
             buyUpgrade,
+            markCategoryAsViewed,
+            resetViewedCategories,
         },
         getComputed,
     };

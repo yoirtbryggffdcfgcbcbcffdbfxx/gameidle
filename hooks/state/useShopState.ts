@@ -1,6 +1,9 @@
-import { useCallback } from 'react';
+// hooks/state/useShopState.ts
+// FIX: Import React to provide namespace for types.
+import React, { useCallback } from 'react';
 import { GameState } from '../../types';
 import { SHOP_UPGRADES } from '../../data/shop';
+import { getNextFragmentCost } from '../../data/quantumFragments';
 
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 
@@ -33,10 +36,37 @@ export const useShopState = (setGameState: SetGameStateFn) => {
             return prev;
         });
     }, [setGameState]);
+
+    const buyQuantumShard = useCallback((): void => {
+        setGameState(prev => {
+            if (!prev.isCoreUnlocked) return prev; // Safety check
+            
+            const cost = getNextFragmentCost(prev.quantumShards);
+            if (prev.energy >= cost) {
+                return {
+                    ...prev,
+                    energy: prev.energy - cost,
+                    quantumShards: prev.quantumShards + 1,
+                };
+            }
+            return prev;
+        });
+    }, [setGameState]);
+
+    const markShopItemsAsSeen = useCallback(() => {
+        setGameState(prev => {
+            if (prev.hasUnseenShopItems) {
+                return { ...prev, hasUnseenShopItems: false };
+            }
+            return prev;
+        });
+    }, [setGameState]);
     
     return {
         actions: {
             buyShopUpgrade,
+            buyQuantumShard,
+            markShopItemsAsSeen,
         },
     };
 };

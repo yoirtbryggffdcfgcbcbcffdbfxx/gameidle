@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+// hooks/ui/useRevealOnScroll.ts
+// FIX: Import React to provide namespace for types.
+import React, { useEffect } from 'react';
 
 export const useRevealOnScroll = (selector: string, dependencies: React.DependencyList = []) => {
     useEffect(() => {

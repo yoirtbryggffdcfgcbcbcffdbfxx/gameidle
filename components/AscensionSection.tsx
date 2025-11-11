@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import SkillTree from './ui/SkillTree';
 import { ASCENSION_UPGRADES } from '../data/ascension';
 import { useGameContext } from '../contexts/GameContext';
 import SectionHeader from './ui/SectionHeader';
+import { useDragToScroll } from '../hooks/ui/useDragToScroll';
 
 const AscensionSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber } = useGameContext();
@@ -11,6 +12,8 @@ const AscensionSection: React.FC = () => {
     const { onAscend, onBuyAscensionUpgrade } = handlers;
     
     const isFirstAscension = ascensionLevel === 0;
+    const scrollableTreeRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(scrollableTreeRef);
 
     return (
         <section id="ascension-portal" className="fullscreen-section reveal">
@@ -54,7 +57,7 @@ const AscensionSection: React.FC = () => {
                     <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col md:col-span-2">
                          <h3 className="text-lg text-yellow-400 mb-2">Arbre d'Ascension</h3>
                          <p className="text-sm mb-2">Vous avez <strong className="text-yellow-400">{ascensionPoints}</strong> points.</p>
-                         <div className="flex-grow overflow-auto custom-scrollbar pr-1 relative">
+                         <div ref={scrollableTreeRef} className="flex-grow overflow-auto custom-scrollbar pr-1 relative scroll-contain">
                             <SkillTree
                                 upgrades={ASCENSION_UPGRADES}
                                 purchasedIds={purchasedAscensionUpgrades}

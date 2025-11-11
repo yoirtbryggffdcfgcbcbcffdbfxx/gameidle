@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { CORE_UPGRADES } from '../data/core';
-import QuantumCore from './QuantumCore';
 import SkillTree from './ui/SkillTree';
 import { useGameContext } from '../contexts/GameContext';
 import SectionHeader from './ui/SectionHeader';
+import { useDragToScroll } from '../hooks/ui/useDragToScroll';
 
 const ReactorSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber } = useGameContext();
-    // FIX: Get `coreBonuses` from computed state, not game state.
-    const { quantumShards, purchasedCoreUpgrades, coreCharge, isCoreDischarging, energy } = gameState;
-    const { coreBonuses } = computedState;
-    const { onBuyCoreUpgrade, onDischargeCore } = handlers;
+    const { quantumShards, purchasedCoreUpgrades, energy } = gameState;
+    const { onBuyCoreUpgrade } = handlers;
+    const scrollableTreeRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(scrollableTreeRef);
     
     return (
         <section id="reactor" className="fullscreen-section reveal">
@@ -21,7 +21,7 @@ const ReactorSection: React.FC = () => {
                     <div className="w-full h-full bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col">
                          <h3 className="text-lg text-center text-cyan-400 mb-2">Arbre de Calibration du Cœur</h3>
                          <p className="text-sm text-center mb-2">Vous avez <strong className="text-purple-400">{quantumShards}</strong> Fragments Quantiques.</p>
-                         <div className="flex-grow overflow-auto custom-scrollbar pr-1 relative min-h-[300px]">
+                         <div ref={scrollableTreeRef} className="flex-grow overflow-auto custom-scrollbar pr-1 relative min-h-[300px] scroll-contain">
                             <SkillTree 
                                 upgrades={CORE_UPGRADES}
                                 purchasedIds={purchasedCoreUpgrades}
@@ -29,15 +29,7 @@ const ReactorSection: React.FC = () => {
                                 currency={quantumShards}
                                 currencyType="FQ"
                                 themeColor="purple"
-                            >
-                                 <QuantumCore
-                                    charge={coreCharge}
-                                    isDischarging={isCoreDischarging}
-                                    onDischarge={onDischargeCore}
-                                    multiplier={coreBonuses.multiplier}
-                                    size={160}
-                                />
-                            </SkillTree>
+                            />
                          </div>
                     </div>
 

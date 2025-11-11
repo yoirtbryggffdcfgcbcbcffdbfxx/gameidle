@@ -29,13 +29,23 @@ export const usePlayerHandlers = ({
     addNotification,
 }: PlayerHandlersProps) => {
 
-    const onCollect = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const onCollect = (e: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
+        e.preventDefault();
         playSfx('click');
         const clickPower = computed.clickPower;
         actions.incrementClickCount(clickPower);
         
-        addParticle(e.clientX, e.clientY, PARTICLE_COLORS.CLICK);
-        addFloatingText(`+${formatNumber(clickPower, settings.scientificNotation)}`, e.clientX, e.clientY, '#ffffff');
+        let x: number, y: number;
+        if ('touches' in e) { // TouchEvent
+            x = e.touches[0].clientX;
+            y = e.touches[0].clientY;
+        } else { // MouseEvent
+            x = e.clientX;
+            y = e.clientY;
+        }
+
+        addParticle(x, y, PARTICLE_COLORS.CLICK);
+        addFloatingText(`+${formatNumber(clickPower, settings.scientificNotation)}`, x, y, '#ffffff');
         actions.unlockAchievement("Étincelle Initiale");
 
         if (popups.tutorialStep === 1) {
@@ -48,13 +58,8 @@ export const usePlayerHandlers = ({
         const { costMultiplier } = computed;
         const { numToBuy } = calculateBulkBuy(upgrade, amount, gameState.energy, costMultiplier);
 
-        // This check provides immediate feedback to the user based on the current UI state.
-        // The authoritative check is still inside the `buyUpgrade` action to prevent race conditions.
         if (numToBuy > 0) {
-            // Fire-and-forget the action.
             actions.buyUpgrade(index, amount);
-
-            // Provide optimistic success feedback.
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
             actions.unlockAchievement("Premier Investissement");
@@ -69,5 +74,6 @@ export const usePlayerHandlers = ({
     return {
         onCollect,
         onBuyUpgrade,
+        markCategoryAsViewed: actions.markCategoryAsViewed,
     };
 };

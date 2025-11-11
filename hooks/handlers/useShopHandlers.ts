@@ -1,6 +1,7 @@
 import { GameState } from '../../types';
 import { SHOP_UPGRADES } from '../../data/shop';
 import { useGameState } from '../useGameState';
+import { getNextFragmentCost } from '../../data/quantumFragments';
 
 type ShopHandlersProps = {
     gameState: GameState;
@@ -37,8 +38,20 @@ export const useShopHandlers = ({
             addNotification(`Pas assez ${currencyName} !`, 'error');
         }
     };
+
+    const onBuyQuantumShard = () => {
+        const cost = getNextFragmentCost(gameState.quantumShards);
+        if (gameState.energy >= cost) {
+            actions.buyQuantumShard();
+            playSfx('buy');
+            addNotification('1 Fragment Quantique acheté !', 'info');
+        } else {
+            addNotification("Pas assez d'énergie pour acheter le fragment.", 'error');
+        }
+    };
     
     return {
         onBuyShopUpgrade,
+        onBuyQuantumShard,
     };
 };

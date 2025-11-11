@@ -1,4 +1,6 @@
-import { useCallback } from 'react';
+// hooks/state/useAchievements.ts
+// FIX: Import React to provide namespace for types.
+import React, { useCallback } from 'react';
 import { GameState, Achievement } from '../../types';
 import { INITIAL_ACHIEVEMENTS } from '../../data/achievements';
 

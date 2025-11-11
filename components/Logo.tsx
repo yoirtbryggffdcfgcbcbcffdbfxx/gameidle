@@ -6,7 +6,7 @@ const Logo: React.FC = () => {
              <h1 className="absolute -top-8 left-1/2 -translate-x-1/2 mt-0 text-2xl text-[var(--text-header)] [text-shadow:1px_1px_#000]">
                 Quantum Core
             </h1>
-            <svg viewBox="0 0 200 200" className="w-full h-full animate-float">
+            <svg viewBox="0 0 200 200" className="w-full h-full animate-slow-rotate">
                 <defs>
                     <radialGradient id="coreGradient">
                         <stop offset="0%" stopColor="#00ffff" />

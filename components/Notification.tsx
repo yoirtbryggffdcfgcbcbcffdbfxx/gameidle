@@ -58,17 +58,17 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onD
     
     return (
         <div
-            className={`relative w-full p-2 rounded-lg border-l-4 shadow-2xl overflow-hidden ${style.borderColor} ${style.bgColor} ${animationClass}`}
+            className={`relative w-full p-1 sm:p-2 rounded-lg border-l-4 shadow-2xl overflow-hidden ${style.borderColor} ${style.bgColor} ${animationClass}`}
             onMouseEnter={pauseTimer}
             onMouseLeave={resumeTimer}
         >
             <div className="flex items-start">
-                <span className="text-lg mr-2">{style.icon}</span>
+                <span className="text-sm sm:text-lg mr-1.5 sm:mr-2">{style.icon}</span>
                 <div>
-                    <h4 className={`font-bold text-xs ${style.titleColor}`}>{title}</h4>
-                    <p className="text-white text-xs leading-tight">{notification.type === 'achievement' ? notification.achievement?.name : notification.message}</p>
+                    <h4 className={`font-bold text-[10px] sm:text-xs leading-tight ${style.titleColor}`}>{title}</h4>
+                    <p className="text-white text-[10px] sm:text-xs leading-tight">{notification.type === 'achievement' ? notification.achievement?.name : notification.message}</p>
                     {notification.type === 'achievement' && (
-                        <p className="text-[10px] text-gray-300 mt-0.5 leading-tight">{notification.achievement?.description}</p>
+                        <p className="text-[8px] sm:text-[10px] text-gray-300 mt-0.5 leading-tight">{notification.achievement?.description}</p>
                     )}
                 </div>
             </div>

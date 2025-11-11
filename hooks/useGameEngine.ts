@@ -1,10 +1,13 @@
+
+
 import { useMemo, useCallback, useEffect, useState } from 'react';
-import { Achievement } from '../types';
+import { Achievement, QuantumPathType } from '../types';
 
 // Main State & Logic
 import { useGameState } from './useGameState';
 import { useGameLoop } from './useGameLoop';
 import { useTutorialTriggers } from './useTutorialTriggers';
+
 
 // App Flow & Settings
 import { useAppFlow } from './useAppFlow';
@@ -25,6 +28,7 @@ import { usePlayerHandlers } from './handlers/usePlayerHandlers';
 import { usePrestigeHandlers } from './handlers/usePrestigeHandlers';
 import { useBankHandlers } from './handlers/useBankHandlers';
 import { useShopHandlers } from './handlers/useShopHandlers';
+import { QUANTUM_PATHS } from '../data/quantumPaths';
 
 export const useGameEngine = () => {
     // --- 1. Foundational Hooks (State, Settings, UI Systems) ---
@@ -59,6 +63,10 @@ export const useGameEngine = () => {
         prestigeState, 
         bankState 
     } = useGameState(onAchievementUnlock, appState, loadStatus);
+    
+    const [activeView, setActiveView] = useState<'main' | 'quantum_core' | 'quantum_path'>('main');
+    const [showQuantumPathConfirm, setShowQuantumPathConfirm] = useState(false);
+    const [pathChoiceToConfirm, setPathChoiceToConfirm] = useState<QuantumPathType | null>(null);
 
     // --- 2. Memoized Values & Callbacks ---
 
@@ -88,6 +96,28 @@ export const useGameEngine = () => {
         () => popups.setShowAscensionTutorial(true),
         () => popups.setShowBankTutorial(true)
     );
+
+    // NEW: Trigger popups based on state changes from the game loop
+    useEffect(() => {
+        if (gameState.isShopUnlocked) {
+            popups.setShowShopTutorial(true);
+        }
+    }, [gameState.isShopUnlocked, popups.setShowShopTutorial]);
+
+    useEffect(() => {
+        if (gameState.isCoreUnlocked && !gameState.hasSeenCoreTutorial) {
+            popups.setShowCoreTutorial(true);
+            actions.setHasSeenCoreTutorial(true);
+        }
+    }, [gameState.isCoreUnlocked, gameState.hasSeenCoreTutorial, popups.setShowCoreTutorial, actions.setHasSeenCoreTutorial]);
+
+
+    // Auto-advance tutorial logic
+    useEffect(() => {
+        if (popups.tutorialStep === 2 && gameState.energy >= 15) {
+            popups.setTutorialStep(3);
+        }
+    }, [gameState.energy, popups.tutorialStep, popups.setTutorialStep]);
     
     // --- 4. Auto-save Logic ---
     useEffect(() => {
@@ -132,6 +162,7 @@ export const useGameEngine = () => {
         settings,
         popups,
         playSfx,
+        addParticle,
         addNotification,
         setShowCoreTutorial: popups.setShowCoreTutorial,
     });
@@ -151,7 +182,60 @@ export const useGameEngine = () => {
         playSfx,
         addNotification,
     });
+
+    // --- Quantum Core Interface Handlers ---
+    const enterQuantumInterface = (e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        playSfx('ui_hover');
+        actions.markQuantumCoreAsInteracted();
+        if (gameState.chosenQuantumPath) {
+            setActiveView('quantum_path');
+        } else {
+            setActiveView('quantum_core');
+        }
+    };
+
+    const exitQuantumInterface = () => {
+        playSfx('click');
+        setActiveView('main');
+    };
     
+    const onChooseQuantumPath = (path: QuantumPathType) => {
+        playSfx('click');
+        setPathChoiceToConfirm(path);
+        setShowQuantumPathConfirm(true);
+    };
+
+    const onConfirmQuantumPath = () => {
+        if (pathChoiceToConfirm) {
+            actions.setQuantumPath(pathChoiceToConfirm);
+            playSfx('buy');
+            addNotification(`Voie du ${QUANTUM_PATHS[pathChoiceToConfirm].name} choisie !`, 'info');
+            setShowQuantumPathConfirm(false);
+            setPathChoiceToConfirm(null);
+            setActiveView('quantum_path'); // Switch to the new interface
+        }
+    };
+
+    const onPurchasePathUpgrade = () => {
+        if (actions.purchasePathUpgrade()) {
+            playSfx('buy');
+            addNotification("Progression de voie acquise !", 'info');
+        } else {
+            addNotification("Pas assez de Fragments Quantiques !", 'error');
+        }
+    };
+    
+    // FIX: Add a handler for purchasing core upgrades to be passed via context.
+    const onBuyCoreUpgrade = (id: string) => {
+        if (actions.buyCoreUpgrade(id)) {
+            playSfx('buy');
+            addNotification("Calibration du cœur acquise !", 'info');
+        } else {
+            addNotification("Pas assez de Fragments Quantiques ou prérequis non remplis !", 'error');
+        }
+    };
+
     // --- 6. Dev Tools ---
     const [showDevPanel, setShowDevPanel] = useState(false);
     useEffect(() => {
@@ -187,6 +271,9 @@ export const useGameEngine = () => {
             particles,
             floatingTexts,
             showDevPanel,
+            activeView,
+            showQuantumPathConfirm,
+            pathChoiceToConfirm,
             ...popups,
         },
         
@@ -197,7 +284,14 @@ export const useGameEngine = () => {
             ...prestigeHandlers,
             ...bankHandlers,
             ...shopHandlers,
+            markShopItemsAsSeen: actions.markShopItemsAsSeen,
             onSettingsChange: handleSettingsChange,
+            enterQuantumInterface,
+            exitQuantumInterface,
+            onChooseQuantumPath,
+            onConfirmQuantumPath,
+            onPurchasePathUpgrade,
+            onBuyCoreUpgrade,
             dev, // Expose dev actions
         },
         
@@ -211,6 +305,8 @@ export const useGameEngine = () => {
         setShowDevPanel,
         setShowCoreTutorial: popups.setShowCoreTutorial,
         setShowBankTutorial: popups.setShowBankTutorial,
+        setShowShopTutorial: popups.setShowShopTutorial,
         setShowBankInfoPopup: popups.setShowBankInfoPopup,
+        setShowQuantumPathConfirm, // Expose setter
     };
 };

@@ -7,6 +7,7 @@ interface EnrichedUpgradeItem {
     originalIndex: number;
     productionContribution?: number;
     efficiencyPercentage?: number;
+    isNew?: boolean;
 }
 
 interface UpgradeListProps {
@@ -44,6 +45,7 @@ const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, forma
                     efficiencyPercentage={item.efficiencyPercentage}
                     isMostEfficient={item.upgradeData.id === mostEfficientId}
                     showEfficiencyPercentage={showEfficiencyPercentage}
+                    isNew={item.isNew}
                 />
             ))}
         </>

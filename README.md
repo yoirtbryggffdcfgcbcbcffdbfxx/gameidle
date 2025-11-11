@@ -5,13 +5,15 @@
 
 **[▶️ Jouer à Quantum Core (Lien de Démo)](https://lien-vers-votre-jeu.com)**
 
-Quantum Core est un jeu incrémental futuriste développé avec React, TypeScript, et Tailwind CSS. Les joueurs génèrent de l'énergie, achètent des améliorations, débloquent des succès, et visent l'Ascension pour débloquer de puissants bonus permanents.
+Quantum Core est un jeu incrémental futuriste développé avec React, TypeScript, et Tailwind CSS. Les joueurs génèrent de l'énergie, achètent des améliorations, débloquent des succès, et visent l'Ascension pour débloquer de puissants bonus permanents et spécialiser leur Cœur Quantique.
+
+*(Suggestion : Insérez ici une capture d'écran ou un GIF du jeu pour un impact visuel maximal.)*
 
 ## Table des Matières
 
 - [🕹️ Mécaniques de Jeu](#️-mécaniques-de-jeu)
 - [✨ Fonctionnalités Clés](#-fonctionnalités-clés)
-- [🧠 Philosophie de Conception](#-philosophie-de-conception)
+- [🧠 Architecture & Philosophie de Conception](#-architecture--philosophie-de-conception)
 - [🛠️ Stack Technique](#️-stack-technique)
 - [🚀 Démarrage Rapide](#-démarrage-rapide)
 - [🤝 Comment Contribuer & Étendre le Jeu](#-comment-contribuer--étendre-le-jeu)
@@ -23,46 +25,61 @@ Le cœur du jeu repose sur une boucle de progression satisfaisante et des décis
 
 -   **🎬 Introduction Cinématique :** Les nouveaux joueurs sont accueillis par une cinématique pour établir le ton futuriste du jeu.
 
--   **⚡ Boucle de Gameplay :** Commencez par collecter manuellement de l'énergie. Utilisez cette énergie pour acheter des améliorations qui génèrent passivement plus d'énergie. Réinvestissez vos gains pour voir votre production exploser.
+-   **⚡ Boucle de Gameplay Fondamentale :**
+    -   Commencez par collecter manuellement de l'énergie.
+    -   Utilisez cette énergie pour acheter des améliorations qui génèrent passivement plus d'énergie.
+    -   Réinvestissez vos gains pour voir votre production exploser de manière exponentielle.
 
--   **⚛️ Le Cœur Quantique :** Une mécanique centrale qui se charge avec le temps. Une fois plein, il peut être activé pour fournir un boost massif et temporaire à toute la production d'énergie, crucial pour surmonter les paliers de coût.
+-   **⚛️ Le Cœur Quantique :**
+    -   Une mécanique centrale qui se charge avec le temps.
+    -   Une fois plein, activez-le pour un **boost massif et temporaire** à toute la production d'énergie, crucial pour surmonter les paliers de coût.
 
--   **✨ Ascension (Système de Prestige) :** Lorsque vous atteignez la capacité maximale d'énergie, vous pouvez **Ascensionner**. Cette puissante réinitialisation recommence votre partie mais vous accorde deux monnaies permanentes :
-    -   **Points d'Ascension :** Dépensez-les dans un arbre de compétences dédié pour des bonus globaux puissants (plus de production, clics plus forts, coûts réduits).
-    -   **Fragments Quantiques :** Utilisez-les dans le **Réacteur** pour améliorer le Cœur Quantique, ou dans la **Boutique** pour des améliorations fonctionnelles uniques.
+-   **✨ Ascension & Fragments Quantiques :**
+    -   Lorsque vous atteignez la capacité maximale d'énergie, vous pouvez **Ascensionner**.
+    -   Cette puissante réinitialisation recommence votre partie mais vous accorde deux monnaies permanentes :
+        -   **Points d'Ascension :** Dépensez-les dans un arbre de compétences pour des bonus globaux (plus de production, clics plus forts, coûts réduits).
+        -   **Fragments Quantiques :** Achetez-les avec de l'énergie ou gagnez-les en Ascensionnant. Ils sont la clé pour améliorer le Cœur.
 
--   **🏆 Succès :** Débloquez des dizaines de succès uniques en atteignant divers jalons. Chaque succès débloqué offre un petit bonus permanent et cumulatif à vos statistiques !
+-   **🌌 Spécialisation du Cœur (Voies Quantiques) :**
+    -   Après votre première Ascension, choisissez une **Voie permanente** pour votre Cœur (Vitesse, Puissance ou Équilibre).
+    -   Utilisez les Fragments Quantiques pour progresser dans cette voie, débloquant des améliorations spécialisées pour le Cœur.
 
--   **🏦 La Banque :** Une fois un certain seuil de production atteint, débloquez la Banque Quantique. Épargnez votre énergie pour gagner des intérêts passifs ou contractez des prêts pour une croissance explosive, à vos risques et périls.
- 
--   **🛍️ La Boutique Permanente :** Dépensez vos Fragments Quantiques dans la boutique pour acheter des améliorations utilitaires qui persistent à travers toutes les ascensions, comme l'Analyseur d'Efficacité.
+-   **🏆 Succès & Bonus :**
+    -   Débloquez des dizaines de succès en atteignant divers jalons.
+    -   Chaque succès offre un petit bonus permanent et cumulatif à vos statistiques.
+
+-   **🏦 La Banque & 🛍️ La Boutique :**
+    -   Débloquez la **Banque Quantique** pour épargner votre énergie ou contracter des prêts.
+    -   Dépensez des Fragments dans la **Boutique Permanente** pour des améliorations utilitaires qui persistent à travers toutes les ascensions.
 
 ## ✨ Fonctionnalités Clés
 
 -   **🚫 Zéro-Build :** Fonctionne directement dans le navigateur sans étape de compilation, grâce aux `importmaps`.
--   **📱 Design Responsive Unifié :** Une expérience de défilement sur une seule page qui s'adapte à toutes les tailles d'écran, avec une navigation `Scrollspy` pour se déplacer facilement entre les sections.
--   **🎨 Personnalisation Visuelle :** Changez l'apparence du jeu avec plusieurs thèmes visuels à débloquer, allant du sombre et néon au cyberpunk vibrant.
--   **🧠 Tutoriel Dynamique :** Une IA de bord guide les nouveaux joueurs à travers les mécaniques de base de manière contextuelle et non intrusive.
+-   **📱 Design Adaptatif Contextuel :** Une expérience de défilement sur une seule page qui s'adapte à tous les écrans. La navigation est contextuelle : en bas sur mobile pour l'ergonomie, en haut pour les filtres, et sur le côté pour la navigation principale.
+-   **🎨 Personnalisation Visuelle :** Changez l'apparence du jeu avec plusieurs thèmes visuels.
+-   **🧠 Tutoriel IA Dynamique :** Une IA de bord guide les nouveaux joueurs à travers les mécaniques de base de manière contextuelle et non intrusive.
 -   **🏗️ Architecture Moderne :** Entièrement basé sur les Hooks React pour une logique propre et une séparation claire des préoccupations.
 
-## 🧠 Philosophie de Conception
+## 🧠 Architecture & Philosophie de Conception
 
-Ce projet adhère à trois principes fondamentaux :
+Ce projet adhère à une philosophie de **séparation stricte des préoccupations**.
 
-1.  **Simplicité d'Exécution :** Pas d'outils de build complexes. Le jeu doit pouvoir être lancé avec un simple serveur web statique, le rendant accessible et facile à maintenir.
-2.  **Séparation Stricte des Préoccupations :** La logique du jeu (l'état, les calculs, les règles) est entièrement contenue dans les **Hooks** (`/hooks`). Les composants (`/components`) sont responsables uniquement de l'affichage et de la capture des interactions utilisateur.
-3.  **Modularité & Extensibilité :** L'architecture est conçue pour être facilement étendue. Ajouter de nouvelles fonctionnalités (améliorations, succès, mécaniques) se fait de manière prévisible en modifiant des fichiers de données et en ajoutant une logique ciblée.
+-   **Logique (`/hooks`) :** Le "cerveau" de l'application. Toute la logique métier, la gestion de l'état et les calculs y sont confinés.
+-   **Présentation (`/components`) :** La couche "visuelle". Les composants sont responsables uniquement de l'affichage des données et de la capture des interactions utilisateur.
+-   **Orchestration (`useGameEngine.ts`) :** Un hook central qui assemble tous les systèmes (état, effets sonores, notifications, etc.) et les expose à l'UI via un `Context`.
+
+Cette structure rend le code prédictible, facile à déboguer et simple à étendre. Pour une analyse approfondie, consultez le guide de l'IA : `GEMINI.md`.
 
 ## 🛠️ Stack Technique
 
 -   **Framework :** React 19 (via `importmap` depuis un CDN)
 -   **Langage :** TypeScript
--   **Styling :** Tailwind CSS (injecté dynamiquement via JavaScript)
+-   **Styling :** Tailwind CSS (injecté dynamiquement via CSS-in-TS)
 -   **Gestion d'État :** Hooks React (`useState`, `useMemo`, `useCallback`)
 
 ## 🚀 Démarrage Rapide
 
-Ce projet ne nécessite aucun outil de build.
+Ce projet ne nécessite **aucun outil de build** (comme `npm` ou `yarn`).
 
 1.  Clonez le dépôt.
 2.  Naviguez vers le répertoire du projet dans votre terminal.
@@ -71,21 +88,22 @@ Ce projet ne nécessite aucun outil de build.
     # Python 3
     python -m http.server
     ```
-4.  Ouvrez votre navigateur à l'adresse `http://localhost:8000`.
+4.  Ouvrez votre navigateur à l'adresse `http://localhost:8000`. C'est tout !
 
 ## 🤝 Comment Contribuer & Étendre le Jeu
 
-L'architecture est conçue pour être facilement extensible en suivant la philosophie de **séparation des préoccupations**. Pour toute modification, veuillez respecter les principes décrits dans `GEMINI.md`.
+Les contributions sont les bienvenues ! L'architecture est conçue pour être facilement extensible en suivant la philosophie de **séparation des préoccupations**.
+
+Pour toute modification, veuillez lire et respecter les principes architecturaux décrits en détail dans **`GEMINI.md`**. Ce document est la source de vérité pour le développement.
 
 ### Étapes pour Contribuer
 
 1.  **Forkez le dépôt** sur votre compte GitHub.
-2.  Créez une nouvelle branche pour votre fonctionnalité ou votre correctif (`git checkout -b feature/ma-nouvelle-feature`).
+2.  Créez une nouvelle branche pour votre fonctionnalité ou votre correctif (`git checkout -b feature/ma-super-feature`).
 3.  Effectuez vos modifications en respectant l'architecture existante.
-4.  **Assurez-vous que le code est propre, bien typé et modulaire.** Consultez `GEMINI.md` pour les directives.
-5.  Ouvrez une **Pull Request** vers la branche `main` du dépôt original, en décrivant clairement les changements que vous avez apportés.
+4.  Ouvrez une **Pull Request** vers la branche `main` du dépôt original, en décrivant clairement vos changements.
 
-### Exemples d'Extensions
+### Exemples d'Extensions Simples
 
 #### Ajouter une nouvelle Amélioration de base :
 1.  **Ouvrez `data/upgrades.ts`**.
@@ -98,6 +116,10 @@ L'architecture est conçue pour être facilement extensible en suivant la philos
 
 ## 📜 Changelog
 
-### Version 1.8.0 - "Stabilité Quantique"
--   **Correction de Bugs Majeurs :** Correction de conditions de concurrence critiques dans les boutiques d'améliorations, éliminant les faux messages d'erreur "fonds insuffisants" lors d'achats rapides.
+### Version 1.8.0 - "Cohérence Contextuelle"
+-   **Amélioration de l'UI/UX Mobile :** Refonte de la navigation dans les sections "Forge" et "Centre de Commandement" pour une expérience plus cohérente et ergonomique.
+-   **Système de Notifications Affiné :** Les indicateurs de notification "point rouge" sont maintenant plus intelligents.
+-   **Interface Épurée :** Suppression des statistiques redondantes.
+-   **Amélioration de la Documentation :** Mise à jour majeure des fichiers `README.md` et `GEMINI.md`.
+-   **Correction de Bugs Majeurs :** Correction de conditions de concurrence dans les boutiques.
 -   **Fiabilité Améliorée :** Le raccourci du panneau de développeur (`Ctrl+Shift+D`) a été rendu plus fiable.
