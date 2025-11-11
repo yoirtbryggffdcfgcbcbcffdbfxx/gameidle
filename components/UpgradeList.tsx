@@ -6,7 +6,7 @@ interface EnrichedUpgradeItem {
     upgradeData: Upgrade;
     originalIndex: number;
     productionContribution?: number;
-    efficiencyScore?: number;
+    efficiencyPercentage?: number;
 }
 
 interface UpgradeListProps {
@@ -17,9 +17,10 @@ interface UpgradeListProps {
     costMultiplier: number;
     mostEfficientId: string | null;
     buyAmount: 1 | 10 | 100 | 'MAX';
+    showEfficiencyPercentage: boolean;
 }
 
-const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, formatNumber, energy, costMultiplier, mostEfficientId, buyAmount }) => {
+const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, formatNumber, energy, costMultiplier, mostEfficientId, buyAmount, showEfficiencyPercentage }) => {
     if (upgrades.length === 0) {
         return (
             <div className="text-center text-gray-400 h-full flex items-center justify-center py-10">
@@ -40,8 +41,9 @@ const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, forma
                     energy={energy}
                     costMultiplier={costMultiplier}
                     buyAmount={buyAmount}
-                    productionContribution={item.productionContribution}
+                    efficiencyPercentage={item.efficiencyPercentage}
                     isMostEfficient={item.upgradeData.id === mostEfficientId}
+                    showEfficiencyPercentage={showEfficiencyPercentage}
                 />
             ))}
         </>

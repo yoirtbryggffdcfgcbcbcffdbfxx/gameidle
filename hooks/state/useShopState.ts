@@ -6,30 +6,37 @@ type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 
 export const useShopState = (setGameState: SetGameStateFn) => {
     
-    const buyShopUpgrade = useCallback((id: string): boolean => {
+    const buyShopUpgrade = useCallback((id: string): void => {
         const upgrade = SHOP_UPGRADES.find(u => u.id === id);
-        if (!upgrade) return false;
+        if (!upgrade) return;
 
-        let success = false;
         setGameState(prev => {
-            const isPurchased = prev.purchasedShopUpgrades.includes(id);
-            if (isPurchased) return prev;
+            if (prev.purchasedShopUpgrades.includes(id)) {
+                return prev;
+            }
 
-            let canAfford = prev.quantumShards >= upgrade.cost;
+            const canAfford = upgrade.currency === 'energy'
+                ? prev.energy >= upgrade.cost
+                : prev.quantumShards >= upgrade.cost;
+            
             if (canAfford) {
-                success = true;
+                const newEnergy = upgrade.currency === 'energy' ? prev.energy - upgrade.cost : prev.energy;
+                const newShards = upgrade.currency === 'quantumShards' ? prev.quantumShards - upgrade.cost : prev.quantumShards;
+
                 return {
                     ...prev,
+                    energy: newEnergy,
+                    quantumShards: newShards,
                     purchasedShopUpgrades: [...prev.purchasedShopUpgrades, id],
-                    quantumShards: prev.quantumShards - upgrade.cost,
                 };
             }
             return prev;
         });
-        return success;
     }, [setGameState]);
-
+    
     return {
-        actions: { buyShopUpgrade }
+        actions: {
+            buyShopUpgrade,
+        },
     };
 };

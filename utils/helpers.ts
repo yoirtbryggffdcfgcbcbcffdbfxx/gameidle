@@ -32,6 +32,7 @@ export const getInitialState = (): GameState => {
         bankLevel: 0,
         hasSeenBankTutorial: false,
         purchasedShopUpgrades: [],
+        productionHistory: [],
     };
 };
 

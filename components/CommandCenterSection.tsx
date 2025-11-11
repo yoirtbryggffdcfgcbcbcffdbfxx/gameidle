@@ -51,8 +51,10 @@ const CommandCenterSection: React.FC = () => {
                     <div id="shop-panel" className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'shop' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <ShopPopup
                             quantumShards={quantumShards}
+                            energy={energy}
                             purchasedShopUpgrades={purchasedShopUpgrades}
                             onBuy={onBuyShopUpgrade}
+                            formatNumber={memoizedFormatNumber}
                         />
                     </div>
                     <div className={`w-full h-full absolute transition-opacity duration-300 ${activeCommandCenterTab === 'settings' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>

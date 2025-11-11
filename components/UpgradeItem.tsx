@@ -11,11 +11,12 @@ interface UpgradeItemProps {
     energy: number;
     costMultiplier: number;
     buyAmount: 1 | 10 | 100 | 'MAX';
-    productionContribution?: number;
+    efficiencyPercentage?: number;
     isMostEfficient: boolean;
+    showEfficiencyPercentage: boolean;
 }
 
-const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber, energy, costMultiplier, buyAmount, productionContribution, isMostEfficient }) => {
+const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber, energy, costMultiplier, buyAmount, efficiencyPercentage, isMostEfficient, showEfficiencyPercentage }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [isOnScreen, setIsOnScreen] = useState(false);
 
@@ -43,53 +44,54 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
 
     const isMaxLevel = upgrade.owned >= MAX_UPGRADE_LEVEL;
 
+    // This is calculated based on energy and is the "real" purchasable amount.
     const purchaseInfo = useMemo(() => {
         return calculateBulkBuy(upgrade, buyAmount, energy, costMultiplier);
     }, [upgrade, buyAmount, energy, costMultiplier]);
 
+    // This is calculated without energy and is for display purposes (full cost of a batch).
     const theoreticalPurchaseInfo = useMemo(() => {
         if (typeof buyAmount === 'number') {
             return calculateTheoreticalBulkBuy(upgrade, buyAmount, costMultiplier);
         }
-        return null;
+        return null; // For 'MAX' mode
     }, [upgrade, buyAmount, costMultiplier]);
 
+    // NEW `canAfford` logic. Simple and consistent.
     const canAfford = useMemo(() => {
         if (isMaxLevel) return false;
+        // We can afford it if we can buy at least one upgrade in the current mode.
+        return purchaseInfo.numToBuy > 0;
+    }, [isMaxLevel, purchaseInfo.numToBuy]);
 
-        if (buyAmount === 'MAX') {
-            return purchaseInfo.numToBuy > 0;
-        }
-
-        if (theoreticalPurchaseInfo) {
-            return energy >= theoreticalPurchaseInfo.totalCost;
-        }
-
-        return false;
-    }, [isMaxLevel, buyAmount, purchaseInfo.numToBuy, theoreticalPurchaseInfo, energy]);
-
+    // NEW `buttonText` logic.
     const buttonText = () => {
         if (isMaxLevel) return 'MAX';
-
-        // "Fonds insuffisants" is only shown if you can't afford a single level in x1 or MAX mode.
-        if (energy < upgrade.currentCost && (buyAmount === 1 || buyAmount === 'MAX')) {
-            return 'Fonds insuffisants';
-        }
-
+    
         if (buyAmount === 'MAX') {
-            // We know we can afford at least one because of the check above.
-            return `Acheter x${purchaseInfo.numToBuy} (${formatNumber(purchaseInfo.totalCost)})`;
+            // In MAX mode, we always show what's actually affordable.
+            if (purchaseInfo.numToBuy > 0) {
+                return `Acheter x${purchaseInfo.numToBuy} (${formatNumber(purchaseInfo.totalCost)})`;
+            }
+            // If we can't afford even one. Button is disabled. Show cost of next level.
+            return `Coût: ${formatNumber(upgrade.currentCost)}`;
         }
         
+        // For numeric amounts (x1, x10, x100)
         if (theoreticalPurchaseInfo) {
             if (theoreticalPurchaseInfo.numToBuy === 0) return 'MAX';
-            // For x1, x10, x100, always show the theoretical cost.
-            // The button's disabled state is handled by the `canAfford` check.
-            return `Acheter x${theoreticalPurchaseInfo.numToBuy} (${formatNumber(theoreticalPurchaseInfo.totalCost)})`;
+    
+            // If we can afford a partial amount, show that. This is more honest.
+            if (purchaseInfo.numToBuy > 0 && purchaseInfo.numToBuy < theoreticalPurchaseInfo.numToBuy) {
+                 return `Acheter x${purchaseInfo.numToBuy} (${formatNumber(purchaseInfo.totalCost)})`;
+            } else {
+                // We can't afford any OR we can afford the full batch. Show the full theoretical cost.
+                // The button's disabled state will differentiate the two cases.
+                return `Acheter x${theoreticalPurchaseInfo.numToBuy} (${formatNumber(theoreticalPurchaseInfo.totalCost)})`;
+            }
         }
-
-        // Fallback for an affordable x1
-        return 'Acheter';
+    
+        return 'Acheter'; // Fallback
     };
 
     const isClickUpgrade = upgrade.type === 'CLICK';
@@ -117,6 +119,13 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
         'opacity-0 translate-y-5',
         isOnScreen ? 'opacity-100 translate-y-0' : '',
     ].join(' ');
+    
+    const isButtonDisabled = isMaxLevel || !canAfford;
+
+    const buttonDynamicClasses = isButtonDisabled
+        ? 'cursor-not-allowed'
+        : `hover:shadow-md ${buttonShadow} ${!isButtonDisabled ? 'active:scale-95 active:brightness-90' : ''}`;
+
 
     return (
         <div ref={containerRef} id={id} className={containerClasses}>
@@ -129,10 +138,10 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
                         <span>Niveau: {upgrade.owned}/{MAX_UPGRADE_LEVEL}</span>
                         <span>|</span>
                         <span>{totalEffectText}</span>
-                        {productionContribution !== undefined && productionContribution > 0 && (
+                        {showEfficiencyPercentage && efficiencyPercentage !== undefined && efficiencyPercentage > 0 && (
                              <>
                                 <span>|</span>
-                                <span title="Contribution à la production totale">📊 {productionContribution.toFixed(1)}%</span>
+                                <span title="Efficacité par rapport à la meilleure option">📊 {efficiencyPercentage.toFixed(0)}%</span>
                              </>
                         )}
                     </div>
@@ -140,8 +149,8 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
                 <button 
                     onClick={onBuy} 
                     style={{ background: isMaxLevel ? '#555' : (canAfford ? upgrade.color : '#444') }} 
-                    disabled={isMaxLevel || !canAfford}
-                    className={`${buttonTextColor} px-2 py-0.5 rounded-md transition-all text-xs ${!isMaxLevel ? `hover:shadow-md ${buttonShadow}` : 'cursor-not-allowed'} ${!canAfford && !isMaxLevel ? 'cursor-not-allowed' : ''}`}
+                    disabled={isButtonDisabled}
+                    className={`${buttonTextColor} px-2 py-0.5 rounded-md transition-all text-xs ${buttonDynamicClasses}`}
                 >
                     {buttonText()}
                 </button>

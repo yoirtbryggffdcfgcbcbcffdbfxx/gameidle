@@ -3,7 +3,7 @@ import { GameState, Settings, Notification, Achievement } from '../../types';
 import { useGameState } from '../useGameState';
 import { usePopupManager } from '../usePopupManager';
 import { PARTICLE_COLORS } from '../../constants';
-import { formatNumber } from '../../utils/helpers';
+import { calculateBulkBuy, formatNumber } from '../../utils/helpers';
 
 type PlayerHandlersProps = {
     gameState: GameState;
@@ -45,7 +45,16 @@ export const usePlayerHandlers = ({
 
     const onBuyUpgrade = (index: number, amount: number | 'MAX') => {
         const upgrade = gameState.upgrades[index];
-        if (actions.buyUpgrade(index, amount)) {
+        const { costMultiplier } = computed;
+        const { numToBuy } = calculateBulkBuy(upgrade, amount, gameState.energy, costMultiplier);
+
+        // This check provides immediate feedback to the user based on the current UI state.
+        // The authoritative check is still inside the `buyUpgrade` action to prevent race conditions.
+        if (numToBuy > 0) {
+            // Fire-and-forget the action.
+            actions.buyUpgrade(index, amount);
+
+            // Provide optimistic success feedback.
             playSfx('buy');
             addParticle(window.innerWidth / 2, window.innerHeight / 2, PARTICLE_COLORS.BUY);
             actions.unlockAchievement("Premier Investissement");

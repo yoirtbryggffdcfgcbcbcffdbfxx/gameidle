@@ -54,7 +54,8 @@ export interface ShopUpgrade {
     name: string;
     description: string;
     cost: number;
-    currency: 'quantumShards';
+    currency: 'quantumShards' | 'energy';
+    icon: string;
 }
 
 export interface GameState {
@@ -80,6 +81,8 @@ export interface GameState {
   hasSeenBankTutorial: boolean;
   // Shop feature state
   purchasedShopUpgrades: string[];
+  // New state for advanced metrics
+  productionHistory: number[];
 }
 
 export interface Settings {

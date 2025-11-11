@@ -8,6 +8,9 @@ export const usePopupManager = () => {
     const [showAscensionConfirm, setShowAscensionConfirm] = useState(false);
     const [showAscensionTutorial, setShowAscensionTutorial] = useState(false);
     const [showBankInfoPopup, setShowBankInfoPopup] = useState(false);
+    // FIX: Add missing state for Core and Bank tutorials to resolve property access errors.
+    const [showCoreTutorial, setShowCoreTutorial] = useState(false);
+    const [showBankTutorial, setShowBankTutorial] = useState(false);
 
     return {
         activePopup,
@@ -17,6 +20,8 @@ export const usePopupManager = () => {
         showAscensionConfirm,
         showAscensionTutorial,
         showBankInfoPopup,
+        showCoreTutorial,
+        showBankTutorial,
         setActivePopup,
         setTutorialStep,
         setShowHardResetConfirm,
@@ -24,5 +29,7 @@ export const usePopupManager = () => {
         setShowAscensionConfirm,
         setShowAscensionTutorial,
         setShowBankInfoPopup,
+        setShowCoreTutorial,
+        setShowBankTutorial,
     };
 };

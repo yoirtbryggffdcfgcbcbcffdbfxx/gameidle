@@ -4,8 +4,10 @@ import { SHOP_UPGRADES } from '../../data/shop';
 
 interface ShopPopupProps {
     quantumShards: number;
+    energy: number;
     purchasedShopUpgrades: string[];
     onBuy: (id: string) => void;
+    formatNumber: (num: number) => string;
 }
 
 const ShopItemCard: React.FC<{
@@ -13,16 +15,19 @@ const ShopItemCard: React.FC<{
     isPurchased: boolean;
     canAfford: boolean;
     onBuy: () => void;
-}> = ({ upgrade, isPurchased, canAfford, onBuy }) => {
+    formatNumber: (num: number) => string;
+}> = ({ upgrade, isPurchased, canAfford, onBuy, formatNumber }) => {
     
     let buttonText = "Acheter";
     if (isPurchased) buttonText = "Acheté";
     else if (!canAfford) buttonText = "Fonds insuffisants";
+    
+    const currencySymbol = upgrade.currency === 'energy' ? '⚡' : 'FQ';
 
     return (
         <div className={`bg-[var(--bg-upgrade)] p-3 rounded-lg flex flex-col md:flex-row gap-4 items-center ${isPurchased ? 'opacity-60' : ''}`}>
             <div className="text-4xl">
-                {upgrade.id === 'efficiency_analyzer' && '💡'}
+                {upgrade.icon}
             </div>
             <div className="flex-grow text-center md:text-left">
                 <h4 className="text-base font-bold text-yellow-400">{upgrade.name}</h4>
@@ -38,7 +43,7 @@ const ShopItemCard: React.FC<{
                         ${!isPurchased && !canAfford ? 'bg-red-900 cursor-not-allowed' : ''}
                     `}
                 >
-                    {buttonText} ({upgrade.cost} FQ)
+                    {buttonText} ({formatNumber(upgrade.cost)} {currencySymbol})
                 </button>
             </div>
         </div>
@@ -46,7 +51,7 @@ const ShopItemCard: React.FC<{
 };
 
 
-const ShopPopup: React.FC<ShopPopupProps> = ({ quantumShards, purchasedShopUpgrades, onBuy }) => {
+const ShopPopup: React.FC<ShopPopupProps> = ({ quantumShards, energy, purchasedShopUpgrades, onBuy, formatNumber }) => {
     return (
         <div className="h-full flex flex-col">
             <h2 className="text-2xl text-center text-[var(--text-header)] mb-4">Boutique Permanente</h2>
@@ -58,7 +63,9 @@ const ShopPopup: React.FC<ShopPopupProps> = ({ quantumShards, purchasedShopUpgra
                     <div className="space-y-3">
                         {SHOP_UPGRADES.map(upgrade => {
                             const isPurchased = purchasedShopUpgrades.includes(upgrade.id);
-                            const canAfford = quantumShards >= upgrade.cost;
+                            const canAfford = upgrade.currency === 'energy'
+                                ? energy >= upgrade.cost
+                                : quantumShards >= upgrade.cost;
                             return (
                                 <ShopItemCard
                                     key={upgrade.id}
@@ -66,6 +73,7 @@ const ShopPopup: React.FC<ShopPopupProps> = ({ quantumShards, purchasedShopUpgra
                                     isPurchased={isPurchased}
                                     canAfford={canAfford}
                                     onBuy={() => onBuy(upgrade.id)}
+                                    formatNumber={formatNumber}
                                 />
                             );
                         })}

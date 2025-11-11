@@ -1,7 +1,7 @@
 // hooks/useGameState.ts
 import { useState, useEffect, useCallback } from 'react';
 import { GameState, Achievement, Settings } from '../types';
-import { SAVE_KEY } from '../constants';
+import { SAVE_KEY, TICK_RATE } from '../constants';
 import { getInitialState } from '../utils/helpers';
 
 import { usePlayerState } from './state/usePlayerState';
@@ -77,6 +77,13 @@ export const useGameState = (
     const prestigeComputed = prestigeState.getComputed(gameState);
     const bankComputed = bankState.getComputed(gameState);
     
+    const avgProductionLast10s = (() => {
+        if (gameState.productionHistory.length === 0) return 0;
+        const sum = gameState.productionHistory.reduce((a, b) => a + b, 0);
+        const avgPerTick = sum / gameState.productionHistory.length;
+        return avgPerTick * (1000 / TICK_RATE); // Convert back to per-second
+    })();
+
     const computedValues = {
         ...playerComputed,
         ...prestigeComputed,
@@ -86,6 +93,7 @@ export const useGameState = (
             prestigeComputed.ascensionBonuses.clickMultiplier *
             prestigeComputed.achievementBonuses.click
         ),
+        avgProductionLast10s,
     };
 
     return {

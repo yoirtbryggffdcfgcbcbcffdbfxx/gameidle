@@ -1,114 +1,107 @@
-// hooks/useGameEngine.ts
-import React, { useEffect, useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
+import { Achievement } from '../types';
 
-// Hooks
+// Main State & Logic
 import { useGameState } from './useGameState';
-import { useSettings } from './useSettings';
-import { usePopupManager } from './usePopupManager';
-import { useParticleSystem } from './useParticleSystem';
-import { useSfx } from './useSfx';
-import { useFloatingText } from './useFloatingText';
-import { useNotifications } from './useNotifications';
-import { useAppFlow } from './useAppFlow';
 import { useGameLoop } from './useGameLoop';
 import { useTutorialTriggers } from './useTutorialTriggers';
-// New Handler Hooks
+
+// App Flow & Settings
+import { useAppFlow } from './useAppFlow';
+import { useSettings } from './useSettings';
+import { SAVE_KEY } from '../constants';
+
+// UI & Effects
+import { useSfx } from './useSfx';
+import { useNotifications } from './useNotifications';
+import { useParticleSystem } from './useParticleSystem';
+import { useFloatingText } from './useFloatingText';
+import { usePopupManager } from './usePopupManager';
+import { formatNumber } from '../utils/helpers';
+
+// Handlers (actions with side effects)
 import { useAppHandlers } from './handlers/useAppHandlers';
 import { usePlayerHandlers } from './handlers/usePlayerHandlers';
 import { usePrestigeHandlers } from './handlers/usePrestigeHandlers';
 import { useBankHandlers } from './handlers/useBankHandlers';
 import { useShopHandlers } from './handlers/useShopHandlers';
 
-
-// Types
-import { Achievement } from '../types';
-
-// Constants & Helpers
-import { formatNumber } from '../utils/helpers';
-import { SAVE_KEY } from '../constants';
-
 export const useGameEngine = () => {
-    // --- App Flow & Load Status ---
-    const [loadStatus, setLoadStatus] = useState<'loading' | 'no_save' | 'has_save'>('loading');
-    const { appState, setAppState, hasSaveData } = useAppFlow(loadStatus);
-
-    useEffect(() => {
-        const savedGame = localStorage.getItem(SAVE_KEY);
-        setLoadStatus(savedGame ? 'has_save' : 'no_save');
-    }, []);
-
-    // --- Core UI & Feedback Systems ---
+    // --- 1. Foundational Hooks (State, Settings, UI Systems) ---
+    
     const { settings, setSettings, handleSettingsChange } = useSettings();
     const { playSfx, unlockAudio } = useSfx(settings.sfxVolume);
+    
+    const { notifications, addNotification, removeNotification } = useNotifications();
+    const popups = usePopupManager();
     const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
     const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.showFloatingText);
-    const { notifications, addNotification, removeNotification } = useNotifications();
     
-    // --- Popups & UI State ---
-    const popups = usePopupManager();
-    const [showDevPanel, setShowDevPanel] = useState(false);
-    const [showCoreTutorial, setShowCoreTutorial] = useState(false);
-    const [showBankTutorial, setShowBankTutorial] = useState(false);
-
-    // --- Callbacks for Inter-System Communication ---
-    const handleAchievementUnlock = useCallback((achievement: Achievement) => {
-        playSfx('buy');
-        addNotification(achievement.description, 'achievement', {
-            title: "Succès Débloqué!",
-            achievement: achievement,
-        });
-    }, [addNotification, playSfx]);
-    
-    const handleShowAscensionTutorial = useCallback(() => {
-        popups.setShowAscensionTutorial(true);
-    }, [popups]);
-    
-    const handleLoanRepaid = useCallback(() => {
-        addNotification("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
+    const onAchievementUnlock = useCallback((achievement: Achievement) => {
+        addNotification(
+            achievement.description, 
+            'achievement', 
+            { title: 'Succès Débloqué !', achievement }
+        );
     }, [addNotification]);
-    
-    const handleBankUnlockedFirstTime = useCallback(() => {
-        setShowBankTutorial(true);
-    }, []);
 
-    // --- Core State Manager ---
+    const loadStatus = localStorage.getItem(SAVE_KEY) ? 'has_save' : 'no_save';
+    const { appState, setAppState, hasSaveData } = useAppFlow(loadStatus);
+
     const { 
         gameState, 
-        setGameState,
+        setGameState, 
         computed, 
         actions, 
         dev, 
-        saveGameState,
-        achievementsManager,
+        saveGameState, 
+        achievementsManager, 
+        prestigeState, 
+        bankState 
+    } = useGameState(onAchievementUnlock, appState, loadStatus);
+
+    // --- 2. Memoized Values & Callbacks ---
+
+    const memoizedFormatNumber = useCallback((num: number) => {
+        return formatNumber(num, settings.scientificNotation);
+    }, [settings.scientificNotation]);
+
+    const onLoanRepaid = useCallback(() => {
+        addNotification("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
+    }, [addNotification]);
+
+    // --- 3. Game Loop & Event Triggers ---
+
+    const loopLoadStatus = appState === 'loading' ? 'loading' : 'loaded';
+    useGameLoop(appState, loopLoadStatus, setGameState, prestigeState, bankState, onLoanRepaid);
+    
+    useEffect(() => {
+        if (appState === 'game') {
+            achievementsManager.checkAll(gameState, computed.productionTotal, computed.maxEnergy);
+        }
+    }, [gameState, computed.productionTotal, computed.maxEnergy, appState, achievementsManager]);
+    
+    useTutorialTriggers(
+        gameState,
         prestigeState,
-        bankState,
-    } = useGameState(handleAchievementUnlock, appState, loadStatus);
+        setGameState,
+        () => popups.setShowAscensionTutorial(true),
+        () => popups.setShowBankTutorial(true)
+    );
     
-    // --- Orchestrated Side Effects / Processes ---
-    useGameLoop(appState, loadStatus, setGameState, prestigeState, bankState, handleLoanRepaid);
-    useTutorialTriggers(gameState, prestigeState, setGameState, handleShowAscensionTutorial, handleBankUnlockedFirstTime);
-
-    // Achievement Checks (now orchestrated by the engine)
+    // --- 4. Auto-save Logic ---
     useEffect(() => {
-        if (appState !== 'game' || loadStatus === 'loading') return;
-        const currentProdTotal = prestigeState.productionTotal(gameState);
-        const currentMaxEnergy = prestigeState.maxEnergy(gameState);
-        achievementsManager.checkAll(gameState, currentProdTotal, currentMaxEnergy);
-    }, [gameState, appState, loadStatus, achievementsManager, prestigeState]);
-
-    // Autosave (now orchestrated by the engine)
-    useEffect(() => {
-        if (loadStatus === 'loading' || appState !== 'game') return;
-        const saveTimer = setInterval(() => saveGameState(settings), 5000);
-        return () => clearInterval(saveTimer);
-    }, [saveGameState, settings, loadStatus, appState]);
-
-
-    // --- Derived State & Memoization ---
-    const memoizedFormatNumber = useCallback((num: number) => formatNumber(num, settings.scientificNotation), [settings.scientificNotation]);
-    const formattedEnergy = useMemo(() => memoizedFormatNumber(gameState.energy), [gameState.energy, memoizedFormatNumber]);
+        const autoSaveInterval = setInterval(() => {
+            if (appState === 'game') {
+                saveGameState(settings);
+                addNotification("Progression sauvegardée.", 'info', { title: 'Sauvegarde auto' });
+            }
+        }, 60000); // Save every 60 seconds
+        return () => clearInterval(autoSaveInterval);
+    }, [appState, saveGameState, settings, addNotification]);
     
-    // --- Game Handlers ---
+    // --- 5. Handlers (User Actions with Side-Effects) ---
+    
     const appHandlers = useAppHandlers({
         hasSaveData,
         actions,
@@ -140,7 +133,7 @@ export const useGameEngine = () => {
         popups,
         playSfx,
         addNotification,
-        setShowCoreTutorial,
+        setShowCoreTutorial: popups.setShowCoreTutorial,
     });
 
     const bankHandlers = useBankHandlers({
@@ -153,79 +146,71 @@ export const useGameEngine = () => {
     });
 
     const shopHandlers = useShopHandlers({
+        gameState,
         actions,
         playSfx,
         addNotification,
     });
     
-    const handlers = {
-        ...appHandlers,
-        ...playerHandlers,
-        ...prestigeHandlers,
-        ...bankHandlers,
-        ...shopHandlers,
-        onSettingsChange: handleSettingsChange,
-        dev,
-    };
-
-    // --- Global Effects ---
+    // --- 6. Dev Tools ---
+    const [showDevPanel, setShowDevPanel] = useState(false);
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'd' || e.key === 'D') {
+            if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
                 e.preventDefault();
-                setShowDevPanel(prev => !prev);
-                if(!showDevPanel) actions.unlockAchievement("Développeur Honoraire");
+                setShowDevPanel(prev => {
+                    const newState = !prev;
+                    if (newState) {
+                        actions.unlockAchievement("Développeur Honoraire");
+                    }
+                    return newState;
+                });
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showDevPanel, actions]);
+    }, [actions]);
+
+    // --- 7. Aggregated Return Object for Context ---
     
-    // Tutorial progression logic
-    useEffect(() => {
-        if (appState !== 'game') return;
-        const firstUpgradeCost = gameState.upgrades.find(u => u.id === 'gen_1')?.baseCost || 10;
-        if (popups.tutorialStep === 2 && gameState.energy >= firstUpgradeCost) {
-            popups.setTutorialStep(3); 
-        }
-    }, [appState, gameState.energy, gameState.upgrades, popups.tutorialStep, popups.setTutorialStep]);
-
-
     return {
+        // State
         appState,
         hasSaveData,
-        playSfx,
-        memoizedFormatNumber,
-        removeNotification,
-
         gameState,
-        computedState: { ...computed, formattedEnergy },
-
+        computedState: computed, // Renamed for clarity in context
+        
+        // UI State
         uiState: {
             settings,
+            notifications,
             particles,
             floatingTexts,
-            notifications,
-            activePopup: popups.activePopup,
-            tutorialStep: popups.tutorialStep,
-            showHardResetConfirm: popups.showHardResetConfirm,
-            showAscensionConfirm: popups.showAscensionConfirm,
-            showAscensionTutorial: popups.showAscensionTutorial,
             showDevPanel,
-            showCoreTutorial,
-            showBankTutorial,
-            showBankInfoPopup: popups.showBankInfoPopup,
+            ...popups,
         },
-
-        handlers,
         
+        // Handlers (user actions)
+        handlers: {
+            ...appHandlers,
+            ...playerHandlers,
+            ...prestigeHandlers,
+            ...bankHandlers,
+            ...shopHandlers,
+            onSettingsChange: handleSettingsChange,
+            dev, // Expose dev actions
+        },
+        
+        // Utilities & Callbacks for components
+        playSfx,
         popups,
-        setShowCoreTutorial,
-        setShowBankTutorial,
-        setShowBankInfoPopup: popups.setShowBankInfoPopup,
+        removeNotification,
         removeParticle,
         removeFloatingText,
-        addFloatingText,
+        memoizedFormatNumber,
         setShowDevPanel,
+        setShowCoreTutorial: popups.setShowCoreTutorial,
+        setShowBankTutorial: popups.setShowBankTutorial,
+        setShowBankInfoPopup: popups.setShowBankInfoPopup,
     };
 };

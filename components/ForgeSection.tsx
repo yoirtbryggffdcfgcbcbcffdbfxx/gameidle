@@ -19,6 +19,7 @@ const ForgeSection: React.FC = () => {
         mostEfficientId,
         tabs,
         buyOptions,
+        showEfficiencyPercentage,
     } = useForge({
         visibleUpgrades,
         productionTotal,
@@ -68,6 +69,7 @@ const ForgeSection: React.FC = () => {
                         costMultiplier={costMultiplier}
                         mostEfficientId={mostEfficientId}
                         buyAmount={buyAmount}
+                        showEfficiencyPercentage={showEfficiencyPercentage}
                     />
                 </div>
             </div>

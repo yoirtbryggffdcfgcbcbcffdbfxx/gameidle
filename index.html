@@ -17,107 +17,30 @@
   }
 }
 </script>
-<style>
-  #server-prompt {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: linear-gradient(135deg, #1e1e2f, #2a2a3f);
-    color: white;
-    font-family: 'Press Start 2P', cursive;
-    z-index: 10000;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 2rem;
-    text-align: center;
-    font-size: 12px;
-    line-height: 1.8;
-  }
-  #server-prompt h2 {
-    font-size: 16px;
-    color: #ffcc00;
-    margin-bottom: 1rem;
-    text-shadow: 1px 1px 2px #000;
-  }
-  #server-prompt a {
-    color: #00ffff;
-    text-decoration: none;
-    border-bottom: 1px solid #00ffff;
-    transition: color 0.3s, background 0.3s;
-  }
-  #server-prompt a:hover {
-    background: #00ffff;
-    color: #1e1e2f;
-  }
-  #server-prompt .prompt-box {
-    max-width: 600px;
-    border: 2px solid #00ffff;
-    padding: 2rem;
-    background: rgba(0,0,0,0.3);
-    border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-  }
-  #server-prompt ol {
-    text-align: left;
-    display: inline-block;
-    margin-top: 1.5rem;
-    padding-left: 0;
-    list-style-position: inside;
-  }
-  #server-prompt li {
-    margin-bottom: 1rem;
-  }
-</style>
 </head>
 <body class="transition-colors duration-500">
     <div id="custom-cursor"></div>
     <div id="parallax-bg"></div>
-
-    <div id="server-prompt">
-        <div class="prompt-box">
-            <h2>Pour lancer le jeu, un mini-serveur web est requis !</h2>
-            <p>
-                Il semble que vous ayez ouvert ce fichier directement. Les technologies web modernes ne fonctionnent pas de cette manière pour des raisons de sécurité.
-            </p>
-            <p style="margin-top: 1rem;">
-                <strong>La solution la plus simple (sans installation) :</strong>
-            </p>
-            <ol>
-                <li>Prenez le <strong>dossier complet</strong> du jeu.</li>
-                <li>Allez sur le site <a href="https://app.netlify.com/drop" target="_blank" rel="noopener noreferrer">Netlify Drop</a>.</li>
-                <li>Faites glisser le dossier sur la page.</li>
-                <li>C'est tout ! Le site vous donnera un lien fonctionnel pour jouer et partager.</li>
-            </ol>
-        </div>
-    </div>
-
     <div id="root"></div>
-
     <script>
-        if (window.location.protocol === 'file:') {
-            document.getElementById('root').style.display = 'none';
-            document.getElementById('server-prompt').style.display = 'flex';
-            document.getElementById('custom-cursor').style.display = 'none';
-        } else {
-            const cursor = document.getElementById('custom-cursor');
-            if (cursor) {
-                window.addEventListener('mousemove', (e) => {
-                    cursor.style.left = e.clientX + 'px';
-                    cursor.style.top = e.clientY + 'px';
-                });
+        const cursor = document.getElementById('custom-cursor');
+        if (cursor) {
+            window.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
 
-                document.body.addEventListener('mouseover', (e) => {
-                    if (e.target.closest('a, button')) {
-                        cursor.classList.add('pointer');
-                    } else {
-                        cursor.classList.remove('pointer');
-                    }
-                });
-                 document.body.addEventListener('mouseout', (e) => {
+            // More reliable hover detection by attaching listeners to the body
+            document.body.addEventListener('mouseover', (e) => {
+                if (e.target.closest('a, button')) {
+                    cursor.classList.add('pointer');
+                } else {
                     cursor.classList.remove('pointer');
-                });
-            }
+                }
+            });
+             document.body.addEventListener('mouseout', (e) => {
+                cursor.classList.remove('pointer');
+            });
         }
     </script>
 </body>

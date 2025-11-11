@@ -31,6 +31,7 @@ export const useGameLoop = (
                 const newEnergy = Math.min(prev.energy + energyFromProduction, prestigeState.maxEnergy(prev));
                 const newSavingsBalance = bankState.calculateInterest(prev);
                 const newCoreCharge = prestigeState.calculateCoreCharge(prev);
+                const newProductionHistory = [...prev.productionHistory, productionThisTick].slice(-100); // Keep last 100 ticks (10s)
 
                 return { 
                     ...prev, 
@@ -38,7 +39,8 @@ export const useGameLoop = (
                     coreCharge: newCoreCharge, 
                     totalEnergyProduced: newTotalEnergyProduced, 
                     savingsBalance: newSavingsBalance, 
-                    currentLoan: newLoan 
+                    currentLoan: newLoan,
+                    productionHistory: newProductionHistory,
                 };
             });
         }, TICK_RATE);

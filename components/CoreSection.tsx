@@ -7,21 +7,33 @@ interface StatDisplayProps {
     value: string;
     icon: string;
     colorClass: string;
+    showRepaymentIndicator?: boolean;
 }
 
-const StatDisplay: React.FC<StatDisplayProps> = ({ label, value, icon, colorClass }) => (
+const StatDisplay: React.FC<StatDisplayProps> = ({ label, value, icon, colorClass, showRepaymentIndicator }) => (
     <div className={`bg-black/30 p-2 rounded-lg text-center ${colorClass}`}>
         <div className="text-xs opacity-80">{icon} {label}</div>
-        <div className="text-base md:text-lg font-bold truncate">{value}</div>
+        <div className="text-base md:text-lg font-bold flex justify-center items-center gap-2">
+            <span>{value}</span>
+            {showRepaymentIndicator && (
+                <div className="relative group">
+                    <span className="text-red-500 text-xs animate-pulse cursor-help">(-50%)</span>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-max mb-2 p-2 bg-gray-900 border border-gray-600 rounded-lg text-xs z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-white">
+                        50% de la production rembourse votre prêt.
+                    </div>
+                </div>
+            )}
+        </div>
     </div>
 );
 
 const CoreSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber } = useGameContext();
-    // FIX: Get computed properties from `computedState`
-    const { energy } = gameState;
-    const { maxEnergy, productionTotal, clickPower } = computedState;
+    const { energy, currentLoan, purchasedShopUpgrades } = gameState;
+    const { maxEnergy, productionTotal, clickPower, avgProductionLast10s } = computedState;
     const { onCollect } = handlers;
+
+    const showEPSMeter = purchasedShopUpgrades.includes('eps_meter');
 
     return (
         <section id="core" className="fullscreen-section reveal">
@@ -35,13 +47,29 @@ const CoreSection: React.FC = () => {
                         </div>
                     </div>
                     <div className="text-center text-xs opacity-70">{memoizedFormatNumber(energy)} / {memoizedFormatNumber(maxEnergy)}</div>
-                    <div id="stats-display-container" className="flex justify-around items-center gap-2">
-                        <div id="stat-prod" className="flex-1">
-                            <StatDisplay label="Prod/sec" value={memoizedFormatNumber(productionTotal)} icon="⚡" colorClass="text-yellow-300" />
+                    <div id="stats-display-container" className={`grid ${showEPSMeter ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+                        <div id="stat-prod">
+                            <StatDisplay 
+                                label="Prod/sec" 
+                                value={memoizedFormatNumber(productionTotal)} 
+                                icon="⚡" 
+                                colorClass="text-yellow-300" 
+                                showRepaymentIndicator={!!currentLoan}
+                            />
                         </div>
-                        <div id="stat-click" className="flex-1">
+                        <div id="stat-click">
                             <StatDisplay label="Clic" value={memoizedFormatNumber(clickPower)} icon="🖱️" colorClass="text-cyan-300" />
                         </div>
+                        {showEPSMeter && (
+                            <div id="stat-avg-prod">
+                                <StatDisplay 
+                                    label="Prod. Moy (10s)" 
+                                    value={memoizedFormatNumber(avgProductionLast10s)} 
+                                    icon="📈" 
+                                    colorClass="text-green-300" 
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 

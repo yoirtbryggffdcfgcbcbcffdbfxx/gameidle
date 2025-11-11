@@ -23,12 +23,11 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
         });
     }, [setGameState, checkAchievement]);
 
-    const buyUpgrade = useCallback((index: number, amount: number | 'MAX'): boolean => {
-        let success = false;
+    const buyUpgrade = useCallback((index: number, amount: number | 'MAX'): void => {
         setGameState(prev => {
             const costReductionFromAscension = prev.purchasedAscensionUpgrades.reduce((acc, id) => {
                 const upg = ASCENSION_UPGRADES.find(u => u.id === id);
-                if (upg?.effect.type === 'COST_REDUCTION') return acc - upg.effect.value;
+                if (upg?.effect.type === 'COST_REDUCTION') return acc + upg.effect.value;
                 return acc;
             }, 0);
 
@@ -45,8 +44,6 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
             
             if (numToBuy === 0) return prev;
 
-            success = true;
-
             const newUpgrades = [...prev.upgrades];
             const newUpgrade = { ...newUpgrades[index] };
             newUpgrade.owned += numToBuy;
@@ -61,8 +58,6 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
 
             return { ...prev, energy: prev.energy - totalCost, upgrades: newUpgrades };
         });
-
-        return success;
     }, [setGameState, checkAchievement]);
 
     const getComputed = (gameState: GameState) => {
