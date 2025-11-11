@@ -27,6 +27,13 @@ export interface UpgradeBankResult {
     newLevel?: number;
 }
 
+export interface RepayLoanResult {
+    success: boolean;
+    reason?: 'no_loan' | 'invalid_amount' | 'insufficient_energy';
+    repaidAmount?: number;
+}
+
+
 export const useBankState = (
     setGameState: SetGameStateFn,
     unlockAchievement: UnlockAchievementFn,
@@ -146,9 +153,41 @@ export const useBankState = (
         return gameState.savingsBalance + interestThisTick;
     };
 
+    const repayLoanManually = useCallback((amount: number): RepayLoanResult => {
+        let result: RepayLoanResult = { success: false };
+        setGameState(prev => {
+            if (!prev.currentLoan) {
+                result = { success: false, reason: 'no_loan' };
+                return prev;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                result = { success: false, reason: 'invalid_amount' };
+                return prev;
+            }
+            const actualRepayment = Math.min(amount, prev.energy, prev.currentLoan.remaining);
+            if (actualRepayment <= 0) {
+                result = { success: false, reason: 'insufficient_energy' };
+                return prev;
+            }
+
+            const remaining = prev.currentLoan.remaining - actualRepayment;
+            let newLoan = prev.currentLoan;
+            if (remaining <= 0) {
+                newLoan = null;
+                // Callback for full repayment is handled in the game loop or by the handler
+            } else {
+                newLoan = { ...prev.currentLoan, remaining };
+            }
+
+            result = { success: true, repaidAmount: actualRepayment };
+            return { ...prev, energy: prev.energy - actualRepayment, currentLoan: newLoan };
+        });
+        return result;
+    }, [setGameState]);
+
     return { 
         getComputed,
-        actions: { buildBank, depositSavings, withdrawSavings, takeOutLoan, upgradeBank },
+        actions: { buildBank, depositSavings, withdrawSavings, takeOutLoan, upgradeBank, repayLoanManually },
         handleLoanRepayment,
         calculateInterest,
     };

@@ -149,6 +149,7 @@ export const useGameEngine = () => {
         playSfx,
         addNotification,
         memoizedFormatNumber,
+        gameState,
     });
 
     const shopHandlers = useShopHandlers({

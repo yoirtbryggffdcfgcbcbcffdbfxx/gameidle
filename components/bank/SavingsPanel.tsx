@@ -8,65 +8,80 @@ interface SavingsPanelProps {
     formatNumber: (num: number) => string;
 }
 
-const SavingsPanel: React.FC<SavingsPanelProps> = ({ savingsBalance, energy, onDeposit, onWithdraw, formatNumber }) => {
-    const [savingsAmount, setSavingsAmount] = useState('');
+const AmountSelector: React.FC<{
+    selected: number | 'MAX' | null;
+    onSelect: (val: number | 'MAX') => void;
+}> = ({ selected, onSelect }) => {
+    const options: (number | 'MAX')[] = [25, 50, 'MAX'];
+    return (
+        <div className="bg-black/30 p-1 rounded-md flex items-center gap-1">
+            <span className="text-xs px-2">Montant:</span>
+            {options.map(amount => (
+                <button
+                    key={amount}
+                    onClick={() => onSelect(typeof amount === 'number' ? amount : 'MAX')}
+                    className={`flex-1 px-3 py-1 text-xs rounded transition-colors ${selected === amount ? 'bg-cyan-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
+                >
+                    {typeof amount === 'number' ? `${amount}%` : amount}
+                </button>
+            ))}
+        </div>
+    );
+};
 
-    const handleSavingsAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+const SavingsPanel: React.FC<SavingsPanelProps> = ({ savingsBalance, energy, onDeposit, onWithdraw, formatNumber }) => {
+    const [customAmount, setCustomAmount] = useState('');
+    const [selectedPercent, setSelectedPercent] = useState<number | 'MAX' | null>(null);
+
+    const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value.replace(/[^0-9]/g, '');
-        setSavingsAmount(value);
+        setCustomAmount(value);
+        if (value) {
+            setSelectedPercent(null);
+        }
+    };
+    
+    const handlePercentSelect = (val: number | 'MAX') => {
+        setSelectedPercent(val);
+        setCustomAmount('');
     };
 
-    const handleTransaction = (action: 'deposit' | 'withdraw', percentage?: number) => {
+    const handleTransaction = (action: 'deposit' | 'withdraw') => {
         let amount = 0;
         const sourceAmount = action === 'deposit' ? energy : savingsBalance;
-        if (percentage) {
-            amount = Math.floor(sourceAmount * percentage);
+
+        if (selectedPercent !== null) {
+            amount = selectedPercent === 'MAX' ? sourceAmount : Math.floor(sourceAmount * (selectedPercent / 100));
         } else {
-            amount = parseInt(savingsAmount, 10);
+            amount = parseInt(customAmount, 10);
         }
+
         if (isNaN(amount) || amount <= 0) return;
 
         if (action === 'deposit') onDeposit(amount);
         else onWithdraw(amount);
         
-        setSavingsAmount('');
+        setCustomAmount('');
+        setSelectedPercent(null);
     };
 
     return (
-        <div className="bg-[var(--bg-upgrade)] p-3 sm:p-4 rounded-lg flex flex-col">
+        <div className="bg-[var(--bg-upgrade)] p-3 sm:p-4 rounded-lg flex flex-col h-full">
             <h3 className="text-base sm:text-lg text-yellow-400 mb-2">🐷 Compte Épargne</h3>
             <p className="text-xs mb-2">Solde:</p>
             <p className="text-xl sm:text-2xl text-green-400 font-bold mb-4">{formatNumber(savingsBalance)} ⚡</p>
-            <div className="mt-auto space-y-4">
-                 <input type="text" value={savingsAmount} onChange={handleSavingsAmountChange} placeholder="Montant personnalisé" className="w-full bg-black/50 p-2 rounded border border-[var(--border-color)] text-white text-right"/>
-                
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-green-400 font-semibold flex-shrink-0">DÉPOSER</span>
-                        <div className="w-full h-px bg-green-400/20"></div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                        <button onClick={() => handleTransaction('deposit', 0.25)} className="p-2 bg-black/20 hover:bg-black/40 rounded">25%</button>
-                        <button onClick={() => handleTransaction('deposit', 0.50)} className="p-2 bg-black/20 hover:bg-black/40 rounded">50%</button>
-                        <button onClick={() => handleTransaction('deposit', 1)} className="p-2 bg-black/20 hover:bg-black/40 rounded">MAX</button>
-                        <button onClick={() => handleTransaction('deposit')} className="p-2 rounded bg-green-700 hover:bg-green-600 col-span-1">Montant</button>
-                    </div>
-                </div>
+            
+            <div className="mt-auto space-y-3">
+                <input type="text" value={customAmount} onChange={handleCustomAmountChange} placeholder="Montant personnalisé" className="w-full bg-black/50 p-2 rounded border border-[var(--border-color)] text-white text-right"/>
+                <AmountSelector selected={selectedPercent} onSelect={handlePercentSelect} />
 
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-yellow-400 font-semibold flex-shrink-0">RETIRER</span>
-                        <div className="w-full h-px bg-yellow-400/20"></div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                        <button onClick={() => handleTransaction('withdraw', 0.25)} className="p-2 bg-black/20 hover:bg-black/40 rounded">25%</button>
-                        <button onClick={() => handleTransaction('withdraw', 0.50)} className="p-2 bg-black/20 hover:bg-black/40 rounded">50%</button>
-                        <button onClick={() => handleTransaction('withdraw', 1)} className="p-2 bg-black/20 hover:bg-black/40 rounded">MAX</button>
-                        <div className="relative group col-span-1">
-                             <button onClick={() => handleTransaction('withdraw')} className="w-full h-full p-2 rounded bg-yellow-700 hover:bg-yellow-600">Montant</button>
-                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-60 mb-2 p-2 bg-gray-900 border border-gray-600 rounded-lg text-xs z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                Le retrait de l'épargne remboursera automatiquement tout prêt en cours en priorité.
-                            </div>
+                <div className="grid grid-cols-2 gap-2 text-sm mt-2">
+                    <button onClick={() => handleTransaction('deposit')} className="p-2 rounded bg-green-700 hover:bg-green-600">Déposer</button>
+                    
+                    <div className="relative group">
+                        <button onClick={() => handleTransaction('withdraw')} className="w-full h-full p-2 rounded bg-yellow-700 hover:bg-yellow-600">Retirer</button>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-60 mb-2 p-2 bg-gray-900 border border-gray-600 rounded-lg text-xs z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                            Le retrait de l'épargne remboursera automatiquement tout prêt en cours en priorité.
                         </div>
                     </div>
                 </div>

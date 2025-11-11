@@ -13,9 +13,10 @@ const BankSection: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber, setShowBankInfoPopup } = useGameContext();
     const { isBankUnlocked, energy, savingsBalance, currentLoan, bankLevel } = gameState;
     const { bankBonuses } = computedState;
-    const { onBuildBank, onDepositSavings, onWithdrawSavings, onTakeOutLoan, onUpgradeBank } = handlers;
+    const { onBuildBank, onDepositSavings, onWithdrawSavings, onTakeOutLoan, onUpgradeBank, onRepayLoan } = handlers;
     
     const [activeTab, setActiveTab] = useState<'compte' | 'améliorations'>('compte');
+    const [activeAccountTab, setActiveAccountTab] = useState<'savings' | 'loan'>('savings');
 
     const renderBankUI = () => (
         <>
@@ -39,24 +40,44 @@ const BankSection: React.FC = () => {
             </div>
 
             {activeTab === 'compte' && (
-                <div className="flex-grow overflow-y-auto no-scrollbar pr-2">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <SavingsPanel 
-                            savingsBalance={savingsBalance}
-                            energy={energy}
-                            onDeposit={onDepositSavings}
-                            onWithdraw={onWithdrawSavings}
-                            formatNumber={memoizedFormatNumber}
-                        />
-                        <LoanPanel 
-                            currentLoan={currentLoan}
-                            bankBonuses={bankBonuses}
-                            onTakeLoan={onTakeOutLoan}
-                            setShowBankInfoPopup={setShowBankInfoPopup}
-                            formatNumber={memoizedFormatNumber}
-                        />
+                <>
+                    <div className="flex justify-center border-b-2 border-gray-700/50 mb-4">
+                        {([
+                            { id: 'savings', label: 'Épargne' },
+                            { id: 'loan', label: 'Prêt' }
+                        ] as const).map(subTab => (
+                            <button
+                                key={subTab.id}
+                                onClick={() => setActiveAccountTab(subTab.id)}
+                                className={`px-4 py-2 text-xs sm:text-sm transition-colors duration-200 border-b-2 ${activeAccountTab === subTab.id ? 'border-cyan-400 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                            >
+                                {subTab.label}
+                            </button>
+                        ))}
                     </div>
-                </div>
+                    <div className="flex-grow overflow-y-auto no-scrollbar pr-2">
+                        {activeAccountTab === 'savings' && (
+                            <SavingsPanel 
+                                savingsBalance={savingsBalance}
+                                energy={energy}
+                                onDeposit={onDepositSavings}
+                                onWithdraw={onWithdrawSavings}
+                                formatNumber={memoizedFormatNumber}
+                            />
+                        )}
+                        {activeAccountTab === 'loan' && (
+                            <LoanPanel 
+                                currentLoan={currentLoan}
+                                energy={energy}
+                                bankBonuses={bankBonuses}
+                                onTakeLoan={onTakeOutLoan}
+                                onRepayLoan={onRepayLoan}
+                                setShowBankInfoPopup={setShowBankInfoPopup}
+                                formatNumber={memoizedFormatNumber}
+                            />
+                        )}
+                    </div>
+                </>
             )}
             
             {activeTab === 'améliorations' && (

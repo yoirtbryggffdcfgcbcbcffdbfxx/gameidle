@@ -1,4 +1,4 @@
-import { Notification, Achievement } from '../../types';
+import { Notification, Achievement, GameState } from '../../types';
 import { useGameState } from '../useGameState';
 import { BANK_CONSTRUCTION_COST } from '../../data/bank';
 
@@ -8,6 +8,7 @@ type BankHandlersProps = {
     playSfx: (sound: 'click' | 'buy') => void;
     addNotification: (message: string, type: Notification['type'], options?: { title?: string; achievement?: Achievement }) => void;
     memoizedFormatNumber: (num: number) => string;
+    gameState: GameState;
 };
 
 export const useBankHandlers = ({
@@ -16,6 +17,7 @@ export const useBankHandlers = ({
     playSfx,
     addNotification,
     memoizedFormatNumber,
+    gameState,
 }: BankHandlersProps) => {
     
     const onBuildBank = () => {
@@ -88,6 +90,23 @@ export const useBankHandlers = ({
             addNotification(message, 'error');
         }
     };
+
+    const onRepayLoan = (amount: number) => {
+        const result = actions.repayLoanManually(amount);
+        if (result.success && result.repaidAmount) {
+            playSfx('click');
+            addNotification(`${memoizedFormatNumber(result.repaidAmount)} énergie utilisée pour rembourser le prêt.`, 'info');
+            // Check if the loan was fully paid off by this action
+            if (gameState.currentLoan && result.repaidAmount >= gameState.currentLoan.remaining) {
+                addNotification("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
+            }
+        } else {
+            let message = "Remboursement impossible.";
+            if (result.reason === 'insufficient_energy') message = "Vous n'avez pas assez d'énergie.";
+            if (result.reason === 'invalid_amount') message = "Montant invalide.";
+            addNotification(message, 'error');
+        }
+    };
     
     return {
         onBuildBank,
@@ -95,5 +114,6 @@ export const useBankHandlers = ({
         onWithdrawSavings,
         onTakeOutLoan,
         onUpgradeBank,
+        onRepayLoan,
     };
 };
