@@ -5,26 +5,13 @@ import { GameState } from '../../types';
 import { MAX_UPGRADE_LEVEL } from '../../constants';
 import { ASCENSION_UPGRADES } from '../../data/ascension';
 import { calculateBulkBuy, calculateCost } from '../../utils/helpers';
+import { ACHIEVEMENT_IDS } from '../../constants/achievements';
 
 type CheckAchievementFn = (name: string, condition: boolean) => void;
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 
 export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: CheckAchievementFn) => {
     
-    const incrementClickCount = useCallback((clickPower: number) => {
-        setGameState(prev => {
-            const newTotalClicks = prev.totalClicks + 1;
-            checkAchievement("Frénésie du Clic", newTotalClicks >= 1000);
-            checkAchievement("Tempête de Clics", newTotalClicks >= 100000);
-            
-            // Recalculate maxEnergy locally to avoid stale closures from props/arguments.
-            const maxEnergy = 1e9 * Math.pow(10, prev.ascensionLevel); 
-            const newEnergy = Math.min(prev.energy + clickPower, maxEnergy);
-            
-            return { ...prev, totalClicks: newTotalClicks, energy: newEnergy };
-        });
-    }, [setGameState, checkAchievement]);
-
     const buyUpgrade = useCallback((index: number, amount: number | 'MAX'): void => {
         setGameState(prev => {
             const costReductionFromAscension = prev.purchasedAscensionUpgrades.reduce((acc, id) => {
@@ -42,21 +29,35 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
             const upgrade = prev.upgrades[index];
             if (upgrade.owned >= MAX_UPGRADE_LEVEL) return prev;
 
-            const { numToBuy, totalCost } = calculateBulkBuy(upgrade, amount, prev.energy, costMultiplier);
+            const { numLevelsBought, tiersBought, totalCost, newBaseCost, nextLevelCostOverride } = calculateBulkBuy(upgrade, amount, prev.energy, costMultiplier);
             
-            if (numToBuy === 0) return prev;
+            if (numLevelsBought === 0 && tiersBought === 0) return prev;
 
             const newUpgrades = [...prev.upgrades];
             const newUpgrade = { ...newUpgrades[index] };
-            newUpgrade.owned += numToBuy;
-            newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier);
+            
+            newUpgrade.owned += numLevelsBought;
+            newUpgrade.tier += tiersBought;
+            
+            // If a new base cost was calculated (after a discount), update it.
+            if (newBaseCost !== undefined) {
+                newUpgrade.baseCost = newBaseCost;
+            }
+            
+            // The nextLevelCostOverride is either the new discount if only a tier was bought,
+            // or undefined if a level was bought (consuming the discount) or no tier was involved.
+            newUpgrade.nextLevelCostOverride = nextLevelCostOverride;
+
+
+            // Recalcule le coût actuel pour le prochain niveau.
+            newUpgrade.currentCost = calculateCost(newUpgrade.baseCost, newUpgrade.owned, costMultiplier, newUpgrade.nextLevelCostOverride);
             newUpgrades[index] = newUpgrade;
 
             const totalUpgradesOwned = newUpgrades.reduce((sum, u) => sum + u.owned, 0);
-            checkAchievement("Amorce d'Empire", totalUpgradesOwned >= 50);
-            checkAchievement("Architecte Industriel", totalUpgradesOwned >= 250);
-            checkAchievement("Magnat de la Technologie", totalUpgradesOwned >= 750);
-            checkAchievement("Souverain Galactique", totalUpgradesOwned >= 1500);
+            checkAchievement(ACHIEVEMENT_IDS.EMPIRE_PRIMER, totalUpgradesOwned >= 50);
+            checkAchievement(ACHIEVEMENT_IDS.INDUSTRIAL_ARCHITECT, totalUpgradesOwned >= 250);
+            checkAchievement(ACHIEVEMENT_IDS.TECH_TYCOON, totalUpgradesOwned >= 750);
+            checkAchievement(ACHIEVEMENT_IDS.GALACTIC_SOVEREIGN, totalUpgradesOwned >= 1500);
 
             // Mark the upgrade as "seen" upon purchase
             const newSeenUpgrades = prev.seenUpgrades.includes(upgrade.id) 
@@ -71,6 +72,50 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
             };
         });
     }, [setGameState, checkAchievement]);
+    
+    const buyTierUpgrade = useCallback((index: number) => {
+        setGameState(prev => {
+            const upgrade = prev.upgrades[index];
+            if (upgrade.owned % 10 !== 0 || upgrade.owned === 0 || upgrade.owned >= MAX_UPGRADE_LEVEL) {
+                return prev;
+            }
+
+            const costReductionFromAscension = prev.purchasedAscensionUpgrades.reduce((acc, id) => {
+                const upg = ASCENSION_UPGRADES.find(u => u.id === id);
+                if (upg?.effect.type === 'COST_REDUCTION') return acc + upg.effect.value;
+                return acc;
+            }, 0);
+            const costReductionFromAchievements = prev.achievements
+                .filter(a => a.unlocked && a.bonus.type === 'COST_REDUCTION')
+                .reduce((acc, a) => acc * (1 - a.bonus.value / 100), 1);
+            const costMultiplier = (1 - costReductionFromAscension) * costReductionFromAchievements;
+
+            const tierUpgradeCost = calculateCost(upgrade.baseCost, upgrade.owned, costMultiplier) * 10;
+
+            if (prev.energy < tierUpgradeCost) {
+                return prev;
+            }
+
+            const newUpgrades = [...prev.upgrades];
+            const newUpgrade = { ...newUpgrades[index] };
+            
+            newUpgrade.tier += 1;
+            
+            const discountedNextCost = Math.floor(tierUpgradeCost * 0.9);
+            newUpgrade.nextLevelCostOverride = discountedNextCost;
+
+            newUpgrade.currentCost = discountedNextCost;
+            
+            newUpgrades[index] = newUpgrade;
+            
+            return {
+                ...prev,
+                energy: prev.energy - tierUpgradeCost,
+                upgrades: newUpgrades,
+            };
+        });
+    }, [setGameState]);
+
 
     const markCategoryAsViewed = useCallback((category: string) => {
         setGameState(prev => {
@@ -88,15 +133,15 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
     const getComputed = (gameState: GameState) => {
         const clickPowerFromUpgrades = gameState.upgrades
             .filter(u => u.type === 'CLICK')
-            .reduce((sum, u) => sum + u.production * u.owned, 0);
+            .reduce((sum, u) => sum + (u.baseProduction * Math.pow(2, u.tier)) * u.owned, 0);
 
         return { clickPowerFromUpgrades };
     };
 
     return {
         actions: {
-            incrementClickCount,
             buyUpgrade,
+            buyTierUpgrade, // Expose the new action
             markCategoryAsViewed,
             resetViewedCategories,
         },

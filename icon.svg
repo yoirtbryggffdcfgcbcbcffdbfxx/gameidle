@@ -1,0 +1,34 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Le fond DOIT être opaque pour les icônes masquables -->
+  <rect width="100" height="100" fill="#0a0a1a" />
+
+  <defs>
+    <radialGradient id="iconGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00ffff" stop-opacity="1"/>
+      <stop offset="70%" stop-color="#005f5f" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0a0a1a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glowEffect">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- IMPORTANT : Tout le contenu doit être dans une zone de 80x80 centrée sur 50,50 -->
+  <g transform="translate(50 50)">
+    <!-- Aura -->
+    <circle r="40" fill="url(#iconGlow)" opacity="0.5" />
+  
+    <!-- Orbites dans la zone de sécurité -->
+    <ellipse cx="0" cy="0" rx="38" ry="15" stroke="#4f4f7f" stroke-width="1.5" fill="none" transform="rotate(45)" />
+    <ellipse cx="0" cy="0" rx="38" ry="15" stroke="#4f4f7f" stroke-width="1.5" fill="none" transform="rotate(-45)" />
+    <ellipse cx="0" cy="0" rx="38" ry="15" stroke="#4f4f7f" stroke-width="1.5" fill="none" />
+    
+    <!-- Cœur Central -->
+    <circle r="12" fill="url(#iconGlow)" filter="url(#glowEffect)" />
+    <circle r="5" fill="white" />
+  </g>
+</svg>

@@ -5,7 +5,8 @@ export const useNotifications = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const notificationIdCounter = useRef(0);
 
-    const removeNotification = useCallback((id: number) => {
+    // FIX: Changed id parameter type from number to string to match Notification.id type.
+    const removeNotification = useCallback((id: string) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     }, []);
 
@@ -16,7 +17,11 @@ export const useNotifications = () => {
     ) => {
         const id = notificationIdCounter.current++;
         const newNotification: Notification = {
-            id,
+            // FIX: Convert numeric id to a string to match the Notification type.
+            id: String(id),
+            // FIX: Add missing timestamp and read properties to satisfy the Notification type.
+            timestamp: Date.now(),
+            read: false,
             message,
             type,
             title: options.title,

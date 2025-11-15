@@ -1,8 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { ShopUpgrade } from '../../types';
 import { SHOP_UPGRADES } from '../../data/shop';
 import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
 import { getNextFragmentCost } from '../../data/quantumFragments';
+import ShopIconRenderer from '../ui/ShopIconRenderer';
+import QuantumFragmentIcon from '../ui/QuantumFragmentIcon';
 
 interface ShopPopupProps {
     quantumShards: number;
@@ -17,50 +19,6 @@ interface ShopPopupProps {
     canAffordFragment: boolean;
 }
 
-const ShopItemCard: React.FC<{
-    upgrade: ShopUpgrade;
-    isPurchased: boolean;
-    canAfford: boolean;
-    onBuy: () => void;
-    formatNumber: (num: number) => string;
-    showNotificationDot: boolean;
-}> = ({ upgrade, isPurchased, canAfford, onBuy, formatNumber, showNotificationDot }) => {
-    
-    let buttonText = "Acheter";
-    if (isPurchased) buttonText = "Acheté";
-    else if (!canAfford) buttonText = "Fonds insuffisants";
-    
-    const currencySymbol = upgrade.currency === 'energy' ? '⚡' : 'FQ';
-
-    return (
-        <div className={`bg-[var(--bg-upgrade)] p-3 rounded-lg flex flex-col md:flex-row gap-4 items-center relative ${isPurchased ? 'opacity-60' : ''}`}>
-            {showNotificationDot && !isPurchased && (
-                <div className="absolute -left-1 top-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse-red" title="Nouvel article !"></div>
-            )}
-            <div className="text-4xl">
-                {upgrade.icon}
-            </div>
-            <div className="flex-grow text-center md:text-left">
-                <h4 className="text-base font-bold text-yellow-400">{upgrade.name}</h4>
-                <p className="text-xs opacity-80 mt-1">{upgrade.description}</p>
-            </div>
-            <div className="flex-shrink-0 w-full md:w-auto">
-                <button
-                    onClick={onBuy}
-                    disabled={isPurchased || !canAfford}
-                    className={`w-full px-4 py-2 rounded-md text-xs font-bold transition-colors
-                        ${isPurchased ? 'bg-green-800 cursor-not-allowed' : ''}
-                        ${!isPurchased && canAfford ? 'bg-cyan-700 hover:bg-cyan-600' : ''}
-                        ${!isPurchased && !canAfford ? 'bg-red-900 cursor-not-allowed' : ''}
-                    `}
-                >
-                    {buttonText} ({formatNumber(upgrade.cost)} {currencySymbol})
-                </button>
-            </div>
-        </div>
-    );
-};
-
 const QuantumFragmentCard: React.FC<{
     quantumShards: number;
     energy: number;
@@ -73,9 +31,7 @@ const QuantumFragmentCard: React.FC<{
 
     return (
         <div className="bg-black/20 border-2 border-purple-500/50 p-3 rounded-lg flex flex-col md:flex-row gap-4 items-center relative shadow-lg shadow-purple-500/10">
-            <div className="text-4xl animate-core-breathe" style={{animationDuration: '3s'}}>
-                💠
-            </div>
+            <QuantumFragmentIcon className="w-12 h-12 animate-core-breathe" style={{animationDuration: '3s'}} />
             <div className="flex-grow text-center md:text-left">
                 <h4 className="text-base font-bold text-purple-300">Fragment Quantique</h4>
                 <p className="text-xs opacity-80 mt-1">Utilisé pour améliorer le Cœur et débloquer son plein potentiel. Le coût augmente à chaque achat.</p>
@@ -114,13 +70,44 @@ const ShopPopup: React.FC<ShopPopupProps> = ({
     const scrollableRef = useRef<HTMLDivElement>(null);
     useDragToScroll(scrollableRef);
 
+    const [animationClass, setAnimationClass] = useState('');
+    const [displayedUpgrade, setDisplayedUpgrade] = useState<ShopUpgrade | null>(null);
+
+    const nextUnpurchasedUpgrade = useMemo(() => {
+        return SHOP_UPGRADES.find(upg => !purchasedShopUpgrades.includes(upg.id));
+    }, [purchasedShopUpgrades]);
+    
+    // Effect to handle the transition between upgrades
+    useEffect(() => {
+        if (nextUnpurchasedUpgrade?.id !== displayedUpgrade?.id) {
+            if (displayedUpgrade) {
+                 setTimeout(() => {
+                    setDisplayedUpgrade(nextUnpurchasedUpgrade || null);
+                    setAnimationClass('animate-shop-card-enter');
+                }, 300); // Must match animation duration
+            } else {
+                setDisplayedUpgrade(nextUnpurchasedUpgrade || null);
+                setTimeout(() => setAnimationClass('animate-shop-card-enter'), 50);
+            }
+        }
+    }, [nextUnpurchasedUpgrade, displayedUpgrade]);
+
+
+    const handleBuyClick = (id: string) => {
+        setAnimationClass('animate-shop-card-exit');
+        setTimeout(() => {
+            onBuy(id);
+        }, 300); // Animation duration
+    };
+
+
     useEffect(() => {
         if (hasUnseenShopItems) {
             setActiveTab('upgrades');
         } else if (canAffordFragment) {
             setActiveTab('fragments');
         }
-    }, []);
+    }, [hasUnseenShopItems, canAffordFragment]);
 
     const handleTabClick = (tab: 'upgrades' | 'fragments') => {
         setActiveTab(tab);
@@ -133,6 +120,49 @@ const ShopPopup: React.FC<ShopPopupProps> = ({
         { id: 'upgrades', name: 'Améliorations Perm.', hasNotification: hasUnseenShopItems },
         { id: 'fragments', name: 'Fragments Quantiques', hasNotification: canAffordFragment }
     ];
+
+    const renderUpgradeCard = () => {
+        if (!displayedUpgrade) {
+            return (
+                 <div className="text-center text-xs opacity-50 mt-6 p-4 bg-black/20 rounded-lg animate-fade-in-fast">
+                    <p>Toutes les améliorations ont été achetées.</p>
+                    <p>De nouveaux articles pourraient apparaître à l'avenir.</p>
+                </div>
+            )
+        }
+
+        const canAfford = displayedUpgrade.currency === 'energy'
+            ? energy >= displayedUpgrade.cost
+            : quantumShards >= displayedUpgrade.cost;
+        const buttonText = canAfford ? "Acheter" : "Fonds insuffisants";
+        const currencySymbol = displayedUpgrade.currency === 'energy' ? '⚡' : 'FQ';
+
+        return (
+             <div className={`bg-[var(--bg-upgrade)] p-3 rounded-lg flex flex-col md:flex-row gap-4 items-center relative ${animationClass}`}>
+                {hasUnseenShopItems && (
+                    <div className="absolute -left-1 top-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse-red" title="Nouvel article !"></div>
+                )}
+                <div className="w-12 h-12">
+                    <ShopIconRenderer iconId={displayedUpgrade.icon} className="w-full h-full" />
+                </div>
+                <div className="flex-grow text-center md:text-left">
+                    <h4 className="text-base font-bold text-yellow-400">{displayedUpgrade.name}</h4>
+                    <p className="text-xs opacity-80 mt-1">{displayedUpgrade.description}</p>
+                </div>
+                <div className="flex-shrink-0 w-full md:w-auto">
+                    <button
+                        onClick={() => handleBuyClick(displayedUpgrade.id)}
+                        disabled={!canAfford}
+                        className={`w-full px-4 py-2 rounded-md text-xs font-bold transition-colors
+                            ${canAfford ? 'bg-cyan-700 hover:bg-cyan-600' : 'bg-red-900 cursor-not-allowed'}
+                        `}
+                    >
+                        {buttonText} ({formatNumber(displayedUpgrade.cost)} {currencySymbol})
+                    </button>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="h-full flex flex-col">
@@ -164,27 +194,8 @@ const ShopPopup: React.FC<ShopPopupProps> = ({
                         <div className="bg-black/30 p-2 rounded-lg text-center text-xs mb-4">
                             <p>Les améliorations achetées ici sont permanentes et persistent à travers les Ascensions.</p>
                         </div>
-                        <div className="space-y-3">
-                            {SHOP_UPGRADES.map(upgrade => {
-                                const isPurchased = purchasedShopUpgrades.includes(upgrade.id);
-                                const canAfford = upgrade.currency === 'energy'
-                                    ? energy >= upgrade.cost
-                                    : quantumShards >= upgrade.cost;
-                                return (
-                                    <ShopItemCard
-                                        key={upgrade.id}
-                                        upgrade={upgrade}
-                                        isPurchased={isPurchased}
-                                        canAfford={canAfford}
-                                        onBuy={() => onBuy(upgrade.id)}
-                                        formatNumber={formatNumber}
-                                        showNotificationDot={hasUnseenShopItems}
-                                    />
-                                );
-                            })}
-                        </div>
-                         <div className="text-center text-xs opacity-50 mt-6">
-                            <p>De nouveaux articles apparaîtront bientôt.</p>
+                        <div className="space-y-3 min-h-[110px]">
+                            {renderUpgradeCard()}
                         </div>
                     </>
                 )}

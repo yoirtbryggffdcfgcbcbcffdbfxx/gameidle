@@ -21,7 +21,7 @@ export const useQuantumCoreState = (setGameState: SetGameStateFn, checkAchieveme
         });
     }, [setGameState]);
 
-    const purchasePathUpgrade = useCallback(() => {
+    const purchasePathUpgrade = useCallback((): boolean => {
         let success = false;
         setGameState(prev => {
             if (!prev.chosenQuantumPath) return prev;
@@ -75,6 +75,26 @@ export const useQuantumCoreState = (setGameState: SetGameStateFn, checkAchieveme
             return { ...prev, hasInteractedWithQuantumCore: true };
         });
     }, [setGameState]);
+    
+    const resetQuantumPath = useCallback(() => {
+        setGameState(prev => {
+            if (!prev.chosenQuantumPath || prev.quantumPathLevel === 0) {
+                return prev; // Nothing to reset
+            }
+
+            const pathData = QUANTUM_PATHS[prev.chosenQuantumPath];
+            const totalCostRefund = pathData.upgrades
+                .filter(u => u.level <= prev.quantumPathLevel)
+                .reduce((sum, u) => sum + u.cost, 0);
+
+            return {
+                ...prev,
+                quantumShards: prev.quantumShards + totalCostRefund,
+                chosenQuantumPath: null,
+                quantumPathLevel: 0,
+            };
+        });
+    }, [setGameState]);
 
     return {
         actions: {
@@ -82,6 +102,7 @@ export const useQuantumCoreState = (setGameState: SetGameStateFn, checkAchieveme
             purchasePathUpgrade,
             markQuantumCoreAsInteracted,
             buyCoreUpgrade,
+            resetQuantumPath,
         },
     };
 };

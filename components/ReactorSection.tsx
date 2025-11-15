@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { CORE_UPGRADES } from '../data/core';
 import SkillTree from './ui/SkillTree';
 import { useGameContext } from '../contexts/GameContext';
@@ -11,6 +11,31 @@ const ReactorSection: React.FC = () => {
     const { onBuyCoreUpgrade } = handlers;
     const scrollableTreeRef = useRef<HTMLDivElement>(null);
     useDragToScroll(scrollableTreeRef);
+
+    // Lock main page scroll when interacting with the skill tree to prevent scroll bleed
+    useEffect(() => {
+        const scrollEl = scrollableTreeRef.current;
+        const gameContentEl = document.getElementById('game-content');
+        if (!scrollEl || !gameContentEl) return;
+
+        const lockScroll = () => { gameContentEl.style.overflowY = 'hidden'; };
+        const unlockScroll = () => { gameContentEl.style.overflowY = 'auto'; };
+
+        scrollEl.addEventListener('mouseenter', lockScroll);
+        scrollEl.addEventListener('mouseleave', unlockScroll);
+        scrollEl.addEventListener('touchstart', lockScroll, { passive: true });
+        scrollEl.addEventListener('touchend', unlockScroll);
+        scrollEl.addEventListener('touchcancel', unlockScroll);
+
+        return () => {
+            scrollEl.removeEventListener('mouseenter', lockScroll);
+            scrollEl.removeEventListener('mouseleave', unlockScroll);
+            scrollEl.removeEventListener('touchstart', lockScroll);
+            scrollEl.removeEventListener('touchend', unlockScroll);
+            scrollEl.removeEventListener('touchcancel', unlockScroll);
+            unlockScroll();
+        };
+    }, []);
     
     return (
         <section id="reactor" className="fullscreen-section reveal">

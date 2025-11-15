@@ -2,13 +2,14 @@ import React from 'react';
 import { Settings, Notification, Achievement } from '../../types';
 import { useGameState } from '../useGameState';
 import { usePopupManager } from '../usePopupManager';
+import { ACHIEVEMENT_IDS } from '../../constants/achievements';
 
 type AppHandlersProps = {
     hasSaveData: boolean;
     actions: ReturnType<typeof useGameState>['actions'];
     popups: ReturnType<typeof usePopupManager>;
     playSfx: (sound: 'click' | 'buy' | 'ui_hover') => void;
-    addNotification: (message: string, type: Notification['type'], options?: { title?: string; achievement?: Achievement }) => void;
+    addMessage: (message: string, type: Notification['type'], options?: { title?: string; achievement?: Achievement }) => void;
     setAppState: React.Dispatch<React.SetStateAction<'loading' | 'menu' | 'game' | 'cinematic'>>;
     setSettings: React.Dispatch<React.SetStateAction<Settings>>;
     unlockAudio: () => void;
@@ -19,7 +20,7 @@ export const useAppHandlers = ({
     actions,
     popups,
     playSfx,
-    addNotification,
+    addMessage,
     setAppState,
     setSettings,
     unlockAudio,
@@ -56,7 +57,7 @@ export const useAppHandlers = ({
     const handleCreditsClick = () => {
         playSfx('ui_hover');
         popups.setActivePopup('credits');
-        actions.unlockAchievement("Curieux");
+        actions.unlockAchievement(ACHIEVEMENT_IDS.CURIOUS);
     };
 
     const handleConfirmNewGame = () => {
@@ -69,7 +70,7 @@ export const useAppHandlers = ({
         playSfx('click');
         actions.resetGame(true);
         popups.setShowHardResetConfirm(false);
-        addNotification("Jeu réinitialisé.", 'info');
+        addMessage("Jeu réinitialisé.", 'info');
         setAppState('menu'); // Go back to menu after reset
     };
 

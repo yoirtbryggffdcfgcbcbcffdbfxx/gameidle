@@ -5,7 +5,6 @@ import ConfirmationPopup from './components/popups/ConfirmationPopup';
 import LoadingScreen from './components/LoadingScreen';
 import MainMenu from './components/MainMenu';
 import GameUI from './components/GameUI';
-import NotificationCenter from './components/Notification';
 import CreditsPopup from './components/popups/CreditsPopup';
 import IntroCinematic from './components/IntroCinematic';
 import { GameContext } from './contexts/GameContext';
@@ -52,12 +51,6 @@ const App: React.FC = () => {
         <GameContext.Provider value={game}>
             <div id="game-content-wrapper" className="h-full w-full">
                 <GameUI />
-                 <NotificationCenter
-                    notifications={game.uiState.notifications}
-                    removeNotification={game.removeNotification}
-                    // Responsive classes for mobile vs desktop
-                    className="fixed top-4 right-4 w-44 sm:w-64 z-[2500]"
-                />
             </div>
         </GameContext.Provider>
     );

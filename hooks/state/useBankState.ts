@@ -5,6 +5,7 @@ import { GameState } from '../../types';
 // FIX: Import missing constant to resolve reference error.
 import { BANK_UPGRADES, LOAN_REPAYMENT_RATE } from '../../data/bank';
 import { TICK_RATE } from '../../constants';
+import { ACHIEVEMENT_IDS } from '../../constants/achievements';
 
 type SetGameStateFn = React.Dispatch<React.SetStateAction<GameState>>;
 type UnlockAchievementFn = (name: string) => void;
@@ -22,7 +23,7 @@ export const useBankState = (
     const buildBank = useCallback((cost: number): void => {
         setGameState(prev => {
             if (prev.energy >= cost && !prev.isBankUnlocked) {
-                unlockAchievement("Capitaliste Quantique");
+                unlockAchievement(ACHIEVEMENT_IDS.QUANTUM_CAPITALIST);
                 return { ...prev, energy: prev.energy - cost, isBankUnlocked: true };
             }
             return prev;
@@ -75,7 +76,7 @@ export const useBankState = (
         setGameState(prev => {
             // All checks are now in the handler.
             const nextUpgrade = BANK_UPGRADES[prev.bankLevel + 1];
-            unlockAchievement("Magnat de la Finance");
+            unlockAchievement(ACHIEVEMENT_IDS.FINANCIAL_TYCOON);
             return { ...prev, energy: prev.energy - nextUpgrade.cost, bankLevel: prev.bankLevel + 1 };
         });
     }, [setGameState, unlockAchievement]);

@@ -26,7 +26,8 @@ const StatPill: React.FC<{ label: string; value: string | number; icon: string; 
 const QuantumInterface: React.FC = () => {
     const { gameState, computedState, handlers } = useGameContext();
     // FIX: Property 'isDischarging' does not exist on type 'GameState'. It should be 'isCoreDischarging'.
-    const { coreCharge, isCoreDischarging, quantumPathLevel } = gameState;
+    // FIX: Destructure coreDischargeEndTimestamp to pass to QuantumCore.
+    const { coreCharge, isCoreDischarging, quantumPathLevel, coreDischargeEndTimestamp } = gameState;
     const { coreBonuses } = computedState;
     const { exitQuantumInterface, onChooseQuantumPath } = handlers;
     
@@ -61,6 +62,8 @@ const QuantumInterface: React.FC = () => {
                         <QuantumCore
                             charge={coreCharge}
                             isDischarging={isCoreDischarging}
+                            // FIX: Pass the required dischargeEndTimestamp prop.
+                            dischargeEndTimestamp={coreDischargeEndTimestamp}
                             onInteraction={() => {}} // Click is disabled in this view
                             multiplier={coreBonuses.multiplier}
                             size={160}

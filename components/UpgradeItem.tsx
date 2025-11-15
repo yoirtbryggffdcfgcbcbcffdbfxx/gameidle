@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Upgrade } from '../types';
 import { MAX_UPGRADE_LEVEL } from '../constants';
-import { calculateBulkBuy, calculateTheoreticalBulkBuy } from '../utils/helpers';
+import { calculateBulkBuy, calculateTheoreticalBulkBuy, calculateCost } from '../utils/helpers';
 
 interface UpgradeItemProps {
     id: string;
     upgrade: Upgrade;
-    onBuy: () => void;
+    onBuy: (amount: 1 | 10 | 100 | 'MAX') => void;
+    onBuyTier: () => void;
     formatNumber: (num: number) => string;
     energy: number;
     costMultiplier: number;
@@ -17,7 +18,7 @@ interface UpgradeItemProps {
     isNew?: boolean;
 }
 
-const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, formatNumber, energy, costMultiplier, buyAmount, efficiencyPercentage, isMostEfficient, showEfficiencyPercentage, isNew }) => {
+const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy, onBuyTier, formatNumber, energy, costMultiplier, buyAmount, efficiencyPercentage, isMostEfficient, showEfficiencyPercentage, isNew }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [isOnScreen, setIsOnScreen] = useState(false);
 
@@ -44,71 +45,70 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
     }, []);
 
     const isMaxLevel = upgrade.owned >= MAX_UPGRADE_LEVEL;
+    // FIX: The condition for being at a tier threshold now also checks if the tier for that level has already been purchased.
+    // This prevents the "Upgrade Tier" button from showing incorrectly after a purchase.
+    const isAtTierThreshold = upgrade.owned > 0 && upgrade.owned % 10 === 0 && !isMaxLevel && upgrade.tier < upgrade.owned / 10;
 
-    // This is calculated based on energy and is the "real" purchasable amount.
+    // --- Calculations ---
+    const currentProductionPerUnit = useMemo(() => upgrade.baseProduction * Math.pow(2, upgrade.tier), [upgrade.baseProduction, upgrade.tier]);
+    const tierUpgradeCost = useMemo(() => calculateCost(upgrade.baseCost, upgrade.owned, costMultiplier) * 10, [upgrade, costMultiplier]);
+
+    // This is calculated based on energy and is the "real" purchasable amount for normal levels.
     const purchaseInfo = useMemo(() => {
+        if (isAtTierThreshold) return { numLevelsBought: 0, totalCost: 0 };
         return calculateBulkBuy(upgrade, buyAmount, energy, costMultiplier);
-    }, [upgrade, buyAmount, energy, costMultiplier]);
+    }, [upgrade, buyAmount, energy, costMultiplier, isAtTierThreshold]);
 
     // This is calculated without energy and is for display purposes (full cost of a batch).
     const theoreticalPurchaseInfo = useMemo(() => {
-        if (typeof buyAmount === 'number') {
-            return calculateTheoreticalBulkBuy(upgrade, buyAmount, costMultiplier);
-        }
-        return null; // For 'MAX' mode
-    }, [upgrade, buyAmount, costMultiplier]);
+        if (isAtTierThreshold || typeof buyAmount !== 'number') return null;
+        return calculateTheoreticalBulkBuy(upgrade, buyAmount, costMultiplier);
+    }, [upgrade, buyAmount, costMultiplier, isAtTierThreshold]);
 
-    // NEW `canAfford` logic. Simple and consistent.
     const canAfford = useMemo(() => {
         if (isMaxLevel) return false;
-        // We can afford it if we can buy at least one upgrade in the current mode.
-        return purchaseInfo.numToBuy > 0;
-    }, [isMaxLevel, purchaseInfo.numToBuy]);
+        if (isAtTierThreshold) return energy >= tierUpgradeCost;
+        return purchaseInfo.numLevelsBought > 0;
+    }, [isMaxLevel, isAtTierThreshold, energy, tierUpgradeCost, purchaseInfo.numLevelsBought]);
 
-    // NEW `buttonText` logic.
+    // --- Display Logic ---
+    const chevrons = '>'.repeat(upgrade.tier);
+
     const buttonText = () => {
         if (isMaxLevel) return 'MAX';
+        if (isAtTierThreshold) return `Améliorer Seuil (${formatNumber(tierUpgradeCost)})`;
     
         if (buyAmount === 'MAX') {
-            // In MAX mode, we always show what's actually affordable.
-            if (purchaseInfo.numToBuy > 0) {
-                return `Acheter x${purchaseInfo.numToBuy} (${formatNumber(purchaseInfo.totalCost)})`;
-            }
-            // If we can't afford even one. Button is disabled. Show cost of next level.
+            if (purchaseInfo.numLevelsBought > 0) return `Acheter x${purchaseInfo.numLevelsBought} (${formatNumber(purchaseInfo.totalCost)})`;
             return `Coût: ${formatNumber(upgrade.currentCost)}`;
         }
         
-        // For numeric amounts (x1, x10, x100)
         if (theoreticalPurchaseInfo) {
             if (theoreticalPurchaseInfo.numToBuy === 0) return 'MAX';
-    
-            // If we can afford a partial amount, show that. This is more honest.
-            if (purchaseInfo.numToBuy > 0 && purchaseInfo.numToBuy < theoreticalPurchaseInfo.numToBuy) {
-                 return `Acheter x${purchaseInfo.numToBuy} (${formatNumber(purchaseInfo.totalCost)})`;
+            if (purchaseInfo.numLevelsBought > 0 && purchaseInfo.numLevelsBought < theoreticalPurchaseInfo.numToBuy) {
+                 return `Acheter x${purchaseInfo.numLevelsBought} (${formatNumber(purchaseInfo.totalCost)})`;
             } else {
-                // We can't afford any OR we can afford the full batch. Show the full theoretical cost.
-                // The button's disabled state will differentiate the two cases.
                 return `Acheter x${theoreticalPurchaseInfo.numToBuy} (${formatNumber(theoreticalPurchaseInfo.totalCost)})`;
             }
         }
     
-        return 'Acheter'; // Fallback
+        return 'Acheter';
     };
 
     const isClickUpgrade = upgrade.type === 'CLICK';
     const isBoosterUpgrade = upgrade.type === 'BOOSTER';
 
     const effectText = isClickUpgrade
-        ? `+${formatNumber(upgrade.production)} par clic`
+        ? `+${formatNumber(currentProductionPerUnit)} par clic`
         : isBoosterUpgrade
-            ? `+${upgrade.production}% Prod. Totale`
-            : `${formatNumber(upgrade.production)}/sec`;
+            ? `+${formatNumber(currentProductionPerUnit)}% Prod. Totale`
+            : `${formatNumber(currentProductionPerUnit)}/sec`;
 
     const totalEffectText = isClickUpgrade
-        ? `Bonus Clic: +${formatNumber(upgrade.production * upgrade.owned)}`
+        ? `Bonus Clic: +${formatNumber(currentProductionPerUnit * upgrade.owned)}`
         : isBoosterUpgrade
-            ? `Bonus Prod: +${upgrade.production * upgrade.owned}%`
-            : `Prod: ${formatNumber(upgrade.production * upgrade.owned)}/sec`;
+            ? `Bonus Prod: +${formatNumber(currentProductionPerUnit * upgrade.owned)}%`
+            : `Prod: ${formatNumber(currentProductionPerUnit * upgrade.owned)}/sec`;
         
     const isUltimate = upgrade.color === '#ffffff';
     const buttonTextColor = isUltimate ? 'text-black' : 'text-white';
@@ -117,6 +117,7 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
     const containerClasses = [
         "bg-[var(--bg-upgrade)] p-2 my-0.5 rounded-lg w-[98%] mx-auto shadow-lg relative transition-all duration-500",
         isMostEfficient ? 'border-2 border-green-500 shadow-[0_0_15px_rgba(74,222,128,0.7)]' : 'border-2 border-transparent',
+        isAtTierThreshold ? 'border-2 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.7)]' : '',
         'opacity-0 translate-y-5',
         isOnScreen ? 'opacity-100 translate-y-0' : '',
     ].join(' ');
@@ -127,6 +128,11 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
         ? 'cursor-not-allowed'
         : `hover:shadow-md ${buttonShadow} ${!isButtonDisabled ? 'active:scale-95 active:brightness-90' : ''}`;
 
+    const buttonBgColor = () => {
+        if (isMaxLevel) return '#555';
+        if (!canAfford) return '#444';
+        return isAtTierThreshold ? '#eab308' : upgrade.color;
+    };
 
     return (
         <div ref={containerRef} id={id} className={containerClasses}>
@@ -136,13 +142,20 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                 <div className="flex-grow">
                     <strong style={{ color: upgrade.color, textShadow: '1px 1px 1px #000' }}>
+                        {chevrons && <span className="text-yellow-400 mr-1">{chevrons}</span>}
                         {upgrade.name} <span className="text-xs opacity-80">({effectText})</span>
                     </strong>
                     <div className="text-xs opacity-80 mt-1 flex flex-wrap gap-x-2">
                         <span>Niveau: {upgrade.owned}/{MAX_UPGRADE_LEVEL}</span>
                         <span>|</span>
                         <span>{totalEffectText}</span>
-                        {showEfficiencyPercentage && efficiencyPercentage !== undefined && efficiencyPercentage > 0 && (
+                        {isAtTierThreshold && (
+                             <>
+                                <span>|</span>
+                                <span className="text-yellow-400 animate-pulse">Bonus Seuil: Prod x2 !</span>
+                             </>
+                        )}
+                        {showEfficiencyPercentage && efficiencyPercentage !== undefined && efficiencyPercentage > 0 && !isAtTierThreshold && (
                              <>
                                 <span>|</span>
                                 <span title="Efficacité par rapport à la meilleure option">📊 {efficiencyPercentage.toFixed(0)}%</span>
@@ -151,8 +164,8 @@ const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({ id, upgrade, onBuy
                     </div>
                 </div>
                 <button 
-                    onClick={onBuy} 
-                    style={{ background: isMaxLevel ? '#555' : (canAfford ? upgrade.color : '#444') }} 
+                    onClick={() => isAtTierThreshold ? onBuyTier() : onBuy(buyAmount)} 
+                    style={{ background: buttonBgColor() }} 
                     disabled={isButtonDisabled}
                     className={`${buttonTextColor} px-6 sm:px-2 py-1.5 sm:py-0.5 rounded-md transition-all text-xs ${buttonDynamicClasses} w-auto self-center sm:self-auto`}
                 >

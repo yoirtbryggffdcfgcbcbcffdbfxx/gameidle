@@ -1,12 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import AchievementsPopup from './popups/AchievementsPopup';
-import ShopPopup from './popups/ShopPopup';
 import SettingsPopup from './popups/SettingsPopup';
 import { useGameContext } from '../contexts/GameContext';
-import { getNextFragmentCost } from '../data/quantumFragments';
+import MobileNav from './MobileNav';
+import GameStatsDisplay from './command_center/GameStatsDisplay';
+import { useDragToScroll } from '../hooks/ui/useDragToScroll';
+import ColoredAwardIcon from './ui/ColoredAwardIcon';
+import ColoredSettingsIcon from './ui/ColoredSettingsIcon';
 
 interface Tab {
-    id: string;
+    id: 'stats' | 'achievements' | 'settings';
     name: string;
     icon: React.ReactNode;
     condition: boolean;
@@ -14,32 +17,82 @@ interface Tab {
 }
 
 const CommandCenterSection: React.FC = () => {
-    const { gameState, computedState, uiState, handlers, popups, playSfx, memoizedFormatNumber } = useGameContext();
-    const { energy, quantumShards, achievements, purchasedShopUpgrades, isShopUnlocked, hasUnseenShopItems, isCoreUnlocked } = gameState;
+    const { gameState, computedState, uiState, handlers, popups, playSfx } = useGameContext();
+    const { achievements } = gameState;
     const { achievementBonuses } = computedState;
     const { settings, tutorialStep } = uiState;
-    const { onBuyShopUpgrade, onSettingsChange, markShopItemsAsSeen, onBuyQuantumShard } = handlers;
-    const { setShowHardResetConfirm, setTutorialStep } = popups;
+    const { onSettingsChange } = handlers;
+    const { setShowHardResetConfirm, setTutorialStep, setActiveMobilePopup } = popups;
     
-    const [activeCommandCenterTab, setActiveCommandCenterTab] = useState('achievements');
-    const canAffordFragment = useMemo(() => isCoreUnlocked && energy >= getNextFragmentCost(quantumShards), [isCoreUnlocked, energy, quantumShards]);
+    const [activeCommandCenterTab, setActiveCommandCenterTab] = useState<'stats' | 'achievements' | 'settings'>('stats');
 
-    const handleCommandCenterTabClick = (tab: string) => {
-        setActiveCommandCenterTab(tab);
-        if (tab === 'achievements' && tutorialStep === 9) {
+    // Refs for scrolling
+    const mobileStatsScrollableRef = useRef<HTMLDivElement>(null);
+    const desktopStatsScrollableRef = useRef<HTMLDivElement>(null);
+    useDragToScroll(mobileStatsScrollableRef);
+    useDragToScroll(desktopStatsScrollableRef);
+
+    // Lock main page scroll when interacting with the stats panel to prevent scroll bleed
+    useEffect(() => {
+        const gameContentEl = document.getElementById('game-content');
+        if (!gameContentEl) return;
+    
+        const lockScroll = () => { gameContentEl.style.overflowY = 'hidden'; };
+        const unlockScroll = () => { gameContentEl.style.overflowY = 'auto'; };
+
+        const addListeners = (el: HTMLElement) => {
+            el.addEventListener('mouseenter', lockScroll);
+            el.addEventListener('mouseleave', unlockScroll);
+            el.addEventListener('touchstart', lockScroll, { passive: true });
+            el.addEventListener('touchend', unlockScroll);
+            el.addEventListener('touchcancel', unlockScroll);
+        };
+
+        const removeListeners = (el: HTMLElement) => {
+            el.removeEventListener('mouseenter', lockScroll);
+            el.removeEventListener('mouseleave', unlockScroll);
+            el.removeEventListener('touchstart', lockScroll);
+            el.removeEventListener('touchend', unlockScroll);
+            el.removeEventListener('touchcancel', unlockScroll);
+        };
+    
+        const mobileEl = mobileStatsScrollableRef.current;
+        const desktopEl = desktopStatsScrollableRef.current;
+        
+        if (mobileEl) addListeners(mobileEl);
+        if (desktopEl) addListeners(desktopEl);
+    
+        return () => {
+            if (mobileEl) removeListeners(mobileEl);
+            if (desktopEl) removeListeners(desktopEl);
+            unlockScroll();
+        };
+    }, []);
+
+    const handleCommandCenterTabClick = (tabId: 'stats' | 'achievements' | 'settings') => {
+        setActiveCommandCenterTab(tabId);
+        if (tabId === 'achievements' && tutorialStep === 9) {
             setTutorialStep(10);
         }
     };
+    
+    const handleMobileTabClick = (tabId: 'achievements' | 'settings') => {
+        setActiveMobilePopup(tabId as 'achievements' | 'settings');
+    }
 
-    const commandCenterTabs: Tab[] = [
-        { id: 'achievements', name: 'Succès', icon: <span className="text-xl">🏆</span>, condition: true },
-        { id: 'shop', name: 'Boutique', icon: <span className="text-xl">🛍️</span>, condition: isShopUnlocked, hasNotification: hasUnseenShopItems || canAffordFragment },
-        { id: 'settings', name: 'Paramètres', icon: <span className="text-xl">⚙️</span>, condition: true },
-    ].filter(tab => tab.condition);
+    // FIX: Add type assertion to the array literal to prevent TypeScript from widening the `id` property to a generic `string`.
+    // The .filter() call prevents contextual typing from the variable assignment, so we must be explicit.
+    const commandCenterTabs: Omit<Tab, 'hasNotification'>[] = ([
+        { id: 'stats', name: 'Stats', icon: <span className="text-xl">📊</span>, condition: true },
+        { id: 'achievements', name: 'Succès', icon: <ColoredAwardIcon className="w-6 h-6" />, condition: true },
+        { id: 'settings', name: 'Paramètres', icon: <ColoredSettingsIcon className="w-6 h-6" />, condition: true },
+    ] as Omit<Tab, 'hasNotification'>[]).filter(tab => tab.condition);
+
+    const mobileNavTabs = commandCenterTabs.filter(tab => tab.id !== 'stats');
 
     return (
         <section id="command-center" className="fullscreen-section reveal">
-            <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col relative overflow-hidden">
+            <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
                 <div className="w-full flex justify-center items-center mb-4 flex-shrink-0">
                     <h2 className="text-2xl text-[var(--text-header)]">Commandement</h2>
                 </div>
@@ -55,58 +108,34 @@ const CommandCenterSection: React.FC = () => {
                         >
                             <span className="relative flex items-center gap-2">
                                 {tab.name}
-                                {tab.hasNotification && (
-                                    <span className="absolute -top-1 -right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse-red"></span>
-                                )}
                             </span>
                         </button>
                     ))}
                 </div>
 
-                {/* Content Area */}
-                <div className="flex-grow overflow-hidden pb-16 md:pb-0">
+                {/* Desktop Content Area */}
+                <div className="hidden md:block flex-grow overflow-hidden">
+                     {activeCommandCenterTab === 'stats' && (
+                        <div ref={desktopStatsScrollableRef} className="h-full overflow-y-auto custom-scrollbar pr-2 scroll-contain">
+                            <GameStatsDisplay />
+                        </div>
+                    )}
                     {activeCommandCenterTab === 'achievements' && (
                         <AchievementsPopup achievements={achievements} achievementBonuses={achievementBonuses} onClose={() => { }} />
-                    )}
-                    {isShopUnlocked && activeCommandCenterTab === 'shop' && (
-                         <ShopPopup
-                            quantumShards={quantumShards}
-                            energy={energy}
-                            purchasedShopUpgrades={purchasedShopUpgrades}
-                            onBuy={onBuyShopUpgrade}
-                            formatNumber={memoizedFormatNumber}
-                            hasUnseenShopItems={hasUnseenShopItems}
-                            isCoreUnlocked={isCoreUnlocked}
-                            onBuyQuantumShard={onBuyQuantumShard}
-                            markShopItemsAsSeen={markShopItemsAsSeen}
-                            canAffordFragment={canAffordFragment}
-                        />
                     )}
                     {activeCommandCenterTab === 'settings' && (
                         <SettingsPopup settings={settings} onSettingsChange={onSettingsChange} onClose={() => { }} onHardReset={() => setShowHardResetConfirm(true)} playSfx={playSfx} />
                     )}
                 </div>
                 
-                {/* Mobile Bottom Nav */}
-                <div className="md:hidden absolute bottom-0 left-0 right-0 h-16 bg-black/50 backdrop-blur-sm border-t border-white/10 flex justify-around items-center">
-                     {commandCenterTabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            id={`tab-mobile-${tab.id}`}
-                            onClick={() => handleCommandCenterTabClick(tab.id)}
-                            className={`flex flex-col items-center justify-center text-xs transition-colors relative w-1/3 h-full ${activeCommandCenterTab === tab.id ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
-                        >
-                            {activeCommandCenterTab === tab.id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-[var(--text-header)] rounded-full"></div>}
-                            <div className="relative">
-                                {tab.icon}
-                                {tab.hasNotification && (
-                                    <span className="absolute -top-1 -right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-                                )}
-                            </div>
-                            <span className="mt-1">{tab.name}</span>
-                        </button>
-                    ))}
+                {/* Mobile Stats Display */}
+                 <div ref={mobileStatsScrollableRef} className="md:hidden flex-grow overflow-y-auto custom-scrollbar pr-2 scroll-contain min-h-0">
+                    <GameStatsDisplay />
                 </div>
+                <MobileNav
+                    tabs={mobileNavTabs}
+                    onTabClick={handleMobileTabClick}
+                />
             </div>
         </section>
     );

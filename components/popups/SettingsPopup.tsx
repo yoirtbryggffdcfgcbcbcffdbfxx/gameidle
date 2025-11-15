@@ -1,12 +1,19 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Settings } from '../../types';
 import ToggleSwitch from '../ui/ToggleSwitch';
-import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
+import ShieldCheckIcon from '../ui/ShieldCheckIcon';
+import EyeIcon from '../ui/EyeIcon';
+import PaletteIcon from '../ui/PaletteIcon';
+import VolumeIcon from '../ui/VolumeIcon';
+import DatabaseIcon from '../ui/DatabaseIcon';
+import AlertTriangleIcon from '../ui/AlertTriangleIcon';
+import ChevronDownIcon from '../ui/ChevronDownIcon';
+import CheckIcon from '../ui/CheckIcon';
 
 interface SettingsPopupProps {
     settings: Settings;
     onSettingsChange: (newSettings: Partial<Settings>) => void;
-    onClose: () => void; // Kept for prop compatibility, but not used
+    onClose: () => void;
     onHardReset: () => void;
     playSfx: (sound: 'click' | 'ui_hover') => void;
 }
@@ -19,16 +26,46 @@ const themes = [
     { id: 'cyberpunk', name: 'Cyberpunk', from: '#0b022d', to: '#3a0ca3', text: '#ff00c8' },
 ];
 
-const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div>
-        <h3 className="text-sm text-yellow-400 mb-2 border-b border-yellow-400/20 pb-1">{title}</h3>
-        <div className="space-y-3">{children}</div>
-    </div>
-);
+const AccordionSection: React.FC<{
+    title: string;
+    icon: React.ReactNode;
+    sectionId: string;
+    openSection: string | null;
+    setOpenSection: (id: string | null) => void;
+    colorClass: string;
+    children: React.ReactNode;
+}> = ({ title, icon, sectionId, openSection, setOpenSection, colorClass, children }) => {
+    const isOpen = openSection === sectionId;
+    const toggle = () => {
+        setOpenSection(isOpen ? null : sectionId);
+    };
+
+    return (
+        <div className="border-b border-white/10 last:border-b-0">
+            <button
+                onClick={toggle}
+                className="w-full flex justify-between items-center p-3 text-left transition-colors hover:bg-white/5"
+                aria-expanded={isOpen}
+            >
+                <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 ${colorClass}`}>{icon}</div>
+                    <span className={`font-bold ${colorClass}`}>{title}</span>
+                </div>
+                <ChevronDownIcon className={`w-5 h-5 text-gray-400 accordion-chevron-rotation ${isOpen ? 'open' : ''}`} />
+            </button>
+            <div className={`accordion-content ${isOpen ? 'open' : ''}`}>
+                <div>
+                    <div className="p-3 pt-0">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChange, onHardReset, playSfx }) => {
-    const scrollableRef = useRef<HTMLDivElement>(null);
-    useDragToScroll(scrollableRef);
+    const [openSection, setOpenSection] = useState<string | null>(null);
 
     const handleToggle = (key: keyof Settings, value: boolean) => {
         playSfx('click');
@@ -36,25 +73,25 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
     };
 
     return (
-        <div className="h-full flex flex-col">
-            <h2 className="text-2xl text-center text-[var(--text-header)] mb-4">Paramètres</h2>
-            <div ref={scrollableRef} className="space-y-5 flex-grow overflow-y-auto pr-2 custom-scrollbar scroll-contain">
-                
-                <SettingsSection title="Général">
+        <div className="-m-4">
+            <AccordionSection title="Général" icon={<ShieldCheckIcon />} sectionId="Général" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-green-400">
+                 <div className="space-y-3">
                     <ToggleSwitch 
                         label="Confirmer l'Ascension" 
                         enabled={settings.confirmAscension} 
                         onChange={(value) => handleToggle('confirmAscension', value)} 
                     />
-                </SettingsSection>
+                </div>
+            </AccordionSection>
 
-                <SettingsSection title="Affichage">
+            <AccordionSection title="Affichage" icon={<EyeIcon />} sectionId="Affichage" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-cyan-400">
+                <div className="space-y-3">
                     <ToggleSwitch 
                         label="Effets Visuels (Particules)" 
                         enabled={settings.visualEffects} 
                         onChange={(value) => handleToggle('visualEffects', value)}
                     />
-                     <ToggleSwitch 
+                    <ToggleSwitch 
                         label="Texte Flottant (+Énergie)" 
                         enabled={settings.showFloatingText} 
                         onChange={(value) => handleToggle('showFloatingText', value)}
@@ -68,39 +105,63 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                         <span className="mb-1.5">Vitesse d'animation : <span className="font-bold text-cyan-300">{settings.animSpeed}x</span></span>
                         <input type="range" min="1" max="5" step="0.5" value={settings.animSpeed} onChange={(e) => onSettingsChange({ animSpeed: parseFloat(e.target.value) })} />
                     </label>
-                </SettingsSection>
+                </div>
+            </AccordionSection>
 
-                <SettingsSection title="Thème Visuel">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {themes.map(theme => (
+            <AccordionSection title="Thème Visuel" icon={<PaletteIcon />} sectionId="Thème Visuel" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-purple-400">
+                <div className="grid grid-cols-2 gap-3">
+                    {themes.map(theme => {
+                        const isActive = settings.theme === theme.id;
+                        return (
                             <button
                                 key={theme.id}
-                                onClick={() => onSettingsChange({ theme: theme.id as any })}
-                                className={`p-2 rounded-md border-2 transition-all ${settings.theme === theme.id ? 'border-cyan-400 scale-105' : 'border-transparent hover:border-cyan-400/50'}`}
+                                onClick={() => {
+                                    playSfx('click');
+                                    onSettingsChange({ theme: theme.id as any });
+                                }}
+                                className={`relative p-3 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 ${
+                                    isActive ? 'border-cyan-400 scale-105 shadow-lg' : 'border-white/10'
+                                }`}
+                                style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
                             >
-                                <div className="w-full h-10 rounded" style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}></div>
-                                <p className="text-xs mt-1" style={{ color: theme.text }}>{theme.name}</p>
+                                <span 
+                                    className="font-bold text-sm" 
+                                    style={{ color: theme.text, textShadow: '1px 1px 2px rgba(0,0,0,0.6)' }}
+                                >
+                                    {theme.name}
+                                </span>
+                                {isActive && (
+                                    <div className="absolute top-1 right-1 bg-cyan-500 rounded-full p-0.5 text-black">
+                                        <CheckIcon className="w-3 h-3" />
+                                    </div>
+                                )}
                             </button>
-                        ))}
-                    </div>
-                </SettingsSection>
+                        );
+                    })}
+                </div>
+            </AccordionSection>
 
-                <SettingsSection title="Audio">
+            <AccordionSection title="Audio" icon={<VolumeIcon />} sectionId="Audio" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-blue-400">
+                <div className="space-y-3">
                     <label className="flex flex-col text-xs">
                         <span className="mb-1.5">Volume des effets sonores : <span className="font-bold text-cyan-300">{Math.round(settings.sfxVolume * 100)}%</span></span>
                         <input type="range" min="0" max="1" step="0.01" value={settings.sfxVolume} onChange={(e) => onSettingsChange({ sfxVolume: parseFloat(e.target.value) })} />
                     </label>
-                </SettingsSection>
+                </div>
+            </AccordionSection>
 
-                <SettingsSection title="Gestion des Données">
+            <AccordionSection title="Gestion des Données" icon={<DatabaseIcon />} sectionId="Gestion des Données" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-gray-400">
+                <div className="space-y-3">
                     <div className="flex gap-2 text-xs">
                         <button disabled className="flex-1 bg-gray-600 text-white/50 p-2 rounded cursor-not-allowed">Exporter la Sauvegarde</button>
                         <button disabled className="flex-1 bg-gray-600 text-white/50 p-2 rounded cursor-not-allowed">Importer la Sauvegarde</button>
                     </div>
-                     <p className="text-center text-[10px] opacity-60">Bientôt disponible !</p>
-                </SettingsSection>
-                
-                <SettingsSection title="Zone de Danger">
+                    <p className="text-center text-[10px] opacity-60">Bientôt disponible !</p>
+                </div>
+            </AccordionSection>
+            
+            <AccordionSection title="Zone de Danger" icon={<AlertTriangleIcon />} sectionId="Zone de Danger" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-red-500">
+                <div className="space-y-3">
                     <button 
                         onClick={() => {
                             playSfx('click');
@@ -110,9 +171,8 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                     >
                         <span className="text-xl">⚠️</span> Réinitialiser Toute la Progression
                     </button>
-                </SettingsSection>
-
-            </div>
+                </div>
+            </AccordionSection>
         </div>
     );
 };

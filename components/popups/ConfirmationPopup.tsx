@@ -12,7 +12,7 @@ const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({ show, title, mess
     if (!show) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/75 flex justify-center items-center z-[160]">
+        <div className="fixed inset-0 bg-black/75 flex justify-center items-center z-[3100]">
             <div className="bg-[var(--bg-popup)] p-4 rounded-lg w-80 max-w-[90%] shadow-2xl text-[var(--text-main)] text-center animate-popup-scale">
                 <h3 className="mt-0 text-[var(--text-header)] text-lg mb-2">{title}</h3>
                 <p className="my-4">{message}</p>

@@ -2,20 +2,20 @@
  * Définit les coûts en énergie pour les premiers Fragments Quantiques.
  */
 export const FRAGMENT_COST_STAGES: number[] = [
-    5e3,    // 1er
-    15e3,   // 2e
-    25e3,   // 3e
-    40e3,   // 4e
-    60e3,   // 5e
-    90e3,   // 6e
-    130e3,  // 7e
-    170e3,  // 8e
-    230e3,  // 9e
-    300e3,  // 10e
-    400e3,  // 11e
-    600e3,  // 12e
-    900e3,  // 13e
-    1.3e6,  // 14e
+    5e4,    // 1er
+    15e4,   // 2e
+    25e4,   // 3e
+    40e4,   // 4e
+    60e4,   // 5e
+    90e4,   // 6e
+    1.3e6,  // 7e
+    1.7e6,  // 8e
+    2.3e6,  // 9e
+    3e6,    // 10e
+    4e6,    // 11e
+    6e6,    // 12e
+    9e6,    // 13e
+    1.3e7,  // 14e
 ];
 
 /**
@@ -29,13 +29,13 @@ export const getNextFragmentCost = (shardsOwned: number): number => {
     }
     
     // Pour les fragments au-delà de la liste, la logique est additive avec un pas qui augmente.
-    // L'incrément de 900k à 1.3M est de 400k. Chaque nouvel incrément augmente de 100k.
-    let currentCost = FRAGMENT_COST_STAGES[FRAGMENT_COST_STAGES.length - 1]; // 1,300,000
-    let currentIncrement = 400000; // Le pas qui a mené au dernier coût défini.
+    // L'incrément de 9M à 13M est de 4M. Chaque nouvel incrément augmente de 1M.
+    let currentCost = FRAGMENT_COST_STAGES[FRAGMENT_COST_STAGES.length - 1]; // 13,000,000
+    let currentIncrement = 4000000; // Le pas qui a mené au dernier coût défini.
     const stagesBeyond = shardsOwned - (FRAGMENT_COST_STAGES.length - 1);
 
     for (let i = 0; i < stagesBeyond; i++) {
-        currentIncrement += 100000;
+        currentIncrement += 1000000;
         currentCost += currentIncrement;
     }
 

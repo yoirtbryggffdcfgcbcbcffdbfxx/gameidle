@@ -2,13 +2,15 @@ export interface Upgrade {
     id: string;
     name: string;
     baseCost: number;
-    production: number;
+    baseProduction: number; // Renommé de 'production'
+    tier: number; // Nouveau: pour les seuils de niveau (10, 20, etc.)
     type: 'PRODUCTION' | 'CLICK' | 'BOOSTER';
     color: string;
     unlockCost: number;
     requiredAscension: number;
     owned: number;
     currentCost: number;
+    nextLevelCostOverride?: number; // NOUVEAU: pour le coût remisé après un seuil
 }
 
 export interface Achievement {
@@ -72,16 +74,19 @@ export interface GameState {
     hasSeenAscensionTutorial: boolean;
     coreCharge: number;
     isCoreDischarging: boolean;
+    coreDischargeEndTimestamp: number | null;
     quantumShards: number;
     hasSeenCoreTutorial: boolean;
     totalEnergyProduced: number;
     isBankUnlocked: boolean;
+    isBankDiscovered: boolean;
     savingsBalance: number;
     currentLoan: Loan | null;
     bankLevel: number;
     hasSeenBankTutorial: boolean;
+    loanTier: number;
     purchasedShopUpgrades: string[];
-    productionHistory: number[];
+    productionHistory: { value: number; duration: number }[];
     seenUpgrades: string[];
     viewedCategories: string[];
     isShopUnlocked: boolean;
@@ -92,6 +97,12 @@ export interface GameState {
     chosenQuantumPath: QuantumPathType | null;
     quantumPathLevel: number;
     hasInteractedWithQuantumCore: boolean;
+    
+    // New stats
+    timePlayedInSeconds: number;
+
+    // New message center
+    messageLog: Notification[];
 }
 
 export interface Particle {
@@ -105,14 +116,17 @@ export interface FloatingText {
     id: number;
     text: string;
     x: number;
+
     y: number;
     color: string;
 }
 
 export interface Notification {
-    id: number;
+    id: string;
+    timestamp: number;
+    read: boolean;
     message: string;
-    type: 'achievement' | 'error' | 'info';
+    type: 'achievement' | 'error' | 'info' | 'system';
     title?: string;
     achievement?: Achievement;
 }

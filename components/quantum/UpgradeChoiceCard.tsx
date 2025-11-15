@@ -15,7 +15,7 @@ const ICONS: Record<QuantumPathType, string> = {
 
 const UpgradeChoiceCard: React.FC<UpgradeChoiceCardProps> = ({ type, pathData, onChoose }) => {
     
-    const handleInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+    const handleInteraction = (e: React.PointerEvent) => {
         e.preventDefault();
         onChoose();
     };
@@ -26,8 +26,7 @@ const UpgradeChoiceCard: React.FC<UpgradeChoiceCardProps> = ({ type, pathData, o
             <h3 className="font-bold text-yellow-400 text-base mb-2">{pathData.name}</h3>
             <p className="text-xs sm:text-sm flex-grow mb-4">{pathData.description}</p>
             <button
-                onMouseDown={handleInteraction}
-                onTouchStart={handleInteraction}
+                onPointerDown={handleInteraction}
                 className="w-full px-4 py-2 rounded-md font-bold text-xs transition-all bg-cyan-700 group-hover:bg-cyan-600 active:scale-95 active:brightness-90"
             >
                 Choisir cette Voie

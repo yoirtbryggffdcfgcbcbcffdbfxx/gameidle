@@ -51,10 +51,6 @@ export const animationsCss = `
 .core-ready .animate-core-glow {
     animation-duration: 1.5s;
 }
-@keyframes discharge-pulse {
-    0% { opacity: 0.8; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.1); }
-}
 @keyframes discharge-flash {
     0% { filter: brightness(3); }
     100% { filter: brightness(1); }
@@ -123,7 +119,7 @@ export const animationsCss = `
 .animate-particle-fade {
     animation: particle-fade linear infinite;
     position: absolute;
-    background: #00ffff;
+    background: #fff;
     border-radius: 50%;
     pointer-events: none;
 }
@@ -196,6 +192,9 @@ export const animationsCss = `
     from { opacity: 0; }
     to { opacity: 1; }
 }
+.animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+}
 .animate-fade-in-fast {
     animation: fade-in 0.3s ease-out forwards;
 }
@@ -243,4 +242,111 @@ export const animationsCss = `
 .animate-pulse-purple {
     animation: pulse-purple 2s infinite;
 }
-`
+
+/* Shop Card Transitions */
+@keyframes shop-card-enter {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.animate-shop-card-enter {
+    animation: shop-card-enter 0.3s ease-out forwards;
+}
+
+@keyframes shop-card-exit {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+}
+.animate-shop-card-exit {
+    animation: shop-card-exit 0.3s ease-out forwards;
+}
+
+/* Sliding Up Panel */
+@keyframes slide-in-up {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+.animate-slide-in-up {
+    animation: slide-in-up 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slide-out-down {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(100%);
+    }
+}
+.animate-slide-out-down {
+    animation: slide-out-down 0.3s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+}
+
+/* Shop Background Panning */
+@keyframes pan {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
+/* Scroll-triggered animations */
+.scroll-reveal-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s cubic-bezier(0.645, 0.045, 0.355, 1), transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+.is-visible .scroll-reveal-item {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.is-visible .scroll-reveal-item:nth-child(1) { transition-delay: 0.1s; }
+.is-visible .scroll-reveal-item:nth-child(2) { transition-delay: 0.2s; }
+.is-visible .scroll-reveal-item:nth-child(3) { transition-delay: 0.3s; }
+.is-visible .scroll-reveal-item:nth-child(4) { transition-delay: 0.4s; }
+
+@keyframes scroll-down-indicator {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(10px); opacity: 0.5; }
+}
+
+@keyframes collect-glow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(232, 0, 0, 0.3), inset 0 0 15px rgba(232, 0, 0, 0.2);
+        border-color: #e80000;
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(232, 0, 0, 0.5), inset 0 0 20px rgba(232, 0, 0, 0.3);
+        border-color: #ff6363;
+    }
+}
+
+@keyframes scan-line {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+@keyframes gradient-shift {
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+}
+`;

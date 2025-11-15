@@ -5,10 +5,9 @@ interface ScrollspyNavProps {
     activeSection: string;
     onNavClick: (sectionId: string) => void;
     newUpgradesAvailable: boolean;
-    newShopItemsAvailable: boolean;
 }
 
-const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection, onNavClick, newUpgradesAvailable, newShopItemsAvailable }) => {
+const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection, onNavClick, newUpgradesAvailable }) => {
     const [scrollProgress, setScrollProgress] = useState(0);
 
     useEffect(() => {
@@ -48,9 +47,6 @@ const ScrollspyNav: React.FC<ScrollspyNavProps> = ({ sections, activeSection, on
                         />
                          {section.id === 'forge' && newUpgradesAvailable && (
                             <span className="absolute right-[-5px] top-[-5px] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse-red" title="Nouvelles améliorations disponibles !"></span>
-                        )}
-                         {section.id === 'command-center' && newShopItemsAvailable && (
-                            <span className="absolute right-[-5px] top-[-5px] w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse-red" title="Nouveaux articles dans la boutique !"></span>
                         )}
                     </li>
                 ))}

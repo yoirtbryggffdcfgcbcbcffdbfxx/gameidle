@@ -14,7 +14,8 @@ const QuantumBackground: React.FC = () => (
 
 const QuantumPathInterface: React.FC = () => {
     const { gameState, computedState, handlers, memoizedFormatNumber } = useGameContext();
-    const { chosenQuantumPath, quantumPathLevel, quantumShards, coreCharge, isCoreDischarging } = gameState;
+    // FIX: Destructure coreDischargeEndTimestamp to pass to QuantumCore.
+    const { chosenQuantumPath, quantumPathLevel, quantumShards, coreCharge, isCoreDischarging, coreDischargeEndTimestamp } = gameState;
     const { coreBonuses, timeToFullSeconds } = computedState;
     const { exitQuantumInterface, onPurchasePathUpgrade } = handlers;
     
@@ -57,6 +58,8 @@ const QuantumPathInterface: React.FC = () => {
                         <QuantumCore
                             charge={coreCharge}
                             isDischarging={isCoreDischarging}
+                            // FIX: Pass the required dischargeEndTimestamp prop.
+                            dischargeEndTimestamp={coreDischargeEndTimestamp}
                             onInteraction={() => {}}
                             multiplier={coreBonuses.multiplier}
                             size={128}

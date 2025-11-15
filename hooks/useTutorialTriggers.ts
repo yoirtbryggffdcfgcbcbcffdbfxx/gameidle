@@ -15,7 +15,8 @@ export const useTutorialTriggers = (
     onBankUnlockedFirstTime: () => void
 ) => {
     useEffect(() => {
-        const canAscendNow = prestigeState.canAscend(gameState);
+        // FIX: Replaced prestigeState.canAscend(gameState) with prestigeState.getComputed(gameState).canAscend to align with the refactored hook structure.
+        const canAscendNow = prestigeState.getComputed(gameState).canAscend;
         if (canAscendNow && !gameState.hasSeenAscensionTutorial) {
             onCanAscendFirstTime();
             setGameState(prev => ({...prev, hasSeenAscensionTutorial: true}));

@@ -1,6 +1,6 @@
 import { CoreUpgrade } from '../types';
 
-export const CORE_UNLOCK_TOTAL_ENERGY = 10000;
+export const CORE_UNLOCK_TOTAL_ENERGY = 100000;
 
 export const CORE_UPGRADES: CoreUpgrade[] = [
     // Center

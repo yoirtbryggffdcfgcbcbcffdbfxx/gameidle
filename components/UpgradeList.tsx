@@ -12,7 +12,8 @@ interface EnrichedUpgradeItem {
 
 interface UpgradeListProps {
     upgrades: EnrichedUpgradeItem[];
-    onBuyUpgrade: (index: number) => void;
+    onBuyUpgrade: (index: number, amount: 1 | 10 | 100 | 'MAX') => void;
+    onBuyTierUpgrade: (index: number) => void;
     formatNumber: (num: number) => string;
     energy: number;
     costMultiplier: number;
@@ -21,7 +22,7 @@ interface UpgradeListProps {
     showEfficiencyPercentage: boolean;
 }
 
-const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, formatNumber, energy, costMultiplier, mostEfficientId, buyAmount, showEfficiencyPercentage }) => {
+const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, onBuyTierUpgrade, formatNumber, energy, costMultiplier, mostEfficientId, buyAmount, showEfficiencyPercentage }) => {
     if (upgrades.length === 0) {
         return (
             <div className="text-center text-gray-400 h-full flex items-center justify-center py-10">
@@ -37,7 +38,8 @@ const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, forma
                     key={item.upgradeData.id} 
                     id={`upgrade-${item.upgradeData.id}`}
                     upgrade={item.upgradeData} 
-                    onBuy={() => onBuyUpgrade(item.originalIndex)} 
+                    onBuy={(amount) => onBuyUpgrade(item.originalIndex, amount)} 
+                    onBuyTier={() => onBuyTierUpgrade(item.originalIndex)}
                     formatNumber={formatNumber}
                     energy={energy}
                     costMultiplier={costMultiplier}

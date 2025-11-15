@@ -1,251 +1,118 @@
+// hooks/useGameEngine.ts
+import React, { useMemo, useCallback } from 'react';
+import { Achievement, Notification } from '../types';
 
-
-import { useMemo, useCallback, useEffect, useState } from 'react';
-import { Achievement, QuantumPathType } from '../types';
-
-// Main State & Logic
+// Hooks d'état et de logique
 import { useGameState } from './useGameState';
-import { useGameLoop } from './useGameLoop';
-import { useTutorialTriggers } from './useTutorialTriggers';
-
-
-// App Flow & Settings
-import { useAppFlow } from './useAppFlow';
 import { useSettings } from './useSettings';
-import { SAVE_KEY } from '../constants';
+import { useAppFlow } from './useAppFlow';
+import { useGameOrchestrator } from './useGameOrchestrator';
+import { useViewManager } from './useViewManager';
 
-// UI & Effects
-import { useSfx } from './useSfx';
-import { useNotifications } from './useNotifications';
-import { useParticleSystem } from './useParticleSystem';
-import { useFloatingText } from './useFloatingText';
-import { usePopupManager } from './usePopupManager';
-import { formatNumber } from '../utils/helpers';
-
-// Handlers (actions with side effects)
+// Handlers (couche d'actions avec effets secondaires)
 import { useAppHandlers } from './handlers/useAppHandlers';
 import { usePlayerHandlers } from './handlers/usePlayerHandlers';
 import { usePrestigeHandlers } from './handlers/usePrestigeHandlers';
 import { useBankHandlers } from './handlers/useBankHandlers';
 import { useShopHandlers } from './handlers/useShopHandlers';
-import { QUANTUM_PATHS } from '../data/quantumPaths';
+
+// UI & Effets
+import { useUIEffects } from './ui/useUIEffects';
+import { formatNumber } from '../utils/helpers';
+import { SAVE_KEY } from '../constants';
+import { ACHIEVEMENT_IDS } from '../constants/achievements';
 
 export const useGameEngine = () => {
-    // --- 1. Foundational Hooks (State, Settings, UI Systems) ---
-    
+    // --- 1. Hooks Fondamentaux ---
     const { settings, setSettings, handleSettingsChange } = useSettings();
-    const { playSfx, unlockAudio } = useSfx(settings.sfxVolume);
-    
-    const { notifications, addNotification, removeNotification } = useNotifications();
-    const popups = usePopupManager();
-    const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
-    const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.showFloatingText);
-    
-    const onAchievementUnlock = useCallback((achievement: Achievement) => {
-        addNotification(
-            achievement.description, 
-            'achievement', 
-            { title: 'Succès Débloqué !', achievement }
-        );
-    }, [addNotification]);
-
+    const { playSfx, unlockAudio, ...uiEffects } = useUIEffects(settings);
     const loadStatus = localStorage.getItem(SAVE_KEY) ? 'has_save' : 'no_save';
     const { appState, setAppState, hasSaveData } = useAppFlow(loadStatus);
 
-    const { 
-        gameState, 
-        setGameState, 
-        computed, 
-        actions, 
-        dev, 
-        saveGameState, 
-        achievementsManager, 
-        prestigeState, 
-        bankState 
-    } = useGameState(onAchievementUnlock, appState, loadStatus);
+    // --- 2. Hook d'État Principal ---
+    const addMessageToState = useCallback((
+        message: string,
+        type: Notification['type'],
+        options: { title?: string; achievement?: Achievement } = {}
+    ) => {
+        // This function will be replaced by the one from useGameState,
+        // but we need a stable reference for the initial render pass.
+    }, []);
+    const addMessageRef = React.useRef(addMessageToState);
+
+    const handleAchievementUnlock = React.useCallback((achievement: Achievement) => {
+        addMessageRef.current(achievement.name, 'achievement', {
+            title: 'Succès Débloqué !',
+            achievement,
+        });
+    }, []);
     
-    const [activeView, setActiveView] = useState<'main' | 'quantum_core' | 'quantum_path'>('main');
-    const [showQuantumPathConfirm, setShowQuantumPathConfirm] = useState(false);
-    const [pathChoiceToConfirm, setPathChoiceToConfirm] = useState<QuantumPathType | null>(null);
+    const { 
+        gameState, setGameState, computed, actions, dev, saveGameState,
+        achievementsManager, prestigeState, coreMechanics, bankState 
+    } = useGameState(handleAchievementUnlock, appState, loadStatus);
+    
+    // Update the ref with the real function once it's available
+    addMessageRef.current = actions.addMessage;
+    const addMessage = actions.addMessage;
 
-    // --- 2. Memoized Values & Callbacks ---
+    // --- 3. Hooks de Logique Spécialisée (Refactorisés) ---
+    const { activeView, pathChoiceToConfirm, viewHandlers } = useViewManager({
+        playSfx,
+        gameState,
+        actions,
+        popups: uiEffects.popups,
+        addMessage,
+    });
+    
+    const clickQueue = React.useRef<{x: number, y: number}[]>([]);
+    
+    const onCollect = React.useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+        e.preventDefault();
+        playSfx('click');
+        clickQueue.current.push({ x: e.clientX, y: e.clientY });
 
-    const memoizedFormatNumber = useCallback((num: number) => {
+        // Handle tutorial progression here, as it's a direct UI interaction feedback
+        if (uiEffects.popups.tutorialStep === 1) {
+            uiEffects.popups.setTutorialStep(2);
+        }
+    }, [playSfx, uiEffects.popups]);
+
+    const memoizedFormatNumber = React.useCallback((num: number) => {
         return formatNumber(num, settings.scientificNotation);
     }, [settings.scientificNotation]);
 
-    const onLoanRepaid = useCallback(() => {
-        addNotification("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
-    }, [addNotification]);
-
-    // --- 3. Game Loop & Event Triggers ---
-
-    const loopLoadStatus = appState === 'loading' ? 'loading' : 'loaded';
-    useGameLoop(appState, loopLoadStatus, setGameState, prestigeState, bankState, onLoanRepaid);
-    
-    useEffect(() => {
-        if (appState === 'game') {
-            achievementsManager.checkAll(gameState, computed.productionTotal, computed.maxEnergy);
-        }
-    }, [gameState, computed.productionTotal, computed.maxEnergy, appState, achievementsManager]);
-    
-    useTutorialTriggers(
-        gameState,
-        prestigeState,
-        setGameState,
-        () => popups.setShowAscensionTutorial(true),
-        () => popups.setShowBankTutorial(true)
-    );
-
-    // NEW: Trigger popups based on state changes from the game loop
-    useEffect(() => {
-        if (gameState.isShopUnlocked) {
-            popups.setShowShopTutorial(true);
-        }
-    }, [gameState.isShopUnlocked, popups.setShowShopTutorial]);
-
-    useEffect(() => {
-        if (gameState.isCoreUnlocked && !gameState.hasSeenCoreTutorial) {
-            popups.setShowCoreTutorial(true);
-            actions.setHasSeenCoreTutorial(true);
-        }
-    }, [gameState.isCoreUnlocked, gameState.hasSeenCoreTutorial, popups.setShowCoreTutorial, actions.setHasSeenCoreTutorial]);
-
-
-    // Auto-advance tutorial logic
-    useEffect(() => {
-        if (popups.tutorialStep === 2 && gameState.energy >= 15) {
-            popups.setTutorialStep(3);
-        }
-    }, [gameState.energy, popups.tutorialStep, popups.setTutorialStep]);
-    
-    // --- 4. Auto-save Logic ---
-    useEffect(() => {
-        const autoSaveInterval = setInterval(() => {
-            if (appState === 'game') {
-                saveGameState(settings);
-                addNotification("Progression sauvegardée.", 'info', { title: 'Sauvegarde auto' });
-            }
-        }, 60000); // Save every 60 seconds
-        return () => clearInterval(autoSaveInterval);
-    }, [appState, saveGameState, settings, addNotification]);
-    
-    // --- 5. Handlers (User Actions with Side-Effects) ---
-    
-    const appHandlers = useAppHandlers({
-        hasSaveData,
-        actions,
-        popups,
-        playSfx,
-        addNotification,
-        setAppState,
-        setSettings,
-        unlockAudio,
-    });
-
-    const playerHandlers = usePlayerHandlers({
-        gameState,
-        computed,
-        actions,
-        settings,
-        popups,
-        playSfx,
-        addParticle,
-        addFloatingText,
-        addNotification,
-    });
-
-    const prestigeHandlers = usePrestigeHandlers({
-        gameState,
-        computed,
-        actions,
-        settings,
-        popups,
-        playSfx,
-        addParticle,
-        addNotification,
-        setShowCoreTutorial: popups.setShowCoreTutorial,
-    });
-
-    const bankHandlers = useBankHandlers({
-        computed,
-        actions,
-        playSfx,
-        addNotification,
+    useGameOrchestrator({
+        appState, loadStatus, gameState, computed,
+        setGameState, prestigeState, coreMechanics, bankState, achievementsManager,
+        saveGameState, settings,
+        popups: uiEffects.popups,
+        addMessage,
+        addFloatingText: uiEffects.addFloatingText,
         memoizedFormatNumber,
-        gameState,
+        onAchievementUnlock: handleAchievementUnlock,
+        clickQueue,
     });
 
-    const shopHandlers = useShopHandlers({
-        gameState,
-        actions,
-        playSfx,
-        addNotification,
-    });
-
-    // --- Quantum Core Interface Handlers ---
-    const enterQuantumInterface = (e: React.MouseEvent | React.TouchEvent) => {
-        e.preventDefault();
-        playSfx('ui_hover');
-        actions.markQuantumCoreAsInteracted();
-        if (gameState.chosenQuantumPath) {
-            setActiveView('quantum_path');
-        } else {
-            setActiveView('quantum_core');
-        }
-    };
-
-    const exitQuantumInterface = () => {
-        playSfx('click');
-        setActiveView('main');
-    };
+    // --- 4. Handlers d'Action ---
+    const appHandlers = useAppHandlers({ hasSaveData, actions, popups: uiEffects.popups, playSfx, addMessage, setAppState, setSettings, unlockAudio });
+    const playerHandlers = usePlayerHandlers({ gameState, computed, actions, settings, popups: uiEffects.popups, playSfx, ...uiEffects, addMessage, memoizedFormatNumber });
+    const prestigeHandlers = usePrestigeHandlers({ gameState, computed, actions, coreActions: actions, settings, popups: uiEffects.popups, playSfx, ...uiEffects, addMessage });
+    const bankHandlers = useBankHandlers({ gameState, computed, actions, playSfx, addMessage, memoizedFormatNumber });
+    const shopHandlers = useShopHandlers({ gameState, actions, playSfx, addMessage });
     
-    const onChooseQuantumPath = (path: QuantumPathType) => {
-        playSfx('click');
-        setPathChoiceToConfirm(path);
-        setShowQuantumPathConfirm(true);
-    };
-
-    const onConfirmQuantumPath = () => {
-        if (pathChoiceToConfirm) {
-            actions.setQuantumPath(pathChoiceToConfirm);
-            playSfx('buy');
-            addNotification(`Voie du ${QUANTUM_PATHS[pathChoiceToConfirm].name} choisie !`, 'info');
-            setShowQuantumPathConfirm(false);
-            setPathChoiceToConfirm(null);
-            setActiveView('quantum_path'); // Switch to the new interface
-        }
-    };
-
-    const onPurchasePathUpgrade = () => {
-        if (actions.purchasePathUpgrade()) {
-            playSfx('buy');
-            addNotification("Progression de voie acquise !", 'info');
-        } else {
-            addNotification("Pas assez de Fragments Quantiques !", 'error');
-        }
-    };
-    
-    // FIX: Add a handler for purchasing core upgrades to be passed via context.
-    const onBuyCoreUpgrade = (id: string) => {
-        if (actions.buyCoreUpgrade(id)) {
-            playSfx('buy');
-            addNotification("Calibration du cœur acquise !", 'info');
-        } else {
-            addNotification("Pas assez de Fragments Quantiques ou prérequis non remplis !", 'error');
-        }
-    };
-
-    // --- 6. Dev Tools ---
-    const [showDevPanel, setShowDevPanel] = useState(false);
-    useEffect(() => {
+    // --- 5. Outils de Développement ---
+    React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+            const target = e.target as HTMLElement;
+            const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+            if (e.key.toLowerCase() === 'd' && !isTyping) {
                 e.preventDefault();
-                setShowDevPanel(prev => {
+                uiEffects.popups.setShowDevPanel(prev => {
                     const newState = !prev;
                     if (newState) {
-                        actions.unlockAchievement("Développeur Honoraire");
+                        actions.unlockAchievement(ACHIEVEMENT_IDS.HONORARY_DEVELOPER);
                     }
                     return newState;
                 });
@@ -253,60 +120,35 @@ export const useGameEngine = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [actions]);
+    }, [actions, uiEffects.popups]);
 
-    // --- 7. Aggregated Return Object for Context ---
-    
+    const unreadMessageCount = useMemo(() => gameState.messageLog.filter(m => !m.read).length, [gameState.messageLog]);
+
+    // --- 6. Objet de Contexte Agrégé ---
+    const { popups, ...otherUiEffects } = uiEffects;
     return {
-        // State
-        appState,
-        hasSaveData,
-        gameState,
-        computedState: computed, // Renamed for clarity in context
-        
-        // UI State
-        uiState: {
-            settings,
-            notifications,
-            particles,
-            floatingTexts,
-            showDevPanel,
-            activeView,
-            showQuantumPathConfirm,
-            pathChoiceToConfirm,
-            ...popups,
-        },
-        
-        // Handlers (user actions)
+        appState, hasSaveData, gameState,
+        computedState: { ...computed, unreadMessageCount },
+        uiState: { settings, activeView, pathChoiceToConfirm, ...otherUiEffects, ...popups },
         handlers: {
             ...appHandlers,
             ...playerHandlers,
             ...prestigeHandlers,
             ...bankHandlers,
             ...shopHandlers,
-            markShopItemsAsSeen: actions.markShopItemsAsSeen,
+            ...viewHandlers,
+            onCollect, // Overwrite playerHandlers.onCollect with the new queued version
             onSettingsChange: handleSettingsChange,
-            enterQuantumInterface,
-            exitQuantumInterface,
-            onChooseQuantumPath,
-            onConfirmQuantumPath,
-            onPurchasePathUpgrade,
-            onBuyCoreUpgrade,
-            dev, // Expose dev actions
+            markShopItemsAsSeen: actions.markShopItemsAsSeen,
+            onBuyTierUpgrade: playerHandlers.onBuyTierUpgrade, // Expose new tier handler
+            addMessage, // Expose directly
+            markAllMessagesAsRead: actions.markAllMessagesAsRead,
+            dev,
         },
-        
-        // Utilities & Callbacks for components
         playSfx,
-        popups,
-        removeNotification,
-        removeParticle,
-        removeFloatingText,
+        popups: popups,
+        removeParticle: otherUiEffects.removeParticle,
+        removeFloatingText: otherUiEffects.removeFloatingText,
         memoizedFormatNumber,
-        setShowDevPanel,
-        setShowCoreTutorial: popups.setShowCoreTutorial,
-        setShowBankTutorial: popups.setShowBankTutorial,
-        setShowShopTutorial: popups.setShowShopTutorial,
-        setShowBankInfoPopup: popups.setShowBankInfoPopup,
-        setShowQuantumPathConfirm, // Expose setter
     };
 };

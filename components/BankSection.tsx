@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useGameContext } from '../contexts/GameContext';
 import { BANK_CONSTRUCTION_COST } from '../data/bank';
 
@@ -8,106 +8,82 @@ import BankUnlockPrompt from './bank/BankUnlockPrompt';
 import SavingsPanel from './bank/SavingsPanel';
 import LoanPanel from './bank/LoanPanel';
 import UpgradesPanel from './bank/UpgradesPanel';
-import { useDragToScroll } from '../hooks/ui/useDragToScroll';
+import ArchiveIcon from './ui/ArchiveIcon';
+import DollarSignIcon from './ui/DollarSignIcon';
+import BarChartIcon from './ui/BarChartIcon';
+import CategoryDial from './ui/CategoryDial';
 
 const BankSection: React.FC = () => {
-    const { gameState, computedState, handlers, memoizedFormatNumber, setShowBankInfoPopup } = useGameContext();
-    const { isBankUnlocked, energy, savingsBalance, currentLoan, bankLevel } = gameState;
-    const { bankBonuses } = computedState;
-    const { onBuildBank, onDepositSavings, onWithdrawSavings, onTakeOutLoan, onUpgradeBank, onRepayLoan } = handlers;
+    const gameContext = useGameContext();
+    const { gameState, computedState, handlers, memoizedFormatNumber, popups } = gameContext;
+    const { isBankUnlocked, energy } = gameState;
     
-    const [activeTab, setActiveTab] = useState<'compte' | 'améliorations'>('compte');
-    const [activeAccountTab, setActiveAccountTab] = useState<'savings' | 'loan'>('savings');
+    const [activeTab, setActiveTab] = useState<'savings' | 'loan' | 'upgrades'>('savings');
 
-    const accountScrollableRef = useRef<HTMLDivElement>(null);
-    useDragToScroll(accountScrollableRef);
-    const upgradesScrollableRef = useRef<HTMLDivElement>(null);
-    useDragToScroll(upgradesScrollableRef);
-
-    const renderBankUI = () => (
-        <>
-            <div className="flex justify-center border-b border-[var(--border-color)] mb-4">
-                {(['compte', 'améliorations'] as const).map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-3 py-2 text-xs sm:text-sm md:text-base transition-all duration-300 relative ${activeTab === tab ? 'text-[var(--text-header)]' : 'text-gray-400'}`}
-                    >
-                        {tab === 'compte' ? '🏦 Compte' : '📈 Améliorations'}
-                        {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--text-header)]"></div>}
-                    </button>
-                ))}
-            </div>
-
-            <div className="bg-black/20 p-2 rounded-lg text-center text-xs mb-3 flex flex-col sm:flex-row sm:justify-center items-center gap-1 sm:gap-4">
-                <span>Niveau Banque: <strong className="text-cyan-400">{bankLevel}</strong></span>
-                <span>Taux Épargne: <strong className="text-cyan-400">{(bankBonuses.savingsInterest * 100).toFixed(1)}%/sec</strong></span>
-                <span>Intérêt Prêt: <strong className="text-cyan-400">{(bankBonuses.loanInterest * 100)}%</strong></span>
-            </div>
-
-            {activeTab === 'compte' && (
-                <>
-                    <div className="flex justify-center border-b-2 border-gray-700/50 mb-4">
-                        {([
-                            { id: 'savings', label: 'Épargne' },
-                            { id: 'loan', label: 'Prêt' }
-                        ] as const).map(subTab => (
-                            <button
-                                key={subTab.id}
-                                onClick={() => setActiveAccountTab(subTab.id)}
-                                className={`px-4 py-2 text-xs sm:text-sm transition-colors duration-200 border-b-2 ${activeAccountTab === subTab.id ? 'border-cyan-400 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
-                            >
-                                {subTab.label}
-                            </button>
-                        ))}
-                    </div>
-                    <div ref={accountScrollableRef} className="flex-grow overflow-y-auto no-scrollbar pr-2 scroll-contain">
-                        {activeAccountTab === 'savings' && (
-                            <SavingsPanel 
-                                savingsBalance={savingsBalance}
-                                energy={energy}
-                                onDeposit={onDepositSavings}
-                                onWithdraw={onWithdrawSavings}
-                                formatNumber={memoizedFormatNumber}
-                            />
-                        )}
-                        {activeAccountTab === 'loan' && (
-                            <LoanPanel 
-                                currentLoan={currentLoan}
-                                energy={energy}
-                                bankBonuses={bankBonuses}
-                                onTakeLoan={onTakeOutLoan}
-                                onRepayLoan={onRepayLoan}
-                                setShowBankInfoPopup={setShowBankInfoPopup}
-                                formatNumber={memoizedFormatNumber}
-                            />
-                        )}
-                    </div>
-                </>
-            )}
-            
-            {activeTab === 'améliorations' && (
-                <div ref={upgradesScrollableRef} className="flex-grow overflow-y-auto custom-scrollbar-bank pr-2 scroll-contain">
-                    <UpgradesPanel 
-                        bankLevel={bankLevel}
-                        energy={energy}
-                        currentLoan={currentLoan}
-                        onUpgradeBank={onUpgradeBank}
-                        formatNumber={memoizedFormatNumber}
-                    />
-                </div>
-            )}
-        </>
-    );
+    const tabs: { id: 'savings' | 'loan' | 'upgrades', name: string, icon: React.ReactNode, color: string }[] = [
+        { id: 'savings', name: 'Épargne', icon: <ArchiveIcon className="w-5 h-5" />, color: '#86efac' },
+        { id: 'loan', name: 'Prêts', icon: <DollarSignIcon className="w-5 h-5" />, color: '#67e8f9' },
+        { id: 'upgrades', name: 'Améliorations', icon: <BarChartIcon className="w-5 h-5" />, color: '#fde047' },
+    ];
 
     return (
         <section id="bank" className="fullscreen-section reveal">
             <div className="w-full max-w-4xl h-[85vh] sm:h-[80vh] bg-black/20 rounded-lg p-2 sm:p-4 flex flex-col">
-                <SectionHeader title="Banque Quantique" energy={energy} formatNumber={memoizedFormatNumber} />
+                <SectionHeader title="Terminal Bancaire" energy={energy} formatNumber={memoizedFormatNumber} />
                 {isBankUnlocked 
-                    ? renderBankUI() 
+                    ? (
+                        <div className="flex-grow flex flex-col">
+                            {/* Dial Navigation */}
+                            <div className="flex justify-center my-2 relative z-10">
+                                <CategoryDial
+                                    tabs={tabs}
+                                    activeTabId={activeTab}
+                                    onTabSelect={(id) => setActiveTab(id as any)}
+                                    variant="bank"
+                                />
+                            </div>
+                            
+                            {/* Tab Content */}
+                            <div className="flex-grow overflow-y-auto custom-scrollbar-bank pr-2 -mr-2 min-h-0">
+                                <div className="pr-2">
+                                    {activeTab === 'savings' && (
+                                        <SavingsPanel 
+                                            savingsBalance={gameState.savingsBalance}
+                                            energy={gameState.energy}
+                                            onDeposit={handlers.onDepositSavings}
+                                            onWithdraw={handlers.onWithdrawSavings}
+                                            formatNumber={memoizedFormatNumber}
+                                            bankBonuses={computedState.bankBonuses}
+                                        />
+                                    )}
+                                    {activeTab === 'loan' && (
+                                        <LoanPanel 
+                                            currentLoan={gameState.currentLoan}
+                                            energy={gameState.energy}
+                                            bankBonuses={computedState.bankBonuses}
+                                            onTakeLoan={handlers.onTakeOutLoan}
+                                            onRepayLoan={handlers.onRepayLoan}
+                                            setShowBankInfoPopup={popups.setShowBankInfoPopup}
+                                            formatNumber={memoizedFormatNumber}
+                                            loanTier={gameState.loanTier}
+                                            maxEnergy={computedState.maxEnergy}
+                                        />
+                                    )}
+                                    {activeTab === 'upgrades' && (
+                                        <UpgradesPanel 
+                                            bankLevel={gameState.bankLevel}
+                                            energy={gameState.energy}
+                                            currentLoan={gameState.currentLoan}
+                                            onUpgradeBank={handlers.onUpgradeBank}
+                                            formatNumber={memoizedFormatNumber}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )
                     : <BankUnlockPrompt 
-                        onBuildBank={onBuildBank} 
+                        onBuildBank={handlers.onBuildBank} 
                         energy={energy} 
                         cost={BANK_CONSTRUCTION_COST} 
                         formatNumber={memoizedFormatNumber} 

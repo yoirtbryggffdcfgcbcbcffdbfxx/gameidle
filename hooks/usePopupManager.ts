@@ -12,6 +12,15 @@ export const usePopupManager = () => {
     const [showCoreTutorial, setShowCoreTutorial] = useState(false);
     const [showBankTutorial, setShowBankTutorial] = useState(false);
     const [showShopTutorial, setShowShopTutorial] = useState(false);
+    const [showDevPanel, setShowDevPanel] = useState(false);
+    // FIX: Add state for the quantum path confirmation popup to centralize popup state management.
+    const [showQuantumPathConfirm, setShowQuantumPathConfirm] = useState(false);
+    const [showQuantumPathResetConfirm, setShowQuantumPathResetConfirm] = useState(false);
+    const [activeMobilePopup, setActiveMobilePopup] = useState<'achievements' | 'shop' | 'settings' | null>(null);
+    const [isMessageCenterOpen, setIsMessageCenterOpen] = useState(false);
+    const [isDevModeActive, setIsDevModeActive] = useState(false);
+    const [forceShowCursor, setForceShowCursor] = useState(false);
+
 
     return {
         activePopup,
@@ -24,6 +33,13 @@ export const usePopupManager = () => {
         showCoreTutorial,
         showBankTutorial,
         showShopTutorial,
+        showDevPanel,
+        showQuantumPathConfirm,
+        showQuantumPathResetConfirm,
+        activeMobilePopup,
+        isMessageCenterOpen,
+        isDevModeActive,
+        forceShowCursor,
         setActivePopup,
         setTutorialStep,
         setShowHardResetConfirm,
@@ -34,5 +50,12 @@ export const usePopupManager = () => {
         setShowCoreTutorial,
         setShowBankTutorial,
         setShowShopTutorial,
+        setShowDevPanel,
+        setShowQuantumPathConfirm,
+        setShowQuantumPathResetConfirm,
+        setActiveMobilePopup,
+        setIsMessageCenterOpen,
+        setIsDevModeActive,
+        setForceShowCursor,
     };
 };

@@ -1,37 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CORE_DISCHARGE_DURATION } from '../constants';
 
 interface QuantumCoreProps {
     charge: number;
     isDischarging: boolean;
-    onInteraction: (event: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => void;
+    dischargeEndTimestamp: number | null;
+    onInteraction: (event: React.PointerEvent<HTMLButtonElement>) => void;
     multiplier: number;
     size?: number;
     showReadyNotification: boolean;
 }
 
-const QuantumCore: React.FC<QuantumCoreProps> = ({ charge, isDischarging, onInteraction, multiplier, size = 128, showReadyNotification }) => {
-    const [countdown, setCountdown] = useState(CORE_DISCHARGE_DURATION / 1000);
+const QuantumCore: React.FC<QuantumCoreProps> = ({ charge, isDischarging, dischargeEndTimestamp, onInteraction, multiplier, size = 128, showReadyNotification }) => {
+    const remainingMs = isDischarging && dischargeEndTimestamp ? Math.max(0, dischargeEndTimestamp - Date.now()) : 0;
+    const countdown = Math.ceil(remainingMs / 1000);
 
     const radius = 45; // Fixed radius for a 100x100 viewBox
     const circumference = 2 * Math.PI * radius;
     
-    useEffect(() => {
-        if (isDischarging) {
-            setCountdown(CORE_DISCHARGE_DURATION / 1000);
-            const timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timer);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            return () => clearInterval(timer);
-        }
-    }, [isDischarging]);
-
     const isReady = charge >= 100;
     const coreColor = isDischarging ? '#ff00c8' : '#00f5d4';
     const strokeDashoffset = circumference - (circumference * charge) / 100;
@@ -53,8 +39,7 @@ const QuantumCore: React.FC<QuantumCoreProps> = ({ charge, isDischarging, onInte
     return (
         <div className="flex justify-center items-center">
             <button
-                onMouseDown={onInteraction}
-                onTouchStart={onInteraction}
+                onPointerDown={onInteraction}
                 disabled={isDischarging}
                 title={titleText}
                 className={coreClasses}
