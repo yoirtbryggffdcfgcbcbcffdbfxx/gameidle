@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GameState, Settings, Notification, Achievement } from '../../types';
 import { useGameState } from '../useGameState';
@@ -27,6 +28,7 @@ export const usePlayerHandlers = ({
     playSfx,
     addParticle,
     addMessage,
+    memoizedFormatNumber,
 }: PlayerHandlersProps) => {
 
     const onBuyUpgrade = (index: number, amount: number | 'MAX') => {
@@ -63,10 +65,20 @@ export const usePlayerHandlers = ({
         }
     };
 
+    const onClaimGift = () => {
+        if (gameState.activeGift) {
+            const reward = Math.floor(gameState.activeGift.value * 0.15);
+            actions.claimGift();
+            playSfx('buy');
+            addParticle(window.innerWidth / 2, window.innerHeight / 2, '#22d3ee');
+            addMessage(`Cadeau ouvert ! +${memoizedFormatNumber(reward)} énergie.`, 'info', { title: 'Chance Quantique' });
+        }
+    };
 
     return {
         onBuyUpgrade,
         onBuyTierUpgrade,
         markCategoryAsViewed: actions.markCategoryAsViewed,
+        onClaimGift,
     };
 };

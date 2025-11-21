@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CORE_DISCHARGE_DURATION } from '../constants';
 
@@ -35,6 +36,9 @@ const QuantumCore: React.FC<QuantumCoreProps> = ({ charge, isDischarging, discha
         'relative rounded-full flex flex-col justify-center items-center transition-all duration-300 transform cursor-pointer group',
         isReady && !isDischarging ? 'core-ready' : ''
     ].join(' ');
+
+    // Hexagon points for SVG
+    const hexPoints = "50,10 85,30 85,70 50,90 15,70 15,30";
 
     return (
         <div className="flex justify-center items-center">
@@ -74,12 +78,24 @@ const QuantumCore: React.FC<QuantumCoreProps> = ({ charge, isDischarging, discha
                     {/* Aura */}
                     <circle cx="50" cy="50" r="48" fill="url(#coreGlowGradient)" className="animate-core-glow" />
                     
-                    {/* Orbits */}
-                    <circle cx="50" cy="50" r="40" fill="none" stroke={coreColor} strokeWidth="0.5" strokeOpacity="0.5" className="animate-spin-clockwise-1" />
-                    <circle cx="50" cy="50" r="32" fill="none" stroke={coreColor} strokeWidth="0.75" strokeOpacity="0.6" strokeDasharray="3 5" className="animate-spin-counter-clockwise-1" />
-                    <circle cx="50" cy="50" r="25" fill="none" stroke={coreColor} strokeWidth="0.25" strokeOpacity="0.3" className="animate-spin-clockwise-2" />
+                    {/* REPLACED ORBITS WITH HEXAGONAL FIELD */}
+                    {/* Outer Hexagon - Slow Rotation */}
+                    <g className="animate-slow-rotate" style={{ transformOrigin: '50px 50px' }}>
+                        <polygon points={hexPoints} fill="none" stroke={coreColor} strokeWidth="0.5" strokeOpacity="0.4" />
+                    </g>
                     
-                    {/* Crackling Energy Arcs */}
+                    {/* Inner Hexagon - Counter Rotation */}
+                    <g className="animate-spin-counter-clockwise-1" style={{ transformOrigin: '50px 50px', animationDuration: '20s' }}>
+                         <polygon points={hexPoints} fill="none" stroke={coreColor} strokeWidth="0.5" strokeOpacity="0.6" transform="scale(0.8) translate(12.5, 12.5)" strokeDasharray="5 5" />
+                    </g>
+                    
+                    {/* Rotating Brackets/Segments */}
+                    <g className="animate-spin-clockwise-2" style={{ transformOrigin: '50px 50px' }}>
+                         <path d="M 50 15 A 35 35 0 0 1 85 50" fill="none" stroke={coreColor} strokeWidth="1" strokeOpacity="0.3" />
+                         <path d="M 50 85 A 35 35 0 0 1 15 50" fill="none" stroke={coreColor} strokeWidth="1" strokeOpacity="0.3" />
+                    </g>
+
+                    {/* Crackling Energy Arcs (Kept as they look cool inside) */}
                     <path d="M 30 40 Q 35 35, 40 40" stroke={coreColor} strokeWidth="0.5" fill="none" className="energy-arc" style={{ animationDelay: '0.1s' }}/>
                     <path d="M 60 38 Q 68 45, 62 50" stroke={coreColor} strokeWidth="0.5" fill="none" className="energy-arc" style={{ animationDelay: '0.3s' }}/>
                     <path d="M 35 60 Q 40 68, 48 62" stroke={coreColor} strokeWidth="0.5" fill="none" className="energy-arc" style={{ animationDelay: '0.6s' }}/>
@@ -89,7 +105,7 @@ const QuantumCore: React.FC<QuantumCoreProps> = ({ charge, isDischarging, discha
                     <circle cx="50" cy="50" r="20" fill="black" />
                     <circle cx="50" cy="50" r="18" fill={coreColor} filter="url(#glow)" className="animate-core-breathe" />
 
-                    {/* Charge Progress Ring */}
+                    {/* Charge Progress Ring (Kept as it's functional) */}
                     <circle
                         cx="50" cy="50" r={radius}
                         fill="none"

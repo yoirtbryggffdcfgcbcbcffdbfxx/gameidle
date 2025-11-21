@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Achievement } from '../../types';
 import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
@@ -14,9 +15,10 @@ interface AchievementsPopupProps {
         costReduction: number;
     };
     onClose: () => void; // Kept for prop compatibility, but not used
+    containerId?: string;
 }
 
-const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, achievementBonuses }) => {
+const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, achievementBonuses, containerId = "achievements-popup-content" }) => {
     const [activeTab, setActiveTab] = useState<'unlocked' | 'locked'>('unlocked');
     const scrollableRef = useRef<HTMLDivElement>(null);
     useDragToScroll(scrollableRef);
@@ -52,7 +54,7 @@ const AchievementsPopup: React.FC<AchievementsPopupProps> = ({ achievements, ach
     }, []);
 
     return (
-        <div className="h-full flex flex-col -mx-4 -my-4">
+        <div id={containerId} className="h-full flex flex-col -mx-4 -my-4">
             <div className="px-4 pt-4">
                 <AchievementBonusSummary achievementBonuses={achievementBonuses} />
 

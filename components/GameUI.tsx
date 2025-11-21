@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 // Hooks
 import { useGameContext } from '../contexts/GameContext';
@@ -10,7 +10,7 @@ import PopupManager from './PopupManager';
 import ViewManager from './ViewManager';
 import MessageCenterButton from './messages/MessageCenterButton';
 import MessageCenter from './messages/MessageCenter';
-import ToastManager from './messages/ToastManager';
+// ToastManager is now in App.tsx to be global
 
 const GameUI: React.FC = () => {
     const { 
@@ -19,11 +19,7 @@ const GameUI: React.FC = () => {
         removeFloatingText,
     } = useGameContext();
 
-    const { settings, particles, floatingTexts, forceShowCursor } = uiState;
-
-    useEffect(() => {
-        document.body.classList.toggle('force-show-cursor', forceShowCursor);
-    }, [forceShowCursor]);
+    const { settings, particles, floatingTexts } = uiState;
     
     return (
         <>
@@ -34,7 +30,7 @@ const GameUI: React.FC = () => {
             {/* New Message System */}
             <MessageCenterButton />
             <MessageCenter />
-            <ToastManager />
+            {/* ToastManager is rendered in App.tsx */}
 
             {/* ViewManager now handles which main interface is shown */}
             <ViewManager />

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useGameContext } from '../contexts/GameContext';
 import { BANK_CONSTRUCTION_COST } from '../data/bank';
@@ -21,20 +22,24 @@ const BankSection: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'savings' | 'loan' | 'upgrades'>('savings');
 
     const tabs: { id: 'savings' | 'loan' | 'upgrades', name: string, icon: React.ReactNode, color: string }[] = [
-        { id: 'savings', name: 'Épargne', icon: <ArchiveIcon className="w-5 h-5" />, color: '#86efac' },
-        { id: 'loan', name: 'Prêts', icon: <DollarSignIcon className="w-5 h-5" />, color: '#67e8f9' },
-        { id: 'upgrades', name: 'Améliorations', icon: <BarChartIcon className="w-5 h-5" />, color: '#fde047' },
+        { id: 'savings', name: 'Stase', icon: <ArchiveIcon className="w-5 h-5" />, color: '#86efac' },
+        { id: 'loan', name: 'Flux', icon: <DollarSignIcon className="w-5 h-5" />, color: '#67e8f9' },
+        { id: 'upgrades', name: 'Structure', icon: <BarChartIcon className="w-5 h-5" />, color: '#fde047' },
     ];
+
+    const containerScrollClass = activeTab === 'upgrades' 
+        ? 'flex-grow overflow-hidden flex flex-col' 
+        : 'flex-grow overflow-y-auto custom-scrollbar-bank pr-2 -mr-2 min-h-0';
 
     return (
         <section id="bank" className="fullscreen-section reveal">
-            <div className="w-full max-w-4xl h-[85vh] sm:h-[80vh] bg-black/20 rounded-lg p-2 sm:p-4 flex flex-col">
-                <SectionHeader title="Terminal Bancaire" energy={energy} formatNumber={memoizedFormatNumber} />
+             {/* UNIFIED GLASS PANEL STYLE */}
+            <div className="w-full max-w-4xl h-[85dvh] sm:h-[80vh] bg-[#0a0a12]/70 backdrop-blur-xl border border-white/10 rounded-xl p-2 sm:p-4 flex flex-col transition-all duration-300 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <SectionHeader title="Coffre Temporel" energy={energy} formatNumber={memoizedFormatNumber} />
                 {isBankUnlocked 
                     ? (
-                        <div className="flex-grow flex flex-col">
-                            {/* Dial Navigation */}
-                            <div className="flex justify-center my-2 relative z-10">
+                        <div className="flex-grow flex flex-col min-h-0">
+                            <div className="flex justify-center my-2 relative z-10 flex-shrink-0">
                                 <CategoryDial
                                     tabs={tabs}
                                     activeTabId={activeTab}
@@ -43,13 +48,13 @@ const BankSection: React.FC = () => {
                                 />
                             </div>
                             
-                            {/* Tab Content */}
-                            <div className="flex-grow overflow-y-auto custom-scrollbar-bank pr-2 -mr-2 min-h-0">
-                                <div className="pr-2">
+                            <div className={containerScrollClass}>
+                                <div className={activeTab === 'upgrades' ? 'h-full' : 'pr-2 pb-4'}>
                                     {activeTab === 'savings' && (
                                         <SavingsPanel 
                                             savingsBalance={gameState.savingsBalance}
                                             energy={gameState.energy}
+                                            currentLoan={gameState.currentLoan}
                                             onDeposit={handlers.onDepositSavings}
                                             onWithdraw={handlers.onWithdrawSavings}
                                             formatNumber={memoizedFormatNumber}

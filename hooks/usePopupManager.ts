@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 
 export const usePopupManager = () => {
@@ -20,6 +21,7 @@ export const usePopupManager = () => {
     const [isMessageCenterOpen, setIsMessageCenterOpen] = useState(false);
     const [isDevModeActive, setIsDevModeActive] = useState(false);
     const [forceShowCursor, setForceShowCursor] = useState(false);
+    const [showGiftPopup, setShowGiftPopup] = useState(false);
 
 
     return {
@@ -40,6 +42,7 @@ export const usePopupManager = () => {
         isMessageCenterOpen,
         isDevModeActive,
         forceShowCursor,
+        showGiftPopup,
         setActivePopup,
         setTutorialStep,
         setShowHardResetConfirm,
@@ -57,5 +60,6 @@ export const usePopupManager = () => {
         setIsMessageCenterOpen,
         setIsDevModeActive,
         setForceShowCursor,
+        setShowGiftPopup,
     };
 };

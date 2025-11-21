@@ -1,3 +1,4 @@
+
 import { useState, useLayoutEffect, useRef } from 'react';
 
 const getCombinedBoundingBox = (elementIds: string[]): DOMRect | null => {
@@ -7,14 +8,18 @@ const getCombinedBoundingBox = (elementIds: string[]): DOMRect | null => {
 
     if (elements.length === 0) return null;
 
-    const rects = elements.map(el => el.getBoundingClientRect());
+    // Modification cruciale : on filtre les rectangles qui ont une taille de 0 (éléments cachés ou display:none)
+    // Cela permet de cibler ['desktop-id', 'mobile-id'] et de ne récupérer que celui qui est visible.
+    const visibleRects = elements
+        .map(el => el.getBoundingClientRect())
+        .filter(rect => rect.width > 0 && rect.height > 0);
     
-    if (rects.some(rect => rect.width === 0 || rect.height === 0)) return null;
+    if (visibleRects.length === 0) return null;
 
-    const left = Math.min(...rects.map(r => r.left));
-    const top = Math.min(...rects.map(r => r.top));
-    const right = Math.max(...rects.map(r => r.right));
-    const bottom = Math.max(...rects.map(r => r.bottom));
+    const left = Math.min(...visibleRects.map(r => r.left));
+    const top = Math.min(...visibleRects.map(r => r.top));
+    const right = Math.max(...visibleRects.map(r => r.right));
+    const bottom = Math.max(...visibleRects.map(r => r.bottom));
 
     return new DOMRect(left, top, right - left, bottom - top);
 };

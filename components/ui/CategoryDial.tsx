@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useGameContext } from '../../contexts/GameContext';
 
@@ -153,7 +154,6 @@ const CategoryDial: React.FC<CategoryDialProps> = ({ tabs, activeTabId, onTabSel
             </button>
 
             <div className={`${listClass} ${(!isMobile && isDragging) || isListOpen ? 'open' : ''}`}>
-                <div className="indicator-arrow up">▲</div>
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
@@ -169,7 +169,6 @@ const CategoryDial: React.FC<CategoryDialProps> = ({ tabs, activeTabId, onTabSel
                         </span>
                     </button>
                 ))}
-                 <div className="indicator-arrow down">▼</div>
             </div>
         </div>
     );

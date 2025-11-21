@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useGameContext } from '../../contexts/GameContext';
 
@@ -17,7 +18,7 @@ const GameStatsDisplay: React.FC = () => {
     } = gameState;
     
     const { 
-        productionTotal, 
+        netProduction, 
         clickPower,
         achievementBonuses,
         ascensionBonuses,
@@ -34,7 +35,7 @@ const GameStatsDisplay: React.FC = () => {
             
             <GeneralStats gameState={gameState} memoizedFormatNumber={memoizedFormatNumber} />
             <ProductionStats 
-                productionTotal={productionTotal}
+                productionTotal={netProduction} 
                 clickPower={clickPower}
                 avgProductionLast10s={avgProductionLast10s}
                 showAvgProduction={showAvgProduction}

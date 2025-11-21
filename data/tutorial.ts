@@ -1,4 +1,8 @@
 
+import { INITIAL_UPGRADES } from './upgrades';
+
+const firstUpgradeCost = INITIAL_UPGRADES.find(u => u.id === 'gen_1')?.baseCost || 15;
+
 export interface TutorialStep {
     elementIds?: string[];
     text: string;
@@ -11,51 +15,52 @@ export interface TutorialStep {
 export const tutorialSteps: { [key: number]: TutorialStep } = {
     1: { 
         elementIds: ['collect-button'], 
-        text: "Bienvenue, Capitaine. Je suis votre IA de bord. Commençons par générer de l'énergie. Cliquez sur ce bouton.",
+        text: "Initialisation... Connexion établie. L'explosion a dispersé la matière. Architecte, nous devons stabiliser le champ local manuellement. Activez l'Injecteur.",
         sectionId: 'core',
     },
     2: {
         elementIds: ['energy-bar-container', 'collect-button'],
-        text: "Excellent. L'énergie que vous collectez remplit cette barre. Continuez jusqu'à 15 unités pour notre premier achat.", 
+        text: `Résonance confirmée. Le système absorbe l'énergie brute. Continuez l'injection jusqu'à atteindre ${firstUpgradeCost} unités pour réactiver les sous-systèmes.`, 
         hideNextButton: true,
         dialogPosition: 'top',
         sectionId: 'core',
     },
     3: { 
         elementIds: ['nav-forge'], 
-        text: "Parfait. Maintenant, utilisez la navigation pour vous rendre à la Forge et dépenser cette énergie.",
+        text: "Capacité atteinte. Les protocoles de construction sont en ligne. Accédez à la Forge pour matérialiser nos premières structures.",
     },
     4: {
         elementIds: ['upgrade-gen_1'],
-        text: "Voici les générateurs. Achetez celui-ci pour lancer notre production d'énergie passive. Il travaillera pour nous.",
+        text: "La Forge est active. Construisez ce Générateur. Il assurera une production d'énergie autonome pendant que vous supervisez l'expansion de l'univers.",
         sectionId: 'forge',
     },
     5: {
         elementIds: ['nav-core'],
-        text: "Générateur activé ! Retournons au Cœur pour voir ses effets."
+        text: "Construction validée. Le flux d'énergie se stabilise. Retournons au Cœur pour calibrer la réaction en chaîne."
     },
     6: {
         elementIds: ['stat-prod'],
-        text: "Regardez ! Votre 'Prod/sec' a augmenté. Vous gagnez maintenant de l'énergie automatiquement.",
+        text: "Analyse des flux : Voici votre 'Output'. C'est le pouls de votre système. L'énergie s'accumule désormais automatiquement à chaque cycle.",
         sectionId: 'core',
     },
     7: {
         elementIds: ['stat-click'],
-        text: "Et ceci est votre puissance de 'Clic', l'énergie que vous gagnez à chaque clic manuel. Vous pourrez aussi l'améliorer.",
+        text: "Ici s'affiche votre puissance 'Manuelle'. Votre interaction directe avec le Cœur crée toujours des ondes gravitationnelles significatives.",
         sectionId: 'core',
     },
     8: {
         elementIds: ['nav-command-center'],
-        text: "Bien. Allons au Centre de Commandement pour suivre nos progrès.",
+        text: "Nous devons cataloguer nos progrès pour optimiser le rendement. Ouvrez le Centre de Commandement.",
     },
     9: {
-        elementIds: ['achievements-panel'],
-        text: "Ici, vous pouvez voir les Succès. En débloquer vous donne des bonus permanents. C'est un objectif clé.",
+        // Target BOTH potential locations. useElementBounds will pick the visible one.
+        elementIds: ['achievements-desktop', 'achievements-mobile'],
+        text: "Voici les protocoles de 'Succès'. Chaque étape franchie dans la reconstruction de la réalité octroie des bonus permanents aux systèmes.",
         sectionId: 'command-center',
         dialogPosition: 'top',
     },
     10: { 
         isGlobal: true, 
-        text: "Vous maîtrisez les bases. Votre mission : générer, améliorer, et atteindre l'Ascension. Je serai en veille si nécessaire. Bonne chance.",
+        text: "Systèmes nominaux. Architecte, cet univers est une page blanche. Générez, optimisez, et visez l'Ascension pour transcender cette réalité. Je reste en veille.",
     },
 };

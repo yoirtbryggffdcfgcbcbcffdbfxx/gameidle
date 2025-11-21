@@ -1,3 +1,5 @@
+
+
 export const baseCss = `
 /* ============================================= */
 /*          BASE STYLES & LAYOUT                 */
@@ -75,13 +77,5 @@ body {
     #custom-cursor {
         display: block;
     }
-}
-
-/* Dev panel override to force cursor visibility for testing */
-body.force-show-cursor {
-    cursor: none;
-}
-body.force-show-cursor #custom-cursor {
-    display: block;
 }
 `;

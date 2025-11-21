@@ -1,10 +1,16 @@
+
 // hooks/useGameOrchestrator.ts
 import React, { useEffect } from 'react';
 import { Achievement, GameState, Notification, Settings } from '../types';
-import { useGameState } from './useGameState';
 import { useGameLoop } from './useGameLoop';
 import { useTutorialTriggers } from './useTutorialTriggers';
-import { usePopupManager } from '../usePopupManager';
+import { usePopupManager } from './usePopupManager';
+import { useGameState } from './useGameState';
+
+// Systems
+import { useAutoSave } from './systems/useAutoSave';
+import { usePlayTime } from './systems/usePlayTime';
+import { useProgressionEvents } from './systems/useProgressionEvents';
 
 type GameOrchestratorProps = {
     appState: string;
@@ -50,8 +56,7 @@ export const useGameOrchestrator = ({
         addMessage("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
     }, [addMessage]);
     
-    // --- Game Loop & Event Triggers ---
-    // FIX: Removed `clickQueueRef` from the arguments passed to `useGameLoop` to match its definition.
+    // --- 1. Main Game Loop (High Frequency) ---
     useGameLoop(
         appState,
         loadStatus,
@@ -68,12 +73,15 @@ export const useGameOrchestrator = ({
         onAchievementUnlock
     );
     
+    // --- 2. Achievement Checking (Sync with Loop) ---
     useEffect(() => {
         if (appState === 'game') {
             achievementsManager.checkAll(gameState, computed.productionTotal, computed.maxEnergy);
         }
     }, [gameState, computed.productionTotal, computed.maxEnergy, appState, achievementsManager]);
     
+    // --- 3. Feature Triggers & Tutorials ---
+    // Triggers for Ascension & Bank discovery
     useTutorialTriggers(
         gameState,
         prestigeState,
@@ -82,64 +90,16 @@ export const useGameOrchestrator = ({
         () => popups.setShowBankTutorial(true)
     );
 
-    // Trigger popups based on state changes from the game loop
-    useEffect(() => {
-        if (gameState.isShopUnlocked && !gameState.hasSeenBankTutorial) { // Assuming shop is a pre-req for bank tutorial trigger
-            popups.setShowShopTutorial(true);
-        }
-    }, [gameState.isShopUnlocked, gameState.hasSeenBankTutorial, popups.setShowShopTutorial]);
+    // Triggers for Shop, Core, Loan Tiers, and Step-based tutorial
+    useProgressionEvents({
+        gameState,
+        setGameState,
+        popups,
+        coreMechanics,
+        addMessage
+    });
 
-    useEffect(() => {
-        if (gameState.isCoreUnlocked && !gameState.hasSeenCoreTutorial) {
-            popups.setShowCoreTutorial(true);
-            coreMechanics.actions.setHasSeenCoreTutorial(true);
-        }
-    }, [gameState.isCoreUnlocked, gameState.hasSeenCoreTutorial, popups.setShowCoreTutorial, coreMechanics.actions]);
-
-    // Auto-advance tutorial logic
-    useEffect(() => {
-        if (popups.tutorialStep === 2 && gameState.energy >= 15) {
-            popups.setTutorialStep(3);
-        }
-    }, [gameState.energy, popups.tutorialStep, popups.setTutorialStep]);
-    
-    // Loan Tier Progression
-    useEffect(() => {
-        const { totalEnergyProduced, loanTier } = gameState;
-        let newTier = loanTier;
-
-        // Check from highest to lowest to prevent incorrect assignments
-        if (totalEnergyProduced >= 1e12 && loanTier < 2) {
-            newTier = 2;
-        } else if (totalEnergyProduced >= 1e9 && loanTier < 1) {
-            newTier = 1;
-        }
-
-        if (newTier !== loanTier) {
-            setGameState(prev => ({ ...prev, loanTier: newTier }));
-            addMessage(`Nouveaux montants de prêt disponibles à la banque !`, 'info', { title: 'Finance Améliorée' });
-        }
-    }, [gameState.totalEnergyProduced, gameState.loanTier, setGameState, addMessage]);
-
-    // --- Auto-save Logic ---
-    useEffect(() => {
-        const autoSaveInterval = setInterval(() => {
-            if (appState === 'game') {
-                saveGameState(settings);
-                addMessage("Progression sauvegardée.", 'info', { title: 'Sauvegarde auto' });
-            }
-        }, 60000); // Save every 60 seconds
-        return () => clearInterval(autoSaveInterval);
-    }, [appState, saveGameState, settings, addMessage]);
-
-    // --- Play Time Tracker ---
-    useEffect(() => {
-        const timer = setInterval(() => {
-            if (appState === 'game') {
-                setGameState(prev => ({ ...prev, timePlayedInSeconds: prev.timePlayedInSeconds + 1 }));
-            }
-        }, 1000); // Increment every second
-
-        return () => clearInterval(timer);
-    }, [appState, setGameState]);
+    // --- 4. Background Systems ---
+    useAutoSave({ appState, saveGameState, settings, addMessage });
+    usePlayTime({ appState, setGameState });
 };

@@ -149,9 +149,19 @@ Ce pattern permet de garder `App.tsx` propre et de gérer les transitions entre 
 
 ## 5. Directives Fondamentales pour le Développement Futur
 
-### Directive 1 : Favoriser la Création à la Modification
+### Directive 1 : Modularité Stricte (1 Feature = 1 Ensemble de Fichiers)
 
-Pour une nouvelle fonctionnalité, **créer de nouveaux fichiers spécialisés** (`useLabState.ts`, `LabView.tsx`) plutôt que d'ajouter de la logique à des fichiers existants. Cela préserve la cohésion et le découplage.
+Pour toute nouvelle fonctionnalité majeure (ex: Système de Guildes, Mini-jeu de Piratage), il est **interdit** de surcharger les fichiers existants (`usePlayerState`, `MainGameView`). Vous DEVEZ créer de nouveaux fichiers dédiés.
+
+**La règle est : 1 Logique Métier = 1 Fichier State + 1 Fichier Handler + N Fichiers Composants.**
+
+*   **Mauvais :** Ajouter la logique de "Guildes" dans `usePlayerState.ts`.
+*   **Bon :** Créer `hooks/state/useGuildState.ts` et `hooks/handlers/useGuildHandlers.ts`.
+
+Cela permet à l'IA et au développeur de :
+1.  Travailler sur une fonctionnalité sans risquer de casser le reste du jeu.
+2.  Garder un contexte court et pertinent lors des modifications.
+3.  Faciliter les tests et le débogage.
 
 ### Directive 2 : Principe de Responsabilité Unique (SRP)
 

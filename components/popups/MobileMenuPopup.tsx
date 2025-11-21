@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useGameContext } from '../../contexts/GameContext';
 import SlidingUpPanel from '../ui/SlidingUpPanel';
@@ -36,7 +37,12 @@ const MobileMenuPopup: React.FC = () => {
             title={currentTitle}
         >
             {activeMobilePopup === 'achievements' && (
-                <AchievementsPopup achievements={achievements} achievementBonuses={achievementBonuses} onClose={() => { }} />
+                <AchievementsPopup 
+                    achievements={achievements} 
+                    achievementBonuses={achievementBonuses} 
+                    onClose={() => { }} 
+                    containerId="achievements-mobile"
+                />
             )}
             {activeMobilePopup === 'shop' && isShopUnlocked && (
                  <ShopPopup

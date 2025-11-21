@@ -1,3 +1,4 @@
+
 export const cursorCss = `
 /* ============================================= */
 /*          CUSTOM CURSOR                        */
@@ -20,5 +21,16 @@ export const cursorCss = `
     transform: translate(-50%, -50%) scale(1.5);
     background-color: var(--cursor-color);
     opacity: 0.5;
+}
+
+/* FORCE SHOW CURSOR LOGIC */
+/* Overrides any media query or default hiding */
+body.force-show-cursor {
+    cursor: none !important;
+}
+body.force-show-cursor #custom-cursor {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 `;

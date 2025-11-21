@@ -1,8 +1,9 @@
+
 // hooks/state/usePlayerState.ts
 // FIX: Import React to provide namespace for types.
 import React, { useCallback } from 'react';
 import { GameState } from '../../types';
-import { MAX_UPGRADE_LEVEL } from '../../constants';
+import { MAX_UPGRADE_LEVEL, TIER_PRODUCTION_MULTIPLIER } from '../../constants';
 import { ASCENSION_UPGRADES } from '../../data/ascension';
 import { calculateBulkBuy, calculateCost } from '../../utils/helpers';
 import { ACHIEVEMENT_IDS } from '../../constants/achievements';
@@ -130,10 +131,28 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
         setGameState(prev => ({ ...prev, viewedCategories: [] }));
     }, [setGameState]);
 
+    const claimGift = useCallback(() => {
+        setGameState(prev => {
+            if (!prev.activeGift) return prev;
+            
+            // STANDARD DU GENRE (ex: Cookie Clicker "Lucky!")
+            // Récompense : 15% du stock actuel au moment de l'apparition.
+            const reward = Math.floor(prev.activeGift.value * 0.15);
+            
+            return {
+                ...prev,
+                energy: prev.energy + reward,
+                totalEnergyProduced: prev.totalEnergyProduced + reward,
+                activeGift: null // Consume gift
+            };
+        });
+    }, [setGameState]);
+
     const getComputed = (gameState: GameState) => {
         const clickPowerFromUpgrades = gameState.upgrades
             .filter(u => u.type === 'CLICK')
-            .reduce((sum, u) => sum + (u.baseProduction * Math.pow(2, u.tier)) * u.owned, 0);
+            // REBALANCE: Use TIER_PRODUCTION_MULTIPLIER for Click upgrades too
+            .reduce((sum, u) => sum + (u.baseProduction * Math.pow(TIER_PRODUCTION_MULTIPLIER, u.tier)) * u.owned, 0);
 
         return { clickPowerFromUpgrades };
     };
@@ -141,9 +160,10 @@ export const usePlayerState = (setGameState: SetGameStateFn, checkAchievement: C
     return {
         actions: {
             buyUpgrade,
-            buyTierUpgrade, // Expose the new action
+            buyTierUpgrade,
             markCategoryAsViewed,
             resetViewedCategories,
+            claimGift,
         },
         getComputed,
     };

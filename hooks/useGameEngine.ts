@@ -1,5 +1,6 @@
+
 // hooks/useGameEngine.ts
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { Achievement, Notification } from '../types';
 
 // Hooks d'état et de logique
@@ -18,9 +19,9 @@ import { useShopHandlers } from './handlers/useShopHandlers';
 
 // UI & Effets
 import { useUIEffects } from './ui/useUIEffects';
+import { useGlobalShortcuts } from './ui/useGlobalShortcuts';
 import { formatNumber } from '../utils/helpers';
 import { SAVE_KEY } from '../constants';
-import { ACHIEVEMENT_IDS } from '../constants/achievements';
 
 export const useGameEngine = () => {
     // --- 1. Hooks Fondamentaux ---
@@ -79,6 +80,8 @@ export const useGameEngine = () => {
     }, [playSfx, uiEffects.popups]);
 
     const memoizedFormatNumber = React.useCallback((num: number) => {
+        // Use strictly the user setting. The helper function now handles infinite suffixes (aa, ab...)
+        // so we don't need to force scientific notation for large numbers anymore.
         return formatNumber(num, settings.scientificNotation);
     }, [settings.scientificNotation]);
 
@@ -101,35 +104,31 @@ export const useGameEngine = () => {
     const bankHandlers = useBankHandlers({ gameState, computed, actions, playSfx, addMessage, memoizedFormatNumber });
     const shopHandlers = useShopHandlers({ gameState, actions, playSfx, addMessage });
     
-    // --- 5. Outils de Développement ---
-    React.useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-            const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-
-            if (e.key.toLowerCase() === 'd' && !isTyping) {
-                e.preventDefault();
-                uiEffects.popups.setShowDevPanel(prev => {
-                    const newState = !prev;
-                    if (newState) {
-                        actions.unlockAchievement(ACHIEVEMENT_IDS.HONORARY_DEVELOPER);
-                    }
-                    return newState;
-                });
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [actions, uiEffects.popups]);
+    // --- 5. Raccourcis Globaux ---
+    // Utilisation du hook dédié pour gérer les raccourcis clavier ('C', 'D')
+    useGlobalShortcuts(uiEffects.popups, actions);
 
     const unreadMessageCount = useMemo(() => gameState.messageLog.filter(m => !m.read).length, [gameState.messageLog]);
 
-    // --- 6. Objet de Contexte Agrégé ---
+    // --- 6. Construction des Objets de Contexte (Optimisation) ---
+    // Nous séparons Data (ce qui change souvent) et Actions (ce qui est stable ou fonctionnel)
+    
     const { popups, ...otherUiEffects } = uiEffects;
-    return {
-        appState, hasSaveData, gameState,
+
+    // Objet DATA : Contient tout l'état réactif
+    // Il sera passé au GameDataContext
+    const gameData = {
+        appState,
+        hasSaveData,
+        gameState,
         computedState: { ...computed, unreadMessageCount },
         uiState: { settings, activeView, pathChoiceToConfirm, ...otherUiEffects, ...popups },
+        popups: popups, // Popups contient aussi du state (show...), donc on le garde dans Data
+    };
+
+    // Objet ACTIONS : Contient toutes les fonctions
+    // Il sera passé au GameActionContext
+    const gameActions = {
         handlers: {
             ...appHandlers,
             ...playerHandlers,
@@ -137,18 +136,29 @@ export const useGameEngine = () => {
             ...bankHandlers,
             ...shopHandlers,
             ...viewHandlers,
-            onCollect, // Overwrite playerHandlers.onCollect with the new queued version
+            onCollect,
             onSettingsChange: handleSettingsChange,
             markShopItemsAsSeen: actions.markShopItemsAsSeen,
-            onBuyTierUpgrade: playerHandlers.onBuyTierUpgrade, // Expose new tier handler
-            addMessage, // Expose directly
+            onBuyTierUpgrade: playerHandlers.onBuyTierUpgrade,
+            addMessage,
             markAllMessagesAsRead: actions.markAllMessagesAsRead,
             dev,
         },
         playSfx,
-        popups: popups,
         removeParticle: otherUiEffects.removeParticle,
         removeFloatingText: otherUiEffects.removeFloatingText,
         memoizedFormatNumber,
+        addMessage,
+        markAllMessagesAsRead: actions.markAllMessagesAsRead,
+        dev,
+    };
+
+    return {
+        gameData,
+        gameActions,
+        // Rétrocompatibilité : On retourne aussi tout à plat pour l'instant si nécessaire,
+        // mais App.tsx utilisera gameData et gameActions.
+        ...gameData,
+        ...gameActions
     };
 };

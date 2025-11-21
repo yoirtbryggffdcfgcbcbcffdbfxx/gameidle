@@ -1,14 +1,18 @@
-import React, { useState, useRef } from 'react';
-import { Settings } from '../../types';
+
+import React, { useState } from 'react';
+import { Settings, GameState } from '../../types';
 import ToggleSwitch from '../ui/ToggleSwitch';
+import Accordion from '../ui/Accordion';
 import ShieldCheckIcon from '../ui/ShieldCheckIcon';
 import EyeIcon from '../ui/EyeIcon';
 import PaletteIcon from '../ui/PaletteIcon';
 import VolumeIcon from '../ui/VolumeIcon';
 import DatabaseIcon from '../ui/DatabaseIcon';
 import AlertTriangleIcon from '../ui/AlertTriangleIcon';
-import ChevronDownIcon from '../ui/ChevronDownIcon';
 import CheckIcon from '../ui/CheckIcon';
+import GlobeIcon from '../ui/GlobeIcon';
+import { useGameContext } from '../../contexts/GameContext';
+import CloudSyncPanel from './settings/CloudSyncPanel';
 
 interface SettingsPopupProps {
     settings: Settings;
@@ -26,55 +30,29 @@ const themes = [
     { id: 'cyberpunk', name: 'Cyberpunk', from: '#0b022d', to: '#3a0ca3', text: '#ff00c8' },
 ];
 
-const AccordionSection: React.FC<{
-    title: string;
-    icon: React.ReactNode;
-    sectionId: string;
-    openSection: string | null;
-    setOpenSection: (id: string | null) => void;
-    colorClass: string;
-    children: React.ReactNode;
-}> = ({ title, icon, sectionId, openSection, setOpenSection, colorClass, children }) => {
-    const isOpen = openSection === sectionId;
-    const toggle = () => {
-        setOpenSection(isOpen ? null : sectionId);
-    };
-
-    return (
-        <div className="border-b border-white/10 last:border-b-0">
-            <button
-                onClick={toggle}
-                className="w-full flex justify-between items-center p-3 text-left transition-colors hover:bg-white/5"
-                aria-expanded={isOpen}
-            >
-                <div className="flex items-center gap-3">
-                    <div className={`w-5 h-5 ${colorClass}`}>{icon}</div>
-                    <span className={`font-bold ${colorClass}`}>{title}</span>
-                </div>
-                <ChevronDownIcon className={`w-5 h-5 text-gray-400 accordion-chevron-rotation ${isOpen ? 'open' : ''}`} />
-            </button>
-            <div className={`accordion-content ${isOpen ? 'open' : ''}`}>
-                <div>
-                    <div className="p-3 pt-0">
-                        {children}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChange, onHardReset, playSfx }) => {
     const [openSection, setOpenSection] = useState<string | null>(null);
+    
+    const { handlers, gameState } = useGameContext();
 
     const handleToggle = (key: keyof Settings, value: boolean) => {
         playSfx('click');
         onSettingsChange({ [key]: value });
     };
 
+    const toggleSection = (sectionId: string) => {
+        setOpenSection(prev => prev === sectionId ? null : sectionId);
+    };
+
     return (
         <div className="-m-4">
-            <AccordionSection title="Général" icon={<ShieldCheckIcon />} sectionId="Général" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-green-400">
+            <Accordion 
+                title="Général" 
+                icon={<ShieldCheckIcon />} 
+                isOpen={openSection === 'Général'} 
+                onToggle={() => toggleSection('Général')} 
+                colorClass="text-green-400"
+            >
                  <div className="space-y-3">
                     <ToggleSwitch 
                         label="Confirmer l'Ascension" 
@@ -82,9 +60,15 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                         onChange={(value) => handleToggle('confirmAscension', value)} 
                     />
                 </div>
-            </AccordionSection>
+            </Accordion>
 
-            <AccordionSection title="Affichage" icon={<EyeIcon />} sectionId="Affichage" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-cyan-400">
+            <Accordion 
+                title="Affichage" 
+                icon={<EyeIcon />} 
+                isOpen={openSection === 'Affichage'} 
+                onToggle={() => toggleSection('Affichage')} 
+                colorClass="text-cyan-400"
+            >
                 <div className="space-y-3">
                     <ToggleSwitch 
                         label="Effets Visuels (Particules)" 
@@ -106,9 +90,15 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                         <input type="range" min="1" max="5" step="0.5" value={settings.animSpeed} onChange={(e) => onSettingsChange({ animSpeed: parseFloat(e.target.value) })} />
                     </label>
                 </div>
-            </AccordionSection>
+            </Accordion>
 
-            <AccordionSection title="Thème Visuel" icon={<PaletteIcon />} sectionId="Thème Visuel" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-purple-400">
+            <Accordion 
+                title="Thème Visuel" 
+                icon={<PaletteIcon />} 
+                isOpen={openSection === 'Thème Visuel'} 
+                onToggle={() => toggleSection('Thème Visuel')} 
+                colorClass="text-purple-400"
+            >
                 <div className="grid grid-cols-2 gap-3">
                     {themes.map(theme => {
                         const isActive = settings.theme === theme.id;
@@ -139,28 +129,71 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                         );
                     })}
                 </div>
-            </AccordionSection>
+            </Accordion>
 
-            <AccordionSection title="Audio" icon={<VolumeIcon />} sectionId="Audio" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-blue-400">
+            <Accordion 
+                title="Audio" 
+                icon={<VolumeIcon />} 
+                isOpen={openSection === 'Audio'} 
+                onToggle={() => toggleSection('Audio')} 
+                colorClass="text-blue-400"
+            >
                 <div className="space-y-3">
                     <label className="flex flex-col text-xs">
                         <span className="mb-1.5">Volume des effets sonores : <span className="font-bold text-cyan-300">{Math.round(settings.sfxVolume * 100)}%</span></span>
                         <input type="range" min="0" max="1" step="0.01" value={settings.sfxVolume} onChange={(e) => onSettingsChange({ sfxVolume: parseFloat(e.target.value) })} />
                     </label>
                 </div>
-            </AccordionSection>
+            </Accordion>
 
-            <AccordionSection title="Gestion des Données" icon={<DatabaseIcon />} sectionId="Gestion des Données" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-gray-400">
+            <Accordion 
+                title="Sauvegarde Locale / Export" 
+                icon={<DatabaseIcon />} 
+                isOpen={openSection === 'Sauvegarde Locale'} 
+                onToggle={() => toggleSection('Sauvegarde Locale')} 
+                colorClass="text-gray-400"
+            >
                 <div className="space-y-3">
                     <div className="flex gap-2 text-xs">
-                        <button disabled className="flex-1 bg-gray-600 text-white/50 p-2 rounded cursor-not-allowed">Exporter la Sauvegarde</button>
-                        <button disabled className="flex-1 bg-gray-600 text-white/50 p-2 rounded cursor-not-allowed">Importer la Sauvegarde</button>
+                        <button 
+                            onClick={() => handlers.onExportSave(gameState, settings)}
+                            className="flex-1 bg-cyan-900/50 hover:bg-cyan-800 border border-cyan-600 text-cyan-200 p-2 rounded transition-colors"
+                        >
+                            Copier le Code
+                        </button>
+                        <button 
+                            onClick={() => handlers.onImportSave()}
+                            className="flex-1 bg-yellow-900/50 hover:bg-yellow-800 border border-yellow-600 text-yellow-200 p-2 rounded transition-colors"
+                        >
+                            Coller un Code
+                        </button>
                     </div>
-                    <p className="text-center text-[10px] opacity-60">Bientôt disponible !</p>
+                    <p className="text-center text-[10px] opacity-60">Utilisez ceci pour transférer votre partie manuellement.</p>
                 </div>
-            </AccordionSection>
+            </Accordion>
+
+            <Accordion 
+                title="Cloud Personnel" 
+                icon={<GlobeIcon className="w-5 h-5" />} 
+                isOpen={openSection === 'Cloud'} 
+                onToggle={() => toggleSection('Cloud')} 
+                colorClass="text-pink-400"
+            >
+               <CloudSyncPanel 
+                   settings={settings} 
+                   onSettingsChange={onSettingsChange} 
+                   onSave={handlers.onCloudSave}
+                   onLoad={handlers.onCloudLoad}
+               />
+            </Accordion>
             
-            <AccordionSection title="Zone de Danger" icon={<AlertTriangleIcon />} sectionId="Zone de Danger" openSection={openSection} setOpenSection={setOpenSection} colorClass="text-red-500">
+            <Accordion 
+                title="Zone de Danger" 
+                icon={<AlertTriangleIcon />} 
+                isOpen={openSection === 'Zone de Danger'} 
+                onToggle={() => toggleSection('Zone de Danger')} 
+                colorClass="text-red-500"
+            >
                 <div className="space-y-3">
                     <button 
                         onClick={() => {
@@ -172,7 +205,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ settings, onSettingsChang
                         <span className="text-xl">⚠️</span> Réinitialiser Toute la Progression
                     </button>
                 </div>
-            </AccordionSection>
+            </Accordion>
         </div>
     );
 };

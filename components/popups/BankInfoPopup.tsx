@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import Popup from './Popup';
 import { useDragToScroll } from '../../hooks/ui/useDragToScroll';
@@ -11,39 +12,42 @@ const BankInfoPopup: React.FC<BankInfoPopupProps> = ({ onClose }) => {
     useDragToScroll(scrollableRef);
 
     return (
-        <Popup title="Manuel de la Banque Quantique" onClose={onClose} widthClass="w-[500px]">
-            <div ref={scrollableRef} className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar scroll-contain">
+        <Popup title="Manuel du Coffre Temporel" onClose={onClose} widthClass="w-[500px]">
+            <div ref={scrollableRef} className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar scroll-contain font-mono">
                 
-                <div className="bg-black/20 p-3 rounded-lg">
-                    <h3 className="text-lg text-yellow-400 mb-2">🐷 Compte Épargne</h3>
-                    <p className="mb-2">Déposez votre énergie pour la mettre en sécurité et gagner des intérêts passifs. Le taux d'intérêt s'améliore avec le niveau de votre banque.</p>
-                    <p className="text-xs text-cyan-400 border-l-2 border-cyan-400 pl-2">
-                        <strong>Astuce :</strong> Lorsque vous retirez de l'épargne, les fonds sont <strong className="text-white">automatiquement utilisés pour rembourser un prêt en cours</strong> avant d'être ajoutés à votre énergie. C'est un excellent moyen de rembourser un prêt d'un seul coup !
+                <div className="bg-black/40 p-3 rounded border-l-2 border-green-500">
+                    <h3 className="text-lg text-green-400 mb-2 flex items-center gap-2">
+                        <span>📦 Module de Stase (Épargne)</span>
+                    </h3>
+                    <p className="mb-2 text-gray-300 text-xs">Placez votre énergie en "Stase" hors du flux temporel normal. Elle y croît grâce à l'accumulation d'entropie positive.</p>
+                    <p className="text-[10px] text-green-300 pl-2 bg-green-900/20 p-1 rounded">
+                        <strong>Protocole Auto :</strong> Un retrait de stase rembourse <strong className="text-white">PRIORITAIREMENT</strong> toute dette temporelle active.
                     </p>
                 </div>
 
-                <div className="bg-black/20 p-3 rounded-lg">
-                    <h3 className="text-lg text-cyan-400 mb-2">💰 Prêts Quantiques</h3>
-                    <p className="mb-2">Besoin d'un boost immédiat ? Contractez un prêt. Mais attention, les intérêts peuvent être élevés.</p>
-                    <ul className="list-disc list-inside text-xs space-y-1 pl-2">
-                        <li><strong>Limite d'emprunt :</strong> Vous ne pouvez emprunter que jusqu'à <strong className="text-white">10% de votre capacité d'énergie maximale</strong>.</li>
-                        <li><strong>Apport (Collatéral) :</strong> Vous devez posséder au moins <strong className="text-white">10% du montant total à rembourser</strong> (prêt + intérêts) pour que le prêt soit approuvé.</li>
-                        <li><strong>Remboursement Passif :</strong> <strong className="text-white">50% de votre production d'énergie par seconde</strong> est automatiquement utilisée pour rembourser le prêt.</li>
+                <div className="bg-black/40 p-3 rounded border-l-2 border-cyan-400">
+                    <h3 className="text-lg text-cyan-400 mb-2 flex items-center gap-2">
+                        <span>⚡ Paradoxe Temporel (Prêts)</span>
+                    </h3>
+                    <p className="mb-2 text-gray-300 text-xs">Matérialisez de l'énergie du futur pour l'utiliser maintenant. Cela crée un Paradoxe qui doit être résolu.</p>
+                    <ul className="list-disc list-inside text-[10px] space-y-1 pl-1 text-gray-400">
+                        <li><strong>Ancrage (Apport) :</strong> Vous devez posséder <strong className="text-white">20%</strong> de la somme pour stabiliser la faille.</li>
+                        <li><strong>Coût Entropique :</strong> Le montant à rendre inclut une "taxe de stabilité" (intérêts).</li>
+                        <li><strong>Résolution Auto :</strong> <strong className="text-white">50%</strong> de votre production actuelle est siphonée pour combler la faille (remboursement).</li>
                     </ul>
-                     <p className="text-xs text-yellow-400 border-l-2 border-yellow-400 pl-2 mt-3">
-                        <strong>Stratégie :</strong> Utilisez les prêts pour surmonter des paliers d'amélioration très coûteux que vous ne pourriez pas atteindre autrement. Un prêt bien placé peut décupler votre production et se rembourser rapidement.
+                </div>
+
+                <div className="bg-black/40 p-3 rounded border-l-2 border-yellow-400">
+                    <h3 className="text-lg text-yellow-400 mb-2 flex items-center gap-2">
+                         <span>🏗️ Structure (Améliorations)</span>
+                    </h3>
+                    <p className="text-gray-300 text-xs">Renforcez la matrice de confinement pour améliorer les rendements de stase et réduire le coût des paradoxes.</p>
+                    <p className="text-[10px] text-red-400 mt-2">
+                        <strong>Restriction :</strong> Impossible d'améliorer la structure si une faille (prêt) est active.
                     </p>
                 </div>
 
-                <div className="bg-black/20 p-3 rounded-lg">
-                    <h3 className="text-lg text-purple-400 mb-2">📈 Améliorations de la Banque</h3>
-                    <p>Investissez dans votre banque pour débloquer de meilleurs taux d'intérêt pour l'épargne et réduire les coûts des prêts. C'est un investissement à long terme.</p>
-                    <p className="text-xs text-red-400 border-l-2 border-red-400 pl-2">
-                        <strong>Important :</strong> Vous ne pouvez <strong className="text-white">PAS</strong> améliorer la banque si vous avez un prêt en cours. Planifiez vos améliorations avant de vous endetter.
-                    </p>
-                </div>
-
-                <button onClick={onClose} className="w-full bg-blue-600 text-white mt-3 px-4 py-2 rounded">J'ai tout compris !</button>
+                <button onClick={onClose} className="w-full bg-cyan-700 hover:bg-cyan-600 text-white mt-3 px-4 py-3 rounded font-bold uppercase tracking-widest text-xs transition-colors">Fermer le Manuel</button>
             </div>
         </Popup>
     );

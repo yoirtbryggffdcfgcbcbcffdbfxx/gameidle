@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+
+import React from 'react';
 
 interface TutorialOverlayProps {
     highlightBox: DOMRect | null;
@@ -6,76 +7,90 @@ interface TutorialOverlayProps {
 }
 
 const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ highlightBox, isGlobal }) => {
-    const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+    const padding = 6;
 
-    useEffect(() => {
-        const handleResize = () => {
-            setViewportSize({ width: window.innerWidth, height: window.innerHeight });
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    // Si pas de cible ou étape globale, pas de viseur tactique nécessaire
+    if (!highlightBox || isGlobal) return null;
 
-    const padding = 8;
+    const { top, left, width, height } = highlightBox;
 
-    const svgPath = useMemo(() => {
-        if (!highlightBox) return '';
-        const { x, y, width, height } = highlightBox;
-        const paddedX = x - padding;
-        const paddedY = y - padding;
-        const paddedWidth = width + padding * 2;
-        const paddedHeight = height + padding * 2;
+    // Styles pour les "coins" du viseur (Brackets)
+    const bracketSize = 15;
+    const bracketThickness = 2;
+    const bracketColor = '#00f5d4'; // Cyan core color
 
-        const outer = `M0,0 H${viewportSize.width} V${viewportSize.height} H0 Z`;
-        const inner = `M${paddedX},${paddedY} H${paddedX + paddedWidth} V${paddedY + paddedHeight} H${paddedX} Z`;
-        
-        return `${outer} ${inner}`;
-    }, [highlightBox, viewportSize.width, viewportSize.height]);
-
-    // True when the step is not global but we are still waiting for the element bounds
-    const isInitialising = !highlightBox && !isGlobal;
+    const commonBracketStyle: React.CSSProperties = {
+        position: 'absolute',
+        width: `${bracketSize}px`,
+        height: `${bracketSize}px`,
+        borderColor: bracketColor,
+        borderStyle: 'solid',
+        filter: 'drop-shadow(0 0 5px rgba(0, 245, 212, 0.8))',
+    };
 
     return (
-        <>
-            <svg 
-                width="100%" 
-                height="100%"
-                className="fixed inset-0 z-[2000] transition-opacity duration-300"
-                style={{ pointerEvents: 'none' }}
+        <div 
+            className="fixed inset-0 z-[1999] pointer-events-none overflow-hidden"
+        >
+            {/* Container animé qui suit la cible */}
+            <div 
+                className="absolute transition-all duration-300 ease-out animate-tutorial-pulse"
+                style={{
+                    top: top - padding,
+                    left: left - padding,
+                    width: width + padding * 2,
+                    height: height + padding * 2,
+                }}
             >
-                {/* Path with a hole, only the filled area blocks clicks */}
-                {highlightBox && !isGlobal && (
-                    <path 
-                        d={svgPath} 
-                        fill="rgba(0,0,0,0.8)" 
-                        fillRule="evenodd"
-                        style={{ pointerEvents: 'auto' }}
-                    />
-                )}
-                {/* Full screen blocker for when we're waiting for bounds */}
-                {isInitialising && (
-                    <rect 
-                        width="100%" 
-                        height="100%" 
-                        fill="rgba(0,0,0,0.8)"
-                        style={{ pointerEvents: 'auto' }}
-                    />
-                )}
-            </svg>
-            
-            {highlightBox && !isGlobal && (
-                <div
-                    className="fixed z-[1999] border-4 rounded-lg pointer-events-none animate-tutorial-pulse"
-                    style={{
-                        top: highlightBox.top - padding,
-                        left: highlightBox.left - padding,
-                        width: highlightBox.width + padding * 2,
-                        height: highlightBox.height + padding * 2,
-                        borderColor: '#22d3ee'
-                    }}
-                />
-            )}
-        </>
+                {/* Coin Haut-Gauche */}
+                <div style={{ 
+                    ...commonBracketStyle, 
+                    top: 0, 
+                    left: 0, 
+                    borderWidth: `${bracketThickness}px 0 0 ${bracketThickness}px` 
+                }} />
+                
+                {/* Coin Haut-Droite */}
+                <div style={{ 
+                    ...commonBracketStyle, 
+                    top: 0, 
+                    right: 0, 
+                    borderWidth: `${bracketThickness}px ${bracketThickness}px 0 0` 
+                }} />
+                
+                {/* Coin Bas-Droite */}
+                <div style={{ 
+                    ...commonBracketStyle, 
+                    bottom: 0, 
+                    right: 0, 
+                    borderWidth: 0,
+                    borderRightWidth: `${bracketThickness}px`,
+                    borderBottomWidth: `${bracketThickness}px`
+                }} />
+                
+                {/* Coin Bas-Gauche */}
+                <div style={{ 
+                    ...commonBracketStyle, 
+                    bottom: 0, 
+                    left: 0, 
+                    borderWidth: 0,
+                    borderLeftWidth: `${bracketThickness}px`,
+                    borderBottomWidth: `${bracketThickness}px`
+                }} />
+
+                {/* Background subtil pour le contraste du texte interne si besoin */}
+                <div className="absolute inset-0 bg-cyan-500/5 rounded-sm"></div>
+                
+                {/* Scanline interne au viseur */}
+                <div className="absolute inset-0 overflow-hidden opacity-30">
+                     <div className="w-full h-[2px] bg-cyan-400 absolute top-0 animate-[scan-line_1.5s_linear_infinite]"></div>
+                </div>
+            </div>
+
+            {/* Lignes de connexion vers les bords de l'écran (Effet Sniper) */}
+            <div className="absolute bg-cyan-500/20 h-[1px] w-screen top-0 left-0" style={{ top: top + height/2 }}></div>
+            <div className="absolute bg-cyan-500/20 w-[1px] h-screen top-0 left-0" style={{ left: left + width/2 }}></div>
+        </div>
     );
 };
 

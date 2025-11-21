@@ -1,3 +1,4 @@
+
 // hooks/state/useBankState.ts
 // FIX: Import React to provide namespace for types.
 import React, { useCallback } from 'react';
@@ -40,7 +41,8 @@ export const useBankState = (
         });
     }, [setGameState]);
 
-    const withdrawSavings = useCallback((amount: number): void => {
+    // Mise à jour : Logique précise pour le retrait avec option de remboursement de prêt
+    const withdrawSavings = useCallback((amount: number, repayLoan: boolean): void => {
         setGameState(prev => {
             const actualWithdrawAmount = Math.min(amount, prev.savingsBalance);
             if (actualWithdrawAmount <= 0) return prev;
@@ -48,24 +50,34 @@ export const useBankState = (
             let toEnergyAmount = actualWithdrawAmount;
             let newLoan = prev.currentLoan;
             
-            if (newLoan) {
+            // Si l'utilisateur a choisi de rembourser le prêt et qu'un prêt existe
+            if (repayLoan && newLoan) {
                 const repayment = Math.min(actualWithdrawAmount, newLoan.remaining);
+                
+                // On déduit le remboursement du montant qui ira vers l'énergie
                 toEnergyAmount -= repayment;
-                const remaining = newLoan.remaining - repayment;
-                if (remaining <= 0) {
+                
+                const remainingLoan = newLoan.remaining - repayment;
+                
+                // Seuil de tolérance pour éviter les dettes fantômes de 0.00001
+                if (remainingLoan < 1) { // Epsilon plus large pour assurer la fermeture
                     newLoan = null;
-                    // The onLoanRepaid callback is now called by the game loop
                 } else {
-                    newLoan = { ...newLoan, remaining };
+                    newLoan = { ...newLoan, remaining: remainingLoan };
                 }
             }
-            return { ...prev, energy: prev.energy + toEnergyAmount, savingsBalance: prev.savingsBalance - actualWithdrawAmount, currentLoan: newLoan };
+            
+            return { 
+                ...prev, 
+                energy: prev.energy + toEnergyAmount, 
+                savingsBalance: prev.savingsBalance - actualWithdrawAmount, 
+                currentLoan: newLoan 
+            };
         });
     }, [setGameState]);
     
     const takeOutLoan = useCallback((loanAmount: number): void => {
         setGameState(prev => {
-            // All checks are now in the handler. This action assumes it's valid.
             const { bankBonuses } = getComputed(prev);
             const repaymentTotal = loanAmount * (1 + bankBonuses.loanInterest);
             return { ...prev, energy: prev.energy + loanAmount, currentLoan: { amount: loanAmount, remaining: repaymentTotal } };
@@ -74,7 +86,6 @@ export const useBankState = (
 
     const upgradeBank = useCallback((): void => {
         setGameState(prev => {
-            // All checks are now in the handler.
             const nextUpgrade = BANK_UPGRADES[prev.bankLevel + 1];
             unlockAchievement(ACHIEVEMENT_IDS.FINANCIAL_TYCOON);
             return { ...prev, energy: prev.energy - nextUpgrade.cost, bankLevel: prev.bankLevel + 1 };
@@ -88,7 +99,8 @@ export const useBankState = (
             const repaymentAmount = productionThisTick * LOAN_REPAYMENT_RATE;
             const actualRepayment = Math.min(repaymentAmount, newLoan.remaining);
             const remaining = newLoan.remaining - actualRepayment;
-            if (remaining <= 0) {
+            
+            if (remaining < 1) { // Utilisation d'un epsilon de 1 pour la sécurité visuelle
                 newLoan = null;
                 wasLoanRepaid = true;
             } else {
@@ -116,7 +128,8 @@ export const useBankState = (
 
             const remaining = prev.currentLoan.remaining - actualRepayment;
             let newLoan = prev.currentLoan;
-            if (remaining <= 0) {
+            
+            if (remaining < 1) { // Utilisation d'un epsilon
                 newLoan = null;
             } else {
                 newLoan = { ...prev.currentLoan, remaining };

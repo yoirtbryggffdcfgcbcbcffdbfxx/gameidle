@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface Tab {
@@ -9,7 +10,7 @@ interface Tab {
 
 interface MobileNavProps {
     tabs: Tab[];
-    onTabClick: (tabId: any) => void;
+    onTabClick: (tabId: string) => void;
 }
 
 const MobileNav: React.FC<MobileNavProps> = ({ tabs, onTabClick }) => {

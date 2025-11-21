@@ -1,3 +1,4 @@
+
 import React from 'react';
 import StatCard from '../../ui/StatCard';
 import StatsSection from './StatsSection';
@@ -6,7 +7,7 @@ import MousePointerIcon from '../../ui/MousePointerIcon';
 import ActivityIcon from '../../ui/ActivityIcon';
 
 interface ProductionStatsProps {
-    productionTotal: number;
+    productionTotal: number; // This is now passed as netProduction
     clickPower: number;
     avgProductionLast10s: number;
     showAvgProduction: boolean;
@@ -26,7 +27,7 @@ const ProductionStats: React.FC<ProductionStatsProps> = ({
         <StatsSection title="Production" icon={<ZapIcon className="w-4 h-4" />}>
             <StatCard 
                 icon={<ZapIcon className={iconClass} />}
-                label="Prod. par Seconde"
+                label="Prod. Nette / Sec"
                 value={`${memoizedFormatNumber(productionTotal)}/s`}
             />
              <StatCard 

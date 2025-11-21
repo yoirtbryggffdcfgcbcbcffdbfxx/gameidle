@@ -1,3 +1,5 @@
+
+import { useCallback } from 'react';
 import { GameState, Notification } from '../../types';
 import { SHOP_UPGRADES } from '../../data/shop';
 import { useGameState } from '../useGameState';
@@ -49,9 +51,14 @@ export const useShopHandlers = ({
             addMessage("Pas assez d'énergie pour acheter le fragment.", 'error');
         }
     };
+
+    const onShopCinematicComplete = useCallback(() => {
+        actions.markShopCinematicSeen();
+    }, [actions]);
     
     return {
         onBuyShopUpgrade,
         onBuyQuantumShard,
+        onShopCinematicComplete,
     };
 };

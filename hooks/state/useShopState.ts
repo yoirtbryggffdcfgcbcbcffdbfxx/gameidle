@@ -1,3 +1,4 @@
+
 // hooks/state/useShopState.ts
 // FIX: Import React to provide namespace for types.
 import React, { useCallback } from 'react';
@@ -61,12 +62,17 @@ export const useShopState = (setGameState: SetGameStateFn) => {
             return prev;
         });
     }, [setGameState]);
+
+    const markShopCinematicSeen = useCallback(() => {
+        setGameState(prev => ({ ...prev, hasSeenShopCinematic: true }));
+    }, [setGameState]);
     
     return {
         actions: {
             buyShopUpgrade,
             buyQuantumShard,
             markShopItemsAsSeen,
+            markShopCinematicSeen,
         },
     };
 };

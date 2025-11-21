@@ -1,3 +1,4 @@
+
 import { Notification, Achievement, GameState } from '../../types';
 import { useGameState } from '../useGameState';
 import { BANK_CONSTRUCTION_COST, BANK_UPGRADES } from '../../data/bank';
@@ -31,42 +32,41 @@ export const useBankHandlers = ({
     };
     
     const onDepositSavings = (amount: number) => {
+        if (isNaN(amount) || amount <= 0) {
+            addMessage("Montant invalide.", 'error');
+            return;
+        }
         const actualAmount = Math.min(amount, gameState.energy);
         if (actualAmount > 0) {
-            actions.depositSavings(amount);
+            actions.depositSavings(actualAmount);
             playSfx('click');
             addMessage(`${memoizedFormatNumber(actualAmount)} énergie déposée.`, 'info');
         } else {
-            addMessage("Montant invalide ou pas assez d'énergie.", 'error');
+            addMessage("Pas assez d'énergie.", 'error');
         }
     };
 
-    const onWithdrawSavings = (amount: number) => {
+    // La décision "repayLoan" est prise par l'UI (SavingsPanel) avant d'appeler ce handler
+    const onWithdrawSavings = (amount: number, repayLoan: boolean) => {
+        if (isNaN(amount) || amount <= 0) {
+             addMessage("Montant invalide.", 'error');
+             return;
+        }
+
         const actualWithdrawAmount = Math.min(amount, gameState.savingsBalance);
+        
         if (actualWithdrawAmount > 0) {
-            actions.withdrawSavings(amount);
+            actions.withdrawSavings(actualWithdrawAmount, repayLoan);
             playSfx('click');
             
-            let repaidAmount = 0;
-            let toEnergyAmount = actualWithdrawAmount;
-            if (gameState.currentLoan) {
-                const repayment = Math.min(actualWithdrawAmount, gameState.currentLoan.remaining);
-                repaidAmount = repayment;
-                toEnergyAmount -= repayment;
+            if (repayLoan && gameState.currentLoan) {
+                 addMessage(`Retrait effectué. Prêt remboursé en priorité.`, 'info');
+            } else {
+                 addMessage(`${memoizedFormatNumber(actualWithdrawAmount)} énergie retirée.`, 'info');
             }
 
-            let message = '';
-            if (repaidAmount > 0) {
-                message = `${memoizedFormatNumber(repaidAmount)} a remboursé votre prêt.`;
-                if (toEnergyAmount > 0) {
-                    message += ` ${memoizedFormatNumber(toEnergyAmount)} a été ajouté à votre énergie.`;
-                }
-            } else {
-                message = `${memoizedFormatNumber(actualWithdrawAmount)} énergie retirée.`;
-            }
-            addMessage(message, 'info');
         } else {
-            addMessage("Montant invalide ou solde insuffisant.", 'error');
+            addMessage("Solde épargne insuffisant.", 'error');
         }
     };
 
@@ -79,21 +79,24 @@ export const useBankHandlers = ({
             addMessage("Le montant du prêt est invalide.", 'error');
             return;
         }
-        const maxLoan = computed.maxEnergy * 0.10;
+        
+        const maxLoan = Number.MAX_VALUE;
         if (amount > maxLoan) {
-            addMessage(`Le prêt ne peut pas dépasser 10% de votre capacité max (${memoizedFormatNumber(maxLoan)}).`, 'error');
+            addMessage(`Le montant dépasse la capacité mathématique de l'univers.`, 'error');
             return;
         }
-        const repaymentTotal = amount * (1 + computed.bankBonuses.loanInterest);
-        const requiredCollateral = repaymentTotal * 0.10;
+        
+        // Règle des 20% du montant emprunté (Le principal) comme collatéral
+        const requiredCollateral = amount * 0.20;
+        
         if (gameState.energy < requiredCollateral) {
-            addMessage(`Vous devez posséder au moins 10% du total à rembourser (${memoizedFormatNumber(requiredCollateral)}) pour ce prêt.`, 'error');
+            addMessage(`Apport insuffisant. Il vous faut 20% du montant emprunté (${memoizedFormatNumber(requiredCollateral)} énergie).`, 'error');
             return;
         }
 
         actions.takeOutLoan(amount);
         playSfx('buy');
-        addMessage(`Prêt de ${memoizedFormatNumber(amount)} énergie obtenu.`, 'info', { title: 'Prêt Approuvé' });
+        addMessage(`Prêt de ${memoizedFormatNumber(amount)} énergie accordé.`, 'info', { title: 'Crédit Approuvé' });
     };
     
     const onUpgradeBank = () => {
@@ -106,8 +109,10 @@ export const useBankHandlers = ({
             addMessage("Pas assez d'énergie pour l'amélioration.", 'error');
             return;
         }
+        
+        // Bloquer l'amélioration si prêt actif
         if (gameState.currentLoan) {
-            addMessage("Vous ne pouvez pas améliorer la banque avec un prêt en cours.", 'error');
+            addMessage("Impossible d'améliorer la banque avec une dette active !", 'error');
             return;
         }
 
@@ -119,7 +124,7 @@ export const useBankHandlers = ({
 
     const onRepayLoan = (amount: number) => {
         if (!gameState.currentLoan) {
-            addMessage("Remboursement impossible : pas de prêt en cours.", 'error');
+            addMessage("Aucun prêt à rembourser.", 'error');
             return;
         }
         if (isNaN(amount) || amount <= 0) {
@@ -127,18 +132,15 @@ export const useBankHandlers = ({
             return;
         }
         const actualRepayment = Math.min(amount, gameState.energy, gameState.currentLoan.remaining);
+        
         if (actualRepayment <= 0) {
-            addMessage("Vous n'avez pas assez d'énergie pour ce remboursement.", 'error');
+            addMessage("Pas assez d'énergie.", 'error');
             return;
         }
         
         actions.repayLoanManually(amount);
         playSfx('click');
-        addMessage(`${memoizedFormatNumber(actualRepayment)} énergie utilisée pour rembourser le prêt.`, 'info');
-        
-        if (actualRepayment >= gameState.currentLoan.remaining) {
-            addMessage("Votre prêt a été entièrement remboursé !", 'info', { title: "Prêt Remboursé" });
-        }
+        addMessage(`${memoizedFormatNumber(actualRepayment)} remboursés.`, 'info');
     };
     
     return {

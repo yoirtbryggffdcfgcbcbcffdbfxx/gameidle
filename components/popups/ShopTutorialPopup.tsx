@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Popup from './Popup';
 
@@ -7,12 +8,14 @@ interface ShopTutorialPopupProps {
 
 const ShopTutorialPopup: React.FC<ShopTutorialPopupProps> = ({ onClose }) => {
     return (
-        <Popup title="🛍️ Boutique Débloquée !" onClose={onClose} widthClass="w-72">
-            <div className="space-y-2 text-xs">
-                <p>Félicitations ! Vous avez débloqué la <strong className="text-yellow-400">Boutique</strong>.</p>
-                <p className="opacity-90">Achetez-y des améliorations permanentes qui persistent même après une Ascension.</p>
-                <p className="text-[10px] opacity-70">Prochain objectif : le <strong className="text-cyan-400">Cœur Quantique</strong> !</p>
-                <button onClick={onClose} className="w-full bg-blue-600 text-white mt-2 px-3 py-1.5 rounded text-xs">Compris !</button>
+        <Popup title="📡 Liaison Uplink Établie" onClose={onClose} widthClass="w-80">
+            <div className="space-y-3 text-sm font-mono text-cyan-300">
+                <p>Architecte, j'ai réussi à percer le voile dimensionnel. Le <strong className="text-yellow-400">Nexus d'Approvisionnement</strong> est en ligne.</p>
+                <p className="opacity-90 text-gray-300">Nous pouvons y télécharger des schémas structurels permanents. Ces améliorations sont encodées dans la structure même de la réalité et <strong className="text-white">persisteront après une Transcendance</strong>.</p>
+                <p className="text-[10px] opacity-70 text-cyan-500 border-t border-cyan-900 pt-2 mt-2">
+                    // NOTE : Les Fragments Quantiques peuvent également être synthétisés ici.
+                </p>
+                <button onClick={onClose} className="w-full bg-cyan-900/50 border border-cyan-500 hover:bg-cyan-800 text-cyan-300 mt-2 px-3 py-2 rounded text-xs uppercase tracking-widest transition-all">Accéder au Nexus</button>
             </div>
         </Popup>
     );

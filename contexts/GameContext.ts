@@ -1,21 +1,33 @@
-import React, { createContext, useContext } from 'react';
-import { useGameEngine } from '../hooks/useGameEngine';
 
-// Crée un type basé sur ce que le hook useGameEngine retourne.
-// C'est une pratique robuste pour garder le type synchronisé.
-type GameEngineContextType = ReturnType<typeof useGameEngine> | null;
+import { useContext } from 'react';
+import { GameDataContext, GameDataValues } from './GameDataContext';
+import { GameActionContext, GameActionValues } from './GameActionContext';
 
-// Crée le contexte avec une valeur par défaut de null.
-export const GameContext = createContext<GameEngineContextType>(null);
+// Type combiné pour la rétrocompatibilité avec le code existant
+export type GameEngineContextType = GameDataValues & GameActionValues;
 
-// Crée un hook personnalisé pour consommer le contexte.
-// C'est la manière recommandée d'accéder aux données du contexte.
-export const useGameContext = () => {
-  const context = useContext(GameContext);
-  if (!context) {
-    // Cette erreur se déclenchera si un composant essaie d'utiliser le contexte
-    // en dehors d'un GameContext.Provider, ce qui est une bonne pratique de sécurité.
-    throw new Error('useGameContext must be used within a GameContextProvider');
+/**
+ * Hook principal (Façade)
+ * Combine les données et les actions pour les composants qui ont besoin des deux.
+ * Pour l'optimisation, préférez utiliser useGameData() ou useGameActions() séparément.
+ */
+export const useGameContext = (): GameEngineContextType => {
+  const data = useContext(GameDataContext);
+  const actions = useContext(GameActionContext);
+
+  if (!data || !actions) {
+    throw new Error('useGameContext must be used within the combined GameProviders (Data + Actions)');
   }
-  return context;
+
+  // On fusionne les deux objets pour recréer l'interface monolithique
+  return {
+      ...data,
+      ...actions
+  };
 };
+
+// Export des contextes et hooks individuels pour une utilisation optimisée dans le futur
+export { GameDataContext, useGameData } from './GameDataContext';
+export { GameActionContext, useGameActions } from './GameActionContext';
+export type { GameDataValues } from './GameDataContext';
+export type { GameActionValues } from './GameActionContext';

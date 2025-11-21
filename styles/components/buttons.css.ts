@@ -1,3 +1,4 @@
+
 export const buttonsCss = `
 /* ============================================= */
 /*          CUSTOM BUTTONS                       */
@@ -53,5 +54,46 @@ export const buttonsCss = `
 
 .collect-button:hover .scan-line {
     animation-duration: 2s;
+}
+
+/* Main Menu Buttons */
+.menu-btn {
+    position: relative;
+    width: 100%;
+    padding: 1rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.menu-btn-cyan {
+    color: #22d3ee;
+    border-color: rgba(34, 211, 238, 0.3);
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.menu-btn-cyan:hover {
+    color: #fff;
+    border-color: rgba(34, 211, 238, 0.8);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+}
+
+.menu-btn-purple {
+    color: #d8b4fe;
+    border-color: rgba(216, 180, 254, 0.3);
+    background: rgba(168, 85, 247, 0.05);
+}
+
+.menu-btn-purple:hover {
+    color: #fff;
+    border-color: rgba(168, 85, 247, 0.8);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
 }
 `;

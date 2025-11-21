@@ -1,3 +1,4 @@
+
 // hooks/state/usePrestigeState.ts
 // FIX: Import React to provide namespace for types.
 import React, { useCallback, useRef, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { ASCENSION_UPGRADES } from '../../data/ascension';
 import { MAX_UPGRADE_LEVEL } from '../../constants';
 import { getInitialState } from '../../utils/helpers';
 import { calculateAscensionBonuses, calculateAchievementBonuses } from '../../utils/bonusCalculations';
-import { calculateProduction, calculateCanAscend } from '../../utils/gameplayCalculations';
+import { calculateProduction, calculateCanAscend, determineVisibleUpgrades } from '../../utils/gameplayCalculations';
 import { ACHIEVEMENT_IDS } from '../../constants/achievements';
 
 
@@ -31,6 +32,10 @@ export const usePrestigeState = (
         const production = calculateProduction(gameState, ascensionBonuses, achievementBonuses, { chargeRate: 1, multiplier: 1, duration: 0 }); // Core bonus is handled separately
 
         const maxEnergy = 1e9 * Math.pow(10, gameState.ascensionLevel);
+        // La limite de stockage saute si la banque est DÉCOUVERTE (Stockage Infini)
+        // Cela permet de dépasser le cap dès qu'on a atteint le seuil de la banque.
+        const energyCap = gameState.isBankDiscovered ? Infinity : maxEnergy;
+
         const unlockedUpgradesForCurrentAscension = gameState.upgrades.filter(u => u.requiredAscension <= gameState.ascensionLevel);
         const unlockedUpgradesAtMaxLevelCount = unlockedUpgradesForCurrentAscension.filter(u => u.owned >= MAX_UPGRADE_LEVEL).length;
         
@@ -42,20 +47,13 @@ export const usePrestigeState = (
             unlockedUpgradesForCurrentAscension.length
         );
 
-        const visibleUpgrades = gameState.upgrades
-            .map((upgradeData, originalIndex) => ({ upgradeData, originalIndex }))
-            .filter(({ upgradeData }) => upgradeData.unlockCost <= gameState.totalEnergyProduced || upgradeData.owned > 0)
-            .filter(({ upgradeData }) => upgradeData.requiredAscension <= gameState.ascensionLevel);
-
-        const newlyVisibleUpgradeIds = visibleUpgrades
-            .map(u => u.upgradeData.id)
-            .filter(id => !gameState.seenUpgrades.includes(id));
-
-        const newlyVisibleUpgradeTypes = new Set<string>();
-        if (newlyVisibleUpgradeIds.length > 0) {
-            const newUpgrades = visibleUpgrades.filter(u => newlyVisibleUpgradeIds.includes(u.upgradeData.id));
-            newUpgrades.forEach(u => newlyVisibleUpgradeTypes.add(u.upgradeData.type));
-        }
+        // Logic extracted to utility function for better Separation of Concerns
+        const { visibleUpgrades, newlyVisibleUpgradeIds, newlyVisibleUpgradeTypes } = determineVisibleUpgrades(
+            gameState.upgrades,
+            gameState.totalEnergyProduced,
+            gameState.ascensionLevel,
+            gameState.seenUpgrades
+        );
 
         return {
             ascensionBonuses,
@@ -63,6 +61,7 @@ export const usePrestigeState = (
             costMultiplier,
             productionTotal: production.productionTotal,
             maxEnergy,
+            energyCap,
             canAscend,
             ascensionGain,
             visibleUpgrades,

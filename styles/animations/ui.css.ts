@@ -1,3 +1,4 @@
+
 export const uiCss = `
 /* ============================================= */
 /*          UI COMPONENTS                        */
@@ -11,6 +12,35 @@ export const uiCss = `
 }
 .animate-pulse-effect {
     animation: pulseAnim 0.3s ease-out;
+}
+
+/* Shake Animation for disabled interaction */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+    75% { transform: translateX(-4px); }
+    100% { transform: translateX(0); }
+}
+
+/* We manually define the hover variant to match Tailwind syntax pattern */
+.hover\:animate-shake:hover {
+    animation: shake 0.3s ease-in-out;
+}
+
+/* Striped Background for disabled state */
+.bg-striped {
+    background-image: linear-gradient(
+        45deg, 
+        rgba(0, 0, 0, 0.3) 25%, 
+        transparent 25%, 
+        transparent 50%, 
+        rgba(0, 0, 0, 0.3) 50%, 
+        rgba(0, 0, 0, 0.3) 75%, 
+        transparent 75%, 
+        transparent
+    );
+    background-size: 16px 16px;
 }
 
 /* Quantum Core Effects */

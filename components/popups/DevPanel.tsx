@@ -11,8 +11,6 @@ interface DevPanelProps {
     toggleDevMode: () => void;
     isDevModeActive: boolean;
     closePanel: () => void;
-    toggleForceShowCursor: () => void;
-    isCursorForced: boolean;
     fillCore: () => void;
     addShards: (amount: number) => void;
     unlockShop: () => void;
@@ -41,8 +39,6 @@ const DevPanel: React.FC<DevPanelProps> = ({
     toggleDevMode,
     isDevModeActive,
     closePanel,
-    toggleForceShowCursor,
-    isCursorForced,
     fillCore,
     addShards,
     unlockShop,
@@ -80,9 +76,6 @@ const DevPanel: React.FC<DevPanelProps> = ({
                     <button onClick={addSystemMessage} className={buttonStyle}>Msg. Système</button>
                     <button onClick={toggleDevMode} className={buttonStyle}>
                         {isDevModeActive ? 'Cacher' : 'Afficher'} Msgs Système
-                    </button>
-                    <button onClick={toggleForceShowCursor} className={buttonStyle}>
-                        {isCursorForced ? 'Cacher' : 'Afficher'} Curseur
                     </button>
                 </Section>
             </div>

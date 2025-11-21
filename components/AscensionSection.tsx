@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import SkillTree from './ui/SkillTree';
 import { ASCENSION_UPGRADES } from '../data/ascension';
@@ -42,11 +43,12 @@ const AscensionSection: React.FC = () => {
 
     return (
         <section id="ascension-portal" className="fullscreen-section reveal">
-            <div className="w-full max-w-4xl h-[80vh] bg-black/20 rounded-lg p-4 flex flex-col">
+             {/* UNIFIED GLASS PANEL STYLE */}
+            <div className="w-full max-w-4xl h-[80vh] bg-[#0a0a12]/70 backdrop-blur-xl border border-white/10 rounded-xl p-4 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                 <SectionHeader title="Portail d'Ascension" energy={energy} formatNumber={memoizedFormatNumber} />
                 <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                     
-                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col justify-between md:col-span-1">
+                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col justify-between md:col-span-1 border border-white/5">
                         <div>
                             <h3 className="text-lg text-yellow-400 mb-2">Faire une Ascension</h3>
                             <div className="mb-3 text-xs space-y-2">
@@ -79,7 +81,7 @@ const AscensionSection: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col md:col-span-2">
+                    <div className="bg-[var(--bg-upgrade)] p-4 rounded-lg flex flex-col md:col-span-2 border border-white/5">
                          <h3 className="text-lg text-yellow-400 mb-2">Arbre d'Ascension</h3>
                          <p className="text-sm mb-2">Vous avez <strong className="text-yellow-400">{ascensionPoints}</strong> points.</p>
                          <div ref={scrollableTreeRef} className="flex-grow overflow-auto custom-scrollbar pr-1 relative scroll-contain">

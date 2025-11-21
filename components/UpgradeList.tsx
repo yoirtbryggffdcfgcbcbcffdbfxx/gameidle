@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Upgrade } from '../types';
 import UpgradeItem from './UpgradeItem';
@@ -39,7 +40,7 @@ const UpgradeList: React.FC<UpgradeListProps> = ({ upgrades, onBuyUpgrade, onBuy
                     id={`upgrade-${item.upgradeData.id}`}
                     upgrade={item.upgradeData} 
                     onBuy={(amount) => onBuyUpgrade(item.originalIndex, amount)} 
-                    onBuyTier={() => onBuyTierUpgrade(item.originalIndex)}
+                    onBuyTierUpgrade={() => onBuyTierUpgrade(item.originalIndex)}
                     formatNumber={formatNumber}
                     energy={energy}
                     costMultiplier={costMultiplier}

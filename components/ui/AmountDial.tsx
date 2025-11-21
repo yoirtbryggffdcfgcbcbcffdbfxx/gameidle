@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useGameContext } from '../../contexts/GameContext';
 import { BuyAmount } from '../../hooks/ui/useForge';
@@ -118,14 +119,12 @@ const AmountDial: React.FC<AmountDialProps> = ({ options, activeOption, onOption
                 className="amount-dial-button"
                 title={isDisabled ? "Débloquez plus d'options dans la boutique" : "Changer le montant d'achat"}
             >
-                <span className="text-xs px-2 opacity-80">Acheter:</span>
-                <span className="font-bold text-cyan-300">x{activeOption}</span>
-                {!isDisabled && <span className="text-xl transition-transform duration-200 ml-2" style={{ transform: isListOpen || (isDragging && !isMobile) ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>}
+                <span className="font-bold text-cyan-300 text-xs">x{activeOption}</span>
+                {!isDisabled && <span className="text-[10px] transition-transform duration-200 ml-1 opacity-70" style={{ transform: isListOpen || (isDragging && !isMobile) ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>}
             </button>
 
             {!isDisabled && (
                  <div className={`amount-dial-list ${(!isMobile && isDragging) || isListOpen ? 'open' : ''}`}>
-                    <div className="indicator-arrow up">▲</div>
                     {options.map((option) => (
                         <button
                             key={option}
@@ -135,7 +134,6 @@ const AmountDial: React.FC<AmountDialProps> = ({ options, activeOption, onOption
                             x{option}
                         </button>
                     ))}
-                    <div className="indicator-arrow down">▼</div>
                 </div>
             )}
         </div>

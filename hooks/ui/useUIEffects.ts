@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Settings } from '../../types';
 
 // UI & Effects Hooks
@@ -13,6 +14,12 @@ export const useUIEffects = (settings: Settings) => {
     const popups = usePopupManager();
     const { particles, addParticle, removeParticle } = useParticleSystem(settings.visualEffects);
     const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText(settings.showFloatingText);
+
+    // GLOBAL EFFECT: Applique la classe pour forcer l'affichage du curseur
+    // Déplacé ici pour fonctionner partout (Menu, Jeu, Cinématique)
+    useEffect(() => {
+        document.body.classList.toggle('force-show-cursor', popups.forceShowCursor);
+    }, [popups.forceShowCursor]);
 
     return {
         // SFX

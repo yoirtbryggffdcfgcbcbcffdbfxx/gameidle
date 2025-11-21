@@ -1,7 +1,8 @@
+
 import { themesCss } from '../styles/themes.css.ts';
 import { baseCss } from '../styles/base.css.ts';
 import { componentsCss } from '../styles/components/index.ts';
-import { animationsCss } from '../styles/animations';
+import { animationsCss } from '../styles/animations/index.ts';
 
 // This function now acts as an orchestrator.
 // It imports CSS strings from modularized files and combines them.

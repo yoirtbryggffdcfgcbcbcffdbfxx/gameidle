@@ -9,8 +9,8 @@ const DevPanelController: React.FC = () => {
         return null;
     }
     
-    const { isDevModeActive, forceShowCursor } = uiState;
-    const { setIsDevModeActive, setForceShowCursor } = popups;
+    const { isDevModeActive } = uiState;
+    const { setIsDevModeActive } = popups;
 
     const addSystemMessage = () => {
         handlers.addMessage(
@@ -22,10 +22,6 @@ const DevPanelController: React.FC = () => {
     
     const toggleDevMode = () => {
         setIsDevModeActive(prev => !prev);
-    };
-
-    const toggleForceShowCursor = () => {
-        setForceShowCursor(prev => !prev);
     };
 
     return (
@@ -40,8 +36,6 @@ const DevPanelController: React.FC = () => {
             toggleDevMode={toggleDevMode}
             isDevModeActive={isDevModeActive}
             closePanel={() => popups.setShowDevPanel(false)}
-            toggleForceShowCursor={toggleForceShowCursor}
-            isCursorForced={forceShowCursor}
             fillCore={() => handlers.dev.setCoreCharge(100)}
             addShards={handlers.dev.addShards}
             unlockShop={() => handlers.dev.unlockFeature('shop')}
