@@ -30,11 +30,43 @@ export const selectUpgradeCost = (baseCost: number, owned: number): number => {
     return Math.floor(baseCost * Math.pow(COST_GROWTH_COEFFICIENT, owned));
 };
 
-// Sélecteur de filtrage pour l'UI
-export const selectFilteredUpgrades = (state: RootState) => {
+// Calcul de la puissance de clic (Upgrades de type CLICK)
+export const selectClickPower = (state: RootState): number => {
+    const baseClick = 1; // Valeur de base d'un clic
+    const bonus = state.upgrades.available
+        .filter(u => u.type === 'CLICK')
+        .reduce((total, u) => {
+            const powerPerUnit = u.baseProduction * Math.pow(TIER_PRODUCTION_MULTIPLIER, u.tier);
+            return total + (powerPerUnit * u.owned);
+        }, 0);
+    return baseClick + bonus;
+};
+
+// Sélecteur de filtrage pour l'UI (Catégorie + Unlock System)
+export const selectVisibleUpgrades = (state: RootState) => {
     const { available } = state.upgrades;
     const { activeCategory } = state.ui;
+    const totalGenerated = state.resources.totalGenerated;
 
-    if (activeCategory === 'ALL') return available;
-    return available.filter(u => u.type === activeCategory);
+    // 1. Filtrer par Unlock Condition
+    const unlocked = available.filter(u => {
+        // Condition 1: Avoir assez d'énergie totale générée (Unlock Cost)
+        const hasEnoughTotal = totalGenerated >= u.unlockCost;
+
+        // Condition 2: Avoir l'upgrade parent (si requis)
+        let hasParent = true;
+        if (u.requiredUpgradeId) {
+            const parent = available.find(p => p.id === u.requiredUpgradeId);
+            hasParent = parent ? parent.owned > 0 : false;
+        }
+
+        // Condition 3: Être déjà possédé (toujours visible si possédé)
+        const isOwned = u.owned > 0;
+
+        return isOwned || (hasEnoughTotal && hasParent);
+    });
+
+    // 2. Filtrer par Catégorie UI
+    if (activeCategory === 'ALL') return unlocked;
+    return unlocked.filter(u => u.type === activeCategory);
 };

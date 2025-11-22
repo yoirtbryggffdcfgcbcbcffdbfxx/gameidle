@@ -1,11 +1,11 @@
 import React from 'react';
 import { useGameSelector } from '../../../lib/context';
 import { UpgradeCard } from './UpgradeCard';
-import { selectFilteredUpgrades } from '../selectors';
+import { selectVisibleUpgrades } from '../selectors';
 
 export const UpgradeList: React.FC = React.memo(() => {
     // Le composant ne sait plus COMMENT filtrer, il demande juste les upgrades filtrés.
-    const upgrades = useGameSelector(selectFilteredUpgrades);
+    const upgrades = useGameSelector(selectVisibleUpgrades);
 
     if (upgrades.length === 0) {
         return (
@@ -20,7 +20,7 @@ export const UpgradeList: React.FC = React.memo(() => {
             {upgrades.map(u => (
                 <UpgradeCard key={u.id} u={u} />
             ))}
-            
+
             {/* Spacer pour le scroll */}
             <div className="h-12"></div>
         </div>

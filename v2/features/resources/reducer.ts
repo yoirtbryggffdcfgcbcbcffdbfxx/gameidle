@@ -14,12 +14,12 @@ export const resourceReducer = (state: ResourceState, action: GameAction): Resou
                 ...state,
                 energy: Math.max(0, state.energy - action.payload.amount)
             };
-        
+
         case 'CLICK_CORE':
             return {
                 ...state,
-                energy: state.energy + 1,
-                totalGenerated: state.totalGenerated + 1
+                energy: state.energy + action.payload.amount,
+                totalGenerated: state.totalGenerated + action.payload.amount
             };
 
         case 'TICK':
