@@ -15,6 +15,7 @@ export interface UIState {
     isMobile: boolean;
     activeMobileTab: MobileTab;
     activeCategory: UpgradeCategory;
+    lastPlasmaFlash: number; // Timestamp du dernier flash manuel
 }
 
 export const initialUIState: UIState = {
@@ -22,4 +23,5 @@ export const initialUIState: UIState = {
     isMobile: false, // Par défaut desktop, sera mis à jour au mount
     activeMobileTab: 'REACTOR',
     activeCategory: 'ALL',
+    lastPlasmaFlash: 0,
 };

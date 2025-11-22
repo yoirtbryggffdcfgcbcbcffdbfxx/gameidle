@@ -1,16 +1,15 @@
-
 import React from 'react';
 import { UpgradeList } from '../features/upgrades/components/UpgradeList';
 import { CategorySelector } from '../features/upgrades/components/CategorySelector';
 
 export const ManagementPanel: React.FC = React.memo(() => {
     return (
-        <div className="flex-1 flex flex-col bg-[#050508]/80 backdrop-blur-sm border-l border-white/5 max-w-md md:max-w-lg w-full mx-auto md:mx-0">
-            
+        <div className="flex-1 flex flex-col bg-[#050508]/80 backdrop-blur-sm border-l border-white/5 max-w-md md:max-w-lg w-full mx-auto md:mx-0 min-h-0">
+
             {/* Header avec Dial V1 */}
-            <div className="p-4 border-b border-white/10 bg-black/20 flex items-center justify-between z-20">
+            <div className="p-4 border-b border-white/10 bg-black/20 flex items-center justify-between z-20 flex-shrink-0">
                 <CategorySelector />
-                
+
                 {/* Déco technique à droite */}
                 <div className="flex flex-col items-end opacity-50">
                     <div className="flex gap-1 mb-1">
@@ -23,7 +22,7 @@ export const ManagementPanel: React.FC = React.memo(() => {
             </div>
 
             {/* Scrollable List */}
-            <div className="flex-grow overflow-y-auto custom-scrollbar p-4 relative z-10">
+            <div className="flex-grow overflow-y-auto overscroll-y-contain custom-scrollbar p-4 relative z-10 scroll-contain min-h-0">
                 <UpgradeList />
             </div>
 

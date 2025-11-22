@@ -25,9 +25,18 @@ export const selectBoosterBonus = (state: RootState): number => {
         }, 0);
 };
 
-// Calcul du coût dynamique d'une amélioration
-export const selectUpgradeCost = (baseCost: number, owned: number): number => {
+// Calcul du coût dynamique d'une amélioration (avec support du discount de tier)
+export const selectUpgradeCost = (baseCost: number, owned: number, costOverride?: number): number => {
+    if (costOverride !== undefined) {
+        return costOverride; // Utiliser le discount si disponible
+    }
     return Math.floor(baseCost * Math.pow(COST_GROWTH_COEFFICIENT, owned));
+};
+
+// Calcul du coût d'un Tier Upgrade (10x le coût du niveau actuel)
+export const selectTierUpgradeCost = (baseCost: number, owned: number, costOverride?: number): number => {
+    const normalCost = selectUpgradeCost(baseCost, owned, costOverride);
+    return normalCost * 10;
 };
 
 // Calcul de la puissance de clic (Upgrades de type CLICK)

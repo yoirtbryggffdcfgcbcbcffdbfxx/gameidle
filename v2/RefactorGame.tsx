@@ -40,10 +40,10 @@ const GameLayout: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 {/* Logique d'affichage conditionnelle pour Mobile vs Desktop */}
                 {isMobile ? (
                     <>
-                        <div className={`flex-grow flex flex-col ${activeMobileTab === 'REACTOR' ? 'block' : 'hidden'}`}>
+                        <div className={`flex-grow flex flex-col overflow-hidden ${activeMobileTab === 'REACTOR' ? 'block' : 'hidden'}`}>
                             <GameplayPanel />
                         </div>
-                        <div className={`flex-grow flex flex-col ${activeMobileTab === 'FORGE' ? 'block' : 'hidden'}`}>
+                        <div className={`flex-grow flex flex-col overflow-hidden ${activeMobileTab === 'FORGE' ? 'block' : 'hidden'}`}>
                             <ManagementPanel />
                         </div>
                     </>

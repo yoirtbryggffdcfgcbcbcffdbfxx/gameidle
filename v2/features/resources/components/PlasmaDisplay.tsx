@@ -4,7 +4,8 @@ import { formatNumber } from '../../../lib/selectors';
 
 export const PlasmaDisplay: React.FC = React.memo(() => {
     const energy = useGameSelector(state => state.resources.energy);
-    
+    const lastFlash = useGameSelector(state => state.ui.lastPlasmaFlash);
+
     // V2 Mockup Target (à connecter plus tard au système de progression)
     const target = 10000;
     const percentage = Math.min((energy / target) * 100, 100);
@@ -12,20 +13,20 @@ export const PlasmaDisplay: React.FC = React.memo(() => {
     const glowColor = '#00ffcc';
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const prevEnergyRef = useRef(energy);
+    const prevFlashRef = useRef(lastFlash);
 
-    // Effet de flash lors du gain d'énergie (comme V1)
+    // Effet de flash lors du CLIC MANUEL uniquement
     useEffect(() => {
-        if (energy > prevEnergyRef.current) {
+        if (lastFlash > prevFlashRef.current) {
             const el = containerRef.current;
             if (el) {
                 el.classList.remove('animate-plasma-flash');
-                void el.offsetWidth; 
+                void el.offsetWidth;
                 el.classList.add('animate-plasma-flash');
             }
         }
-        prevEnergyRef.current = energy;
-    }, [energy]);
+        prevFlashRef.current = lastFlash;
+    }, [lastFlash]);
 
     return (
         <div className="w-full max-w-md mx-auto mb-4 md:mb-8">
@@ -33,24 +34,24 @@ export const PlasmaDisplay: React.FC = React.memo(() => {
                 <span className="text-[10px] font-mono text-cyan-500/80 uppercase tracking-widest">Condensateur</span>
                 <span className="text-[9px] text-gray-500 uppercase tracking-wider">Objectif: <span className="text-cyan-400">Upgrade</span></span>
             </div>
-            
-            <div 
+
+            <div
                 ref={containerRef}
                 className="plasma-bar-container" // Réutilisation classe CSS V1
             >
                 {/* Background Ticks */}
                 <div className="plasma-bar-ticks"></div>
-                
+
                 {/* The Plasma Fluid */}
-                <div 
-                    className="plasma-fill" 
-                    style={{ 
+                <div
+                    className="plasma-fill"
+                    style={{
                         width: `${percentage}%`,
                         background: `linear-gradient(90deg, ${glowColor}20, ${glowColor})`,
-                        color: glowColor 
+                        color: glowColor
                     }}
                 ></div>
-                
+
                 {/* Centered Capacity Text Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                     <div className="relative px-4 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/5 shadow-lg">

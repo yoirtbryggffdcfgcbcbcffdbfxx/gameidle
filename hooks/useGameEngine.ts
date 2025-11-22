@@ -27,9 +27,18 @@ export const useGameEngine = () => {
     // --- 1. Hooks Fondamentaux ---
     const { settings, setSettings, handleSettingsChange } = useSettings();
     const { playSfx, unlockAudio, ...uiEffects } = useUIEffects(settings);
-    const loadStatus = localStorage.getItem(SAVE_KEY) ? 'has_save' : 'no_save';
+
+    // Fix: Use useState to properly initialize loadStatus
+    const [loadStatus, setLoadStatus] = useState<'loading' | 'no_save' | 'has_save'>('loading');
+
+    // Check localStorage on mount
+    React.useEffect(() => {
+        const savedData = localStorage.getItem(SAVE_KEY);
+        setLoadStatus(savedData ? 'has_save' : 'no_save');
+    }, []);
+
     const { appState, setAppState, hasSaveData } = useAppFlow(loadStatus);
-    
+
     // Nouvel état pour le suivi Cloud
     const [cloudStatus, setCloudStatus] = useState<'none' | 'connected' | 'offline'>('none');
 
@@ -50,12 +59,12 @@ export const useGameEngine = () => {
             achievement,
         });
     }, []);
-    
-    const { 
+
+    const {
         gameState, setGameState, computed, actions, dev, saveGameState,
-        achievementsManager, prestigeState, coreMechanics, bankState 
+        achievementsManager, prestigeState, coreMechanics, bankState
     } = useGameState(handleAchievementUnlock, appState, loadStatus);
-    
+
     // Update the ref with the real function once it's available
     addMessageRef.current = actions.addMessage;
     const addMessage = actions.addMessage;
@@ -68,9 +77,9 @@ export const useGameEngine = () => {
         popups: uiEffects.popups,
         addMessage,
     });
-    
-    const clickQueue = React.useRef<{x: number, y: number}[]>([]);
-    
+
+    const clickQueue = React.useRef<{ x: number, y: number }[]>([]);
+
     const onCollect = React.useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
         e.preventDefault();
         playSfx('click');
@@ -101,14 +110,14 @@ export const useGameEngine = () => {
     });
 
     // --- 4. Handlers d'Action ---
-    const appHandlers = useAppHandlers({ 
-        hasSaveData, 
-        actions, 
-        popups: uiEffects.popups, 
-        playSfx, 
-        addMessage, 
-        setAppState, 
-        setSettings, 
+    const appHandlers = useAppHandlers({
+        hasSaveData,
+        actions,
+        popups: uiEffects.popups,
+        playSfx,
+        addMessage,
+        setAppState,
+        setSettings,
         unlockAudio,
         setCloudStatus // Passage du setter
     });
@@ -116,7 +125,7 @@ export const useGameEngine = () => {
     const prestigeHandlers = usePrestigeHandlers({ gameState, computed, actions, coreActions: actions, settings, popups: uiEffects.popups, playSfx, ...uiEffects, addMessage });
     const bankHandlers = useBankHandlers({ gameState, computed, actions, playSfx, addMessage, memoizedFormatNumber });
     const shopHandlers = useShopHandlers({ gameState, actions, playSfx, addMessage });
-    
+
     // --- 5. Raccourcis Globaux ---
     // Utilisation du hook dédié pour gérer les raccourcis clavier ('C', 'D')
     useGlobalShortcuts(uiEffects.popups, actions);
@@ -125,7 +134,7 @@ export const useGameEngine = () => {
 
     // --- 6. Construction des Objets de Contexte (Optimisation) ---
     // Nous séparons Data (ce qui change souvent) et Actions (ce qui est stable ou fonctionnel)
-    
+
     const { popups, ...otherUiEffects } = uiEffects;
 
     // Objet DATA : Contient tout l'état réactif

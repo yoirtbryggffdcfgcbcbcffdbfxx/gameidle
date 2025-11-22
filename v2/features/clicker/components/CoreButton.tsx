@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useGameDispatch, useGameSelector } from '../../../lib/context';
 import { clickCore } from '../actions';
-import { spawnFloatingText } from '../../ui/actions';
+import { spawnFloatingText, triggerPlasmaFlash } from '../../ui/actions';
 import { selectClickPower } from '../../upgrades/selectors';
 import { formatNumber } from '../../../lib/formatters';
 
@@ -12,6 +12,7 @@ export const CoreButton: React.FC = React.memo(() => {
     const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault(); // Prevent sticky focus on mobile
         dispatch(clickCore(clickPower));
+        dispatch(triggerPlasmaFlash()); // Déclenche l'animation de la barre
         const x = e.clientX;
         const y = e.clientY;
         dispatch(spawnFloatingText(x, y, `+${formatNumber(clickPower)}`, '#ffffff'));
@@ -20,8 +21,8 @@ export const CoreButton: React.FC = React.memo(() => {
     return (
         <button
             id="collect-button"
-            onPointerDown={handleClick} // Utilisation de onPointerDown pour une meilleure réactivité mobile
-            className="injector-button group w-48 md:w-64 mx-auto" // Reuse V1 CSS class
+            onPointerDown={handleClick}
+            className="injector-button group w-48 md:w-64 mx-auto"
         >
             <div className="injector-core">
                 <span className="injector-label">INJECTION</span>

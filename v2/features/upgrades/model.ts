@@ -13,11 +13,14 @@ export interface Upgrade {
     tier: number; // Niveau d'évolution (ex: tous les 10, 25, 100)
     color: string;
     type: UpgradeType;
-    
+
     // Logique de progression (Unlock System)
     unlockCost: number; // Énergie totale requise pour voir l'item
     requiredUpgradeId?: string; // Parent requis (ex: Gen 2 requiert Gen 1)
     requiredAscension: number; // Niveau d'ascension requis
+
+    // Système de Tiers (Discount après achat de tier)
+    nextLevelCostOverride?: number;
 }
 
 export interface UpgradesState {

@@ -5,10 +5,10 @@ import { GameAction } from '../../lib/types';
 export const uiReducer = (state: UIState, action: GameAction): UIState => {
     switch (action.type) {
         case 'UI_ADD_FLOATING_TEXT':
-            const currentTexts = state.floatingTexts.length > 20 
-                ? state.floatingTexts.slice(1) 
+            const currentTexts = state.floatingTexts.length > 20
+                ? state.floatingTexts.slice(1)
                 : state.floatingTexts;
-                
+
             return {
                 ...state,
                 floatingTexts: [...currentTexts, action.payload]
@@ -36,6 +36,12 @@ export const uiReducer = (state: UIState, action: GameAction): UIState => {
             return {
                 ...state,
                 activeCategory: action.payload.category
+            };
+
+        case 'UI_TRIGGER_PLASMA_FLASH':
+            return {
+                ...state,
+                lastPlasmaFlash: Date.now()
             };
 
         default:
