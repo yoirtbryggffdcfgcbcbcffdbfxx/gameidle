@@ -53,6 +53,7 @@ export interface GameActionValues {
         checkCloudSlots: (userId: string, password: string, apiUrl: string) => Promise<SaveSlotMetadata[]>;
         loadCloudSlot: (userId: string, password: string, slotId: number, apiUrl: string) => Promise<void>;
         saveNewGameToSlot: (userId: string, password: string, slotId: number, apiUrl: string) => Promise<boolean>;
+        checkServerTime: (apiUrl: string) => Promise<string | null>;
         dev: ReturnType<typeof useDevTools>;
     };
     playSfx: (sound: 'click' | 'buy' | 'ui_hover' | 'typing') => void;

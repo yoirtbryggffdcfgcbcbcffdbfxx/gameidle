@@ -89,6 +89,8 @@ export interface GameDataValues {
         showGiftPopup: boolean;
         // Autres propriétés UI
         notifications: Notification[];
+        // Cloud Status
+        cloudStatus: 'none' | 'connected' | 'offline';
     };
     popups: ReturnType<typeof usePopupManager>;
 }

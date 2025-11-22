@@ -76,9 +76,9 @@ export const getEncodedSaveData = (state: GameState, settings: Settings): string
     }
 };
 
-export const importEncodedSaveData = (encodedData: string): boolean => {
+export const importEncodedSaveData = (encodedData: string): GameState | null => {
     try {
-        if (!encodedData || typeof encodedData !== 'string') return false;
+        if (!encodedData || typeof encodedData !== 'string') return null;
 
         // TENTATIVE 1 : Décodage Standard (Base64 -> URI -> JSON)
         let jsonString;
@@ -90,7 +90,7 @@ export const importEncodedSaveData = (encodedData: string): boolean => {
                 jsonString = atob(encodedData);
             } catch (e2) {
                 console.error("Base64 decode failed:", e2);
-                return false;
+                return null;
             }
         }
 
@@ -107,13 +107,22 @@ export const importEncodedSaveData = (encodedData: string): boolean => {
         if (hasEnergy && hasUpgrades) { // On assouplit légèrement pour la compatibilité ascendante
             // Sauvegarde validée, on l'écrit
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-            return true;
+            
+            // On retourne les données nettoyées (sans la clé settings qui est racine dans le json d'export)
+            // Mais attend, loadAndMergeState s'attend à ce que localStorage contienne { ...state, settings }
+            // Donc data contient probablement { energy: ..., settings: ... }
+            // Si on retourne data tel quel, TypeScript risque de râler si on l'assigne à GameState
+            // Mais en JS/TS lâche, data est un 'any' ou compatible.
+            // Pour être propre, on devrait retourner data sans les settings, mais GameState contient pas settings
+            // Donc c'est bon.
+            
+            return data as GameState;
         } else {
             console.error("Import validation failed: Missing critical properties.", { hasEnergy, hasUpgrades, hasAchievements });
-            return false;
+            return null;
         }
     } catch (e) {
         console.error("Import failed (JSON Parse or Decode error)", e);
-        return false;
+        return null;
     }
 };

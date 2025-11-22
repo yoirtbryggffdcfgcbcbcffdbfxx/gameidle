@@ -16,9 +16,11 @@ interface CloudSyncPanelProps {
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxWwHScSbi7vbC1D-NxmnPIRhdLV0-XybifytgqeblokkgbRXCK8ypxLsyDkpjmplp8/exec';
 
 const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({ settings, onSettingsChange, onSave, onLoad }) => {
-    const { gameState, playSfx } = useGameContext();
-    const [isLoading, setIsLoading] = useState<'save' | 'load' | null>(null);
+    const { gameState, playSfx, uiState, handlers } = useGameContext();
+    const [isLoading, setIsLoading] = useState<'save' | 'load' | 'time' | null>(null);
     const [lastActionStatus, setLastActionStatus] = useState<'success' | 'error' | null>(null);
+
+    const { cloudStatus } = uiState;
 
     const handleSave = async () => {
         if (isLoading) return;
@@ -38,6 +40,21 @@ const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({ settings, onSettingsCha
         if (!success) {
             setIsLoading(null);
             setLastActionStatus('error');
+        }
+    };
+
+    const handleCheckTime = async () => {
+        if (isLoading) return;
+        setIsLoading('time');
+        playSfx('click');
+        const serverTime = await handlers.checkServerTime(settings.cloudApiUrl);
+        setIsLoading(null);
+        
+        if (serverTime) {
+            const date = new Date(serverTime);
+            handlers.addMessage(`Horloge Serveur : ${date.toLocaleTimeString()}`, 'info', { title: 'Temps UTC' });
+        } else {
+            handlers.addMessage("Impossible de joindre le serveur de temps.", 'error');
         }
     };
 
@@ -61,6 +78,10 @@ const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({ settings, onSettingsCha
         }
     };
 
+    // Statut visuel pour le header
+    const statusColor = cloudStatus === 'connected' ? 'text-green-400' : cloudStatus === 'offline' ? 'text-orange-400' : 'text-gray-500';
+    const statusLabel = cloudStatus === 'connected' ? 'CONNECTÉ' : cloudStatus === 'offline' ? 'LOCAL' : 'OFF';
+
     return (
         <div className="bg-gradient-to-br from-pink-950/30 to-purple-950/30 rounded-lg border border-pink-500/30 overflow-hidden">
             {/* Header Visuel */}
@@ -69,7 +90,12 @@ const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({ settings, onSettingsCha
                     <GlobeIcon className="w-5 h-5" />
                     <span className="font-bold text-sm">Synchronisation Cloud</span>
                 </div>
-                {isLoading && <div className="text-xs text-pink-300 animate-pulse">Connexion...</div>}
+                <div className="flex items-center gap-2">
+                    {isLoading && <div className="text-xs text-pink-300 animate-pulse">Traitement...</div>}
+                    <div className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-black/50 border border-white/10 ${statusColor}`}>
+                        {statusLabel}
+                    </div>
+                </div>
             </div>
 
             <div className="p-4 space-y-4">
@@ -182,6 +208,13 @@ const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({ settings, onSettingsCha
                                 className="flex-1 text-[10px] text-cyan-400 hover:text-cyan-200 bg-cyan-900/20 px-2 py-1 rounded border border-cyan-500/30 transition-colors"
                             >
                                 🔗 Test
+                            </button>
+                            <button 
+                                onClick={handleCheckTime}
+                                disabled={isLoading === 'time'}
+                                className="flex-1 text-[10px] text-purple-400 hover:text-purple-200 bg-purple-900/20 px-2 py-1 rounded border border-purple-500/30 transition-colors"
+                            >
+                                {isLoading === 'time' ? '...' : '⏱️ Clock'}
                             </button>
                         </div>
                     </div>

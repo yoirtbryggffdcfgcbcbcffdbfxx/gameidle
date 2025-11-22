@@ -50,6 +50,11 @@ export const useGameState = (
         setGameState(getInitialState());
     }, []);
 
+    // Action pour charger une sauvegarde complète sans recharger la page
+    const loadSave = useCallback((newState: GameState) => {
+        setGameState(newState);
+    }, []);
+
     // --- Dev Tools Initialization ---
     const devTools = useDevTools({
         setGameState, 
@@ -110,6 +115,7 @@ export const useGameState = (
             ...messageState.actions,
             unlockAchievement: achievementsManager.unlockAchievement,
             resetGame,
+            loadSave, // Expose loadSave
         },
         dev: devTools,
         saveGameState,

@@ -117,7 +117,7 @@ const CloudSlotsPanel: React.FC<CloudSlotsPanelProps> = ({
                                     <div 
                                         key={slot.slotId} 
                                         className={`
-                                            relative overflow-hidden border p-3 rounded-lg flex items-center justify-between group transition-all duration-300
+                                            relative overflow-hidden border p-3 rounded-lg flex flex-row items-center justify-between group transition-all duration-300
                                             ${isEmpty 
                                                 ? 'border-white/10 bg-transparent hover:bg-white/5 hover:border-white/30 border-dashed' 
                                                 : 'border-cyan-500/30 bg-black/40 hover:bg-cyan-900/20 hover:border-cyan-400'
@@ -125,9 +125,9 @@ const CloudSlotsPanel: React.FC<CloudSlotsPanelProps> = ({
                                         `}
                                     >
                                         {/* Slot Info */}
-                                        <div className="flex items-center gap-3 relative z-10">
+                                        <div className="flex items-center gap-3 relative z-10 flex-grow min-w-0">
                                             <div className={`
-                                                w-8 h-8 rounded flex items-center justify-center text-xs font-bold shadow-inner
+                                                w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold shadow-inner
                                                 ${isEmpty 
                                                     ? 'bg-gray-800 text-gray-500' 
                                                     : 'bg-gradient-to-br from-cyan-600 to-purple-600 text-white ring-1 ring-white/20'
@@ -136,21 +136,21 @@ const CloudSlotsPanel: React.FC<CloudSlotsPanelProps> = ({
                                                 {slot.slotId}
                                             </div>
                                             
-                                            <div className="flex flex-col">
+                                            <div className="flex flex-col min-w-0 flex-grow mr-2">
                                                 {isEmpty ? (
                                                     <span className="text-gray-500 text-xs font-mono tracking-wide">SECTEUR VIERGE</span>
                                                 ) : (
                                                     <>
-                                                        <div className="flex items-center gap-2 mb-0.5">
-                                                            <span className="text-xs text-white font-bold tracking-wide">Ascension {slot.ascensionLevel}</span>
+                                                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                                            <span className="text-xs text-white font-bold tracking-wide whitespace-nowrap">Ascension {slot.ascensionLevel}</span>
                                                             {slot.timestamp && (
-                                                                <span className="text-[9px] text-gray-500 flex items-center gap-0.5">
+                                                                <span className="text-[9px] text-gray-500 flex items-center gap-0.5 whitespace-nowrap">
                                                                     <ClockIcon className="w-3 h-3" />
                                                                     {new Date(slot.timestamp).toLocaleDateString()}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
+                                                        <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1 truncate">
                                                             <ZapIcon className="w-3 h-3" />
                                                             {formatNumber(slot.energy || 0)}
                                                         </span>
@@ -163,7 +163,7 @@ const CloudSlotsPanel: React.FC<CloudSlotsPanelProps> = ({
                                         <button
                                             onClick={() => onSlotAction(slot)}
                                             className={`
-                                                relative z-10 px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all transform active:scale-95 shadow-lg
+                                                relative z-10 px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all transform active:scale-95 shadow-lg flex-shrink-0
                                                 ${isEmpty 
                                                     ? 'bg-green-900/20 text-green-400 border border-green-700/50 hover:bg-green-700 hover:text-white group-hover:opacity-100 opacity-70'
                                                     : 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-500/20'

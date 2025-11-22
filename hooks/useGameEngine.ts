@@ -1,6 +1,6 @@
 
 // hooks/useGameEngine.ts
-import React, { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef, useState } from 'react';
 import { Achievement, Notification } from '../types';
 
 // Hooks d'état et de logique
@@ -29,6 +29,9 @@ export const useGameEngine = () => {
     const { playSfx, unlockAudio, ...uiEffects } = useUIEffects(settings);
     const loadStatus = localStorage.getItem(SAVE_KEY) ? 'has_save' : 'no_save';
     const { appState, setAppState, hasSaveData } = useAppFlow(loadStatus);
+    
+    // Nouvel état pour le suivi Cloud
+    const [cloudStatus, setCloudStatus] = useState<'none' | 'connected' | 'offline'>('none');
 
     // --- 2. Hook d'État Principal ---
     const addMessageToState = useCallback((
@@ -98,7 +101,17 @@ export const useGameEngine = () => {
     });
 
     // --- 4. Handlers d'Action ---
-    const appHandlers = useAppHandlers({ hasSaveData, actions, popups: uiEffects.popups, playSfx, addMessage, setAppState, setSettings, unlockAudio });
+    const appHandlers = useAppHandlers({ 
+        hasSaveData, 
+        actions, 
+        popups: uiEffects.popups, 
+        playSfx, 
+        addMessage, 
+        setAppState, 
+        setSettings, 
+        unlockAudio,
+        setCloudStatus // Passage du setter
+    });
     const playerHandlers = usePlayerHandlers({ gameState, computed, actions, settings, popups: uiEffects.popups, playSfx, ...uiEffects, addMessage, memoizedFormatNumber });
     const prestigeHandlers = usePrestigeHandlers({ gameState, computed, actions, coreActions: actions, settings, popups: uiEffects.popups, playSfx, ...uiEffects, addMessage });
     const bankHandlers = useBankHandlers({ gameState, computed, actions, playSfx, addMessage, memoizedFormatNumber });
@@ -122,7 +135,7 @@ export const useGameEngine = () => {
         hasSaveData,
         gameState,
         computedState: { ...computed, unreadMessageCount },
-        uiState: { settings, activeView, pathChoiceToConfirm, ...otherUiEffects, ...popups },
+        uiState: { settings, activeView, pathChoiceToConfirm, ...otherUiEffects, ...popups, cloudStatus },
         popups: popups, // Popups contient aussi du state (show...), donc on le garde dans Data
     };
 
