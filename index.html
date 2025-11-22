@@ -5,35 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Quantum Core</title>
     
-    <!-- PWA & Mobile Experience Enhancements -->
     <meta name="theme-color" content="#0a0a1a">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     
-    <!-- iOS Specific Meta Tags -->
+    <!-- iOS Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Quantum Core">
     <link rel="apple-touch-icon" href="/icon.svg">
 
+    <!-- Tailwind (Tu pourras l'enlever plus tard car Vite peut le gérer, mais garde-le pour l'instant) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "uuid": "https://aistudiocdn.com/uuid@^9.0.1"
-  }
-}
-</script>
 </head>
 <body class="transition-colors duration-500">
     <div id="custom-cursor"></div>
     <div id="parallax-bg"></div>
+    
+    <!-- LE POINT D'ENTRÉE DE REACT -->
     <div id="root"></div>
+
+    <!-- Script Curseur -->
     <script>
         const cursor = document.getElementById('custom-cursor');
         if (cursor) {
@@ -41,8 +38,6 @@
                 cursor.style.left = e.clientX + 'px';
                 cursor.style.top = e.clientY + 'px';
             });
-
-            // More reliable hover detection by attaching listeners to the body
             document.body.addEventListener('mouseover', (e) => {
                 if (e.target.closest('a, button')) {
                     cursor.classList.add('pointer');
@@ -55,5 +50,10 @@
             });
         }
     </script>
+
+    <!-- !!! LA LIGNE MAGIQUE !!! -->
+    <!-- C'est ici qu'on connecte ton fichier TypeScript principal -->
+    <script type="module" src="/index.tsx"></script>
+    
 </body>
 </html>
